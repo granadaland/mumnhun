@@ -1,0 +1,192 @@
+// Prisma Schema for Mum'n'Hun Blog
+// WordPress Migration: 306 posts, 7 categories, 401 tags
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =============================================================================
+// USER MODEL (for future admin CMS)
+// =============================================================================
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  role      Role     @default(AUTHOR)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  posts Post[]
+
+  @@map("users")
+}
+
+enum Role {
+  ADMIN
+  AUTHOR
+}
+
+// =============================================================================
+// POST MODEL (306 blog posts from WordPress)
+// =============================================================================
+model Post {
+  id              String      @id @default(cuid())
+  title           String
+  slug            String      @unique // WordPress post_name, e.g., "tips-menyusui-bayi"
+  content         String      // HTML content from WordPress
+  excerpt         String?     // Short description
+  featuredImage   String?     @map("featured_image") // Supabase Storage URL
+  status          PostStatus  @default(DRAFT)
+  publishedAt     DateTime?   @map("published_at")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  
+  // WordPress metadata (for migration)
+  wpId            Int?        @unique @map("wp_id") // Original WordPress post ID
+  wpGuid          String?     @map("wp_guid") // Original WordPress GUID
+  
+  // SEO
+  metaTitle       String?     @map("meta_title")
+  metaDescription String?     @map("meta_description")
+  
+  // Relations
+  authorId        String?     @map("author_id")
+  author          User?       @relation(fields: [authorId], references: [id])
+  categories      CategoriesOnPosts[]
+  tags            TagsOnPosts[]
+
+  @@index([slug])
+  @@index([status])
+  @@index([publishedAt])
+  @@map("posts")
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+// =============================================================================
+// CATEGORY MODEL (7 categories from WordPress)
+// =============================================================================
+model Category {
+  id          String   @id @default(cuid())
+  name        String   // Indonesian: "Kehamilan", "Bayi", etc.
+  slug        String   @unique // URL-friendly: "kehamilan", "bayi"
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  // WordPress metadata
+  wpId        Int?     @unique @map("wp_id")
+  wpTermId    Int?     @map("wp_term_id")
+
+  // Relations
+  posts       CategoriesOnPosts[]
+
+  @@index([slug])
+  @@map("categories")
+}
+
+// =============================================================================
+// TAG MODEL (401 tags from WordPress)
+// =============================================================================
+model Tag {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  // WordPress metadata
+  wpId      Int?     @unique @map("wp_id")
+  wpTermId  Int?     @map("wp_term_id")
+
+  // Relations
+  posts     TagsOnPosts[]
+
+  @@index([slug])
+  @@map("tags")
+}
+
+// =============================================================================
+// MANY-TO-MANY RELATIONS
+// =============================================================================
+model CategoriesOnPosts {
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId     String   @map("post_id")
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId String   @map("category_id")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  @@id([postId, categoryId])
+  @@map("categories_on_posts")
+}
+
+model TagsOnPosts {
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId     String   @map("post_id")
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tagId      String   @map("tag_id")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  @@id([postId, tagId])
+  @@map("tags_on_posts")
+}
+
+// =============================================================================
+// PAGE MODEL (Static pages: Petunjuk, Syarat, Kontak)
+// =============================================================================
+model Page {
+  id          String     @id @default(cuid())
+  title       String
+  slug        String     @unique // "petunjuk", "syarat-ketentuan", "kontak"
+  content     String
+  status      PostStatus @default(DRAFT)
+  publishedAt DateTime?  @map("published_at")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  
+  // SEO
+  metaTitle       String? @map("meta_title")
+  metaDescription String? @map("meta_description")
+  
+  // WordPress metadata
+  wpId        Int?       @unique @map("wp_id")
+
+  @@index([slug])
+  @@map("pages")
+}
+
+// =============================================================================
+// MEDIA MODEL (Image metadata for 391MB WordPress uploads)
+// =============================================================================
+model Media {
+  id              String   @id @default(cuid())
+  filename        String   // Original filename
+  mimeType        String   @map("mime_type") // "image/jpeg", "image/png"
+  size            Int      // File size in bytes
+  width           Int?     // Image width
+  height          Int?     // Image height
+  alt             String?  // Alt text
+  
+  // URLs
+  url             String   // Supabase Storage URL
+  wpUrl           String?  @map("wp_url") // Original WordPress URL
+  wpPath          String?  @map("wp_path") // Original path: uploads/2024/01/image.jpg
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  
+  // WordPress metadata
+  wpId            Int?     @unique @map("wp_id")
+
+  @@index([wpPath])
+  @@map("media")
+}
