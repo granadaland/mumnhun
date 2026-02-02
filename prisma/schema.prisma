@@ -190,3 +190,22 @@ model Media {
   @@index([wpPath])
   @@map("media")
 }
+
+// Hero section configuration
+model HeroSection {
+  id              String   @id @default(cuid())
+  title           String
+  subtitle        String?
+  imageUrl        String?  // Cloudinary URL
+  imagePublicId   String?  // For transformations/deletion
+  ctaPrimaryText  String   @default("Cek Harga Sewa")
+  ctaPrimaryLink  String   @default("/#pricing")
+  ctaSecondaryText String? @default("Konsultasi Gratis")
+  ctaSecondaryLink String?
+  isActive        Boolean  @default(true)
+  order           Int      @default(0) // For slide ordering
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("hero_sections")
+}

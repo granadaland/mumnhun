@@ -115,23 +115,26 @@ export const TESTIMONIALS = [
     {
         id: 1,
         name: "Fauzin Moenitawati",
-        quote: "Mum 'N Hun sangat membantu saya! Freezer bersih dan dingin, ASI saya aman tersimpan. Sangat direkomendasikan untuk ibu menyusui!",
+        role: "Ibu Rumah Tangga",
+        content: "Mum 'N Hun sangat membantu saya! Freezer bersih dan dingin, ASI saya aman tersimpan. Sangat direkomendasikan untuk ibu menyusui!",
         rating: 5,
-        image: "/images/testimonials/customer-1.jpg",
+        avatar: "https://i.pravatar.cc/300?img=1",
     },
     {
         id: 2,
         name: "Siti Rahayu",
-        quote: "Pelayanan cepat dan freezer berkualitas. Sangat membantu untuk menyimpan ASI perah saat bekerja.",
+        role: "Karyawan Swasta",
+        content: "Pelayanan cepat dan freezer berkualitas. Sangat membantu untuk menyimpan ASI perah saat bekerja. Tim supportnya juga sangat responsif!",
         rating: 5,
-        image: "/images/testimonials/customer-2.jpg",
+        avatar: "https://i.pravatar.cc/300?img=5",
     },
     {
         id: 3,
         name: "Dewi Lestari",
-        quote: "Harga terjangkau dan gratis antar jemput. Tidak perlu repot lagi menyimpan ASI untuk si kecil.",
-        rating: 4,
-        image: "/images/testimonials/customer-3.jpg",
+        role: "Dokter",
+        content: "Harga terjangkau dan gratis antar jemput. Tidak perlu repot lagi menyimpan ASI untuk si kecil. Kualitas freezernya juga sangat baik!",
+        rating: 5,
+        avatar: "https://i.pravatar.cc/300?img=9",
     },
 ]
 

@@ -1,182 +1,244 @@
-import { Metadata } from "next"
-import { notFound } from "next/navigation"
-import Link from "next/link"
-import Image from "next/image"
-import { ArrowLeft, Calendar, Clock, Tag } from "lucide-react"
-import { getPostBySlug, getRelatedPosts, getAllPostSlugs } from "@/lib/db/queries"
-import { formatIndonesianDate } from "@/lib/utils/format-date"
-import { calculateReadTime } from "@/lib/utils/read-time"
-import { Container } from "@/components/layout"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import { PostCard } from "@/components/blog/post-card"
-import { SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE } from "@/lib/constants"
+import { getPostBySlug, getPosts, getFeaturedImageUrl, stripHtml, cleanWordPressContent } from '@/lib/wordpress'
+import { notFound } from 'next/navigation'
+import Image from 'next/image'
+import Link from 'next/link'
+import { Container } from '@/components/ui/container'
+import { Calendar, Clock, ArrowLeft, Tag } from 'lucide-react'
 
-interface BlogPostPageProps {
-    params: Promise<{ slug: string }>
-}
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const post = await getPostBySlug(slug)
 
-// Generate static params for all posts
-export async function generateStaticParams() {
-    const slugs = await getAllPostSlugs()
-    return slugs.map((slug) => ({ slug }))
-}
-
-// Generate metadata for SEO
-export async function generateMetadata({ params }: BlogPostPageProps): Promise<Metadata> {
-    const { slug } = await params
-    const post = await getPostBySlug(slug)
-
-    if (!post) {
-        return {
-            title: "Artikel Tidak Ditemukan",
-        }
-    }
-
-    const title = post.metaTitle || post.title
-    const description = post.metaDescription || post.excerpt || `Baca artikel ${post.title} di ${SITE_NAME}`
-    const ogImage = post.featuredImage || DEFAULT_OG_IMAGE
-
+  if (!post) {
     return {
-        title,
-        description,
-        openGraph: {
-            title,
-            description,
-            type: "article",
-            publishedTime: post.publishedAt?.toISOString(),
-            url: `${SITE_URL}/blog/${post.slug}/`,
-            images: [{ url: ogImage, width: 1200, height: 630 }],
-        },
-        twitter: {
-            card: "summary_large_image",
-            title,
-            description,
-            images: [ogImage],
-        },
+      title: 'Post Not Found'
     }
+  }
+
+  const title = post.title.rendered.replace(/&#038;/g, '&')
+  const description = stripHtml(post.excerpt.rendered).substring(0, 160)
+
+  return {
+    title: `${title} | Mum'N Hun`,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [getFeaturedImageUrl(post)],
+    }
+  }
 }
 
-export default async function BlogPostPage({ params }: BlogPostPageProps) {
-    const { slug } = await params
-    const post = await getPostBySlug(slug)
+export default async function BlogDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const [post, recentPosts] = await Promise.all([
+    getPostBySlug(slug),
+    getPosts(1, 5)
+  ])
 
-    if (!post) {
-        notFound()
-    }
+  if (!post) {
+    notFound()
+  }
 
-    const readTime = calculateReadTime(post.content)
-    const category = post.categories?.[0]?.category
+  const imageUrl = getFeaturedImageUrl(post)
+  const title = post.title.rendered.replace(/&#038;/g, '&')
+  const relatedPosts = recentPosts.filter(p => p.id !== post.id).slice(0, 3)
+  const cleanContent = cleanWordPressContent(post.content.rendered)
 
-    // Get related posts if we have a category
-    const relatedPosts = category
-        ? await getRelatedPosts(post.id, category.id, 3)
-        : []
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-[#FFFBF7] to-white">
+      {/* Breadcrumb Navigation */}
+      <section className="pt-32 pb-6 px-6 border-b border-gray-100">
+        <Container className="max-w-7xl">
+          <div className="flex items-center gap-2 text-sm text-[#382821]/60">
+            <Link href="/" className="hover:text-[#466A68] transition-colors">
+              Home
+            </Link>
+            <span>/</span>
+            <Link href="/blog" className="hover:text-[#466A68] transition-colors">
+              Blog
+            </Link>
+            <span>/</span>
+            <span className="text-[#382821]">Article</span>
+          </div>
+        </Container>
+      </section>
 
-    return (
-        <article className="py-8 md:py-12">
-            <Container size="narrow">
-                {/* Back Button */}
-                <Button asChild variant="ghost" className="mb-6 -ml-4">
-                    <Link href="/blog">
-                        <ArrowLeft className="h-4 w-4 mr-2" />
-                        Kembali ke Artikel
-                    </Link>
-                </Button>
+      <Container className="max-w-7xl py-12 px-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+          {/* Main Content */}
+          <article className="lg:col-span-8">
+            {/* Article Header */}
+            <div className="mb-8">
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#382821] mb-6 leading-tight">
+                {title}
+              </h1>
 
-                {/* Header */}
-                <header className="mb-8">
-                    {/* Category */}
-                    {category && (
-                        <Link href={`/category/${category.slug}/`}>
-                            <Badge className="mb-4 bg-mumnhun-100 text-mumnhun-700 hover:bg-mumnhun-200">
-                                {category.name}
-                            </Badge>
-                        </Link>
-                    )}
+              {/* Meta Info */}
+              <div className="flex flex-wrap items-center gap-4 text-[#382821]/60 pb-6 border-b border-gray-100">
+                <span className="flex items-center gap-2">
+                  <Calendar size={16} />
+                  {new Date(post.date).toLocaleDateString('id-ID', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                  })}
+                </span>
+                <span className="flex items-center gap-2">
+                  <Clock size={16} />
+                  5 min read
+                </span>
+              </div>
+            </div>
 
-                    {/* Title */}
-                    <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-4">
-                        {post.title}
-                    </h1>
+            {/* Featured Image */}
+            <div className="relative aspect-[16/9] rounded-2xl overflow-hidden shadow-xl mb-10">
+              <Image
+                src={imageUrl}
+                alt={title}
+                fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1000px"
+                className="object-cover"
+                priority
+              />
+            </div>
 
-                    {/* Meta */}
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                        {post.publishedAt && (
-                            <div className="flex items-center gap-1">
-                                <Calendar className="h-4 w-4" />
-                                <time dateTime={post.publishedAt.toISOString()}>
-                                    {formatIndonesianDate(post.publishedAt)}
-                                </time>
-                            </div>
-                        )}
-                        <div className="flex items-center gap-1">
-                            <Clock className="h-4 w-4" />
-                            <span>{readTime} menit baca</span>
-                        </div>
-                    </div>
-                </header>
+            {/* Article Content - Styles in globals.css */}
+            <div
+              className="article-content"
+              dangerouslySetInnerHTML={{ __html: cleanContent }}
+            />
 
-                {/* Featured Image */}
-                {post.featuredImage && (
-                    <div className="relative aspect-video overflow-hidden rounded-lg mb-8">
-                        <Image
-                            src={post.featuredImage}
-                            alt={post.title}
+            {/* Related Posts */}
+            {relatedPosts.length > 0 && (
+              <div className="mt-16 pt-10 border-t-2 border-gray-100">
+                <h3 className="text-2xl font-bold text-[#382821] mb-6 flex items-center gap-2">
+                  <Tag size={24} className="text-[#466A68]" />
+                  Baca Juga
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {relatedPosts.map((related) => {
+                    const relatedImage = getFeaturedImageUrl(related)
+                    const relatedTitle = related.title.rendered.replace(/&#038;/g, '&')
+
+                    return (
+                      <Link
+                        key={related.id}
+                        href={`/blog/${related.slug}`}
+                        className="group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                      >
+                        <div className="relative aspect-[16/10] overflow-hidden">
+                          <Image
+                            src={relatedImage}
+                            alt={relatedTitle}
                             fill
-                            className="object-cover"
-                            priority
-                            sizes="(max-width: 768px) 100vw, 768px"
-                        />
-                    </div>
-                )}
-
-                {/* Content */}
-                <div
-                    className="prose prose-lg max-w-none
-            prose-headings:font-bold prose-headings:tracking-tight
-            prose-h2:text-2xl prose-h2:mt-8 prose-h2:mb-4
-            prose-h3:text-xl prose-h3:mt-6 prose-h3:mb-3
-            prose-p:text-muted-foreground prose-p:leading-relaxed
-            prose-a:text-mumnhun-600 prose-a:no-underline hover:prose-a:underline
-            prose-img:rounded-lg
-            prose-blockquote:border-l-mumnhun-500 prose-blockquote:bg-mumnhun-50 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r-lg
-            prose-ul:my-4 prose-ol:my-4
-            prose-li:text-muted-foreground"
-                    dangerouslySetInnerHTML={{ __html: post.content }}
-                />
-
-                {/* Tags */}
-                {post.tags && post.tags.length > 0 && (
-                    <div className="mt-8 pt-8 border-t">
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <Tag className="h-4 w-4 text-muted-foreground" />
-                            {post.tags.map(({ tag }) => (
-                                <Link key={tag.id} href={`/tag/${tag.slug}/`}>
-                                    <Badge variant="outline" className="hover:bg-mumnhun-50">
-                                        {tag.name}
-                                    </Badge>
-                                </Link>
-                            ))}
+                            sizes="(max-width: 768px) 100vw, 33vw"
+                            className="object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
                         </div>
-                    </div>
-                )}
-
-                <Separator className="my-12" />
-
-                {/* Related Posts */}
-                {relatedPosts.length > 0 && (
-                    <section>
-                        <h2 className="text-2xl font-bold mb-6">Artikel Terkait</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            {relatedPosts.map((relatedPost) => (
-                                <PostCard key={relatedPost.id} post={relatedPost} />
-                            ))}
+                        <div className="p-4">
+                          <h4 className="font-bold text-[#382821] line-clamp-2 group-hover:text-[#466A68] transition-colors">
+                            {relatedTitle}
+                          </h4>
                         </div>
-                    </section>
-                )}
-            </Container>
-        </article>
-    )
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* CTA Section */}
+            <div className="mt-16 p-8 rounded-3xl bg-gradient-to-r from-[#466A68] to-[#2F4A48] text-white text-center">
+              <h3 className="text-2xl font-bold mb-3">
+                Butuh Freezer ASI Berkualitas?
+              </h3>
+              <p className="text-white/90 mb-6">
+                Sewa freezer ASI premium dari Mum'N Hun. Steril, hemat energi, dan siap diantar!
+              </p>
+              <Link
+                href="https://wa.me/6282122229350?text=Halo%20Mum%27N%20Hun%2C%20saya%20mau%20tanya%20tentang%20sewa%20freezer%20ASI"
+                className="inline-flex items-center gap-2 bg-white text-[#466A68] px-8 py-4 rounded-full font-bold hover:shadow-xl transition-all hover:-translate-y-1"
+              >
+                Hubungi Kami via WhatsApp
+              </Link>
+            </div>
+          </article>
+
+          {/* Sidebar */}
+          <aside className="lg:col-span-4">
+            <div className="sticky top-24 space-y-8">
+              {/* Latest Posts */}
+              <div className="bg-white rounded-3xl p-6 shadow-lg">
+                <h3 className="text-xl font-bold text-[#382821] mb-6 pb-3 border-b border-gray-100">
+                  Artikel Terbaru
+                </h3>
+                <div className="space-y-4">
+                  {recentPosts.slice(0, 4).map((recent) => {
+                    const recentImage = getFeaturedImageUrl(recent)
+                    const recentTitle = recent.title.rendered.replace(/&#038;/g, '&')
+
+                    return (
+                      <Link
+                        key={recent.id}
+                        href={`/blog/${recent.slug}`}
+                        className="flex gap-4 group"
+                      >
+                        <div className="relative w-20 h-20 rounded-xl overflow-hidden flex-shrink-0">
+                          <Image
+                            src={recentImage}
+                            alt={recentTitle}
+                            fill
+                            sizes="80px"
+                            className="object-cover group-hover:scale-110 transition-transform duration-300"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-sm text-[#382821] line-clamp-2 group-hover:text-[#466A68] transition-colors">
+                            {recentTitle}
+                          </h4>
+                          <p className="text-xs text-[#382821]/60 mt-1">
+                            {new Date(recent.date).toLocaleDateString('id-ID', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric'
+                            })}
+                          </p>
+                        </div>
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* CTA Widget */}
+              <div className="bg-gradient-to-br from-[#466A68] to-[#2F4A48] rounded-3xl p-6 text-white shadow-lg">
+                <h3 className="text-xl font-bold mb-3">
+                  Konsultasi Gratis!
+                </h3>
+                <p className="text-white/90 text-sm mb-4">
+                  Ada pertanyaan seputar sewa freezer ASI? Hubungi kami sekarang!
+                </p>
+                <Link
+                  href="https://wa.me/6282122229350"
+                  className="block w-full bg-white text-[#466A68] text-center py-3 rounded-full font-bold hover:shadow-xl transition-all"
+                >
+                  Chat WhatsApp
+                </Link>
+              </div>
+
+              {/* Back to Blog */}
+              <Link
+                href="/blog"
+                className="flex items-center justify-center gap-2 w-full bg-white text-[#382821] py-3 rounded-full font-semibold hover:shadow-lg transition-all border border-gray-200"
+              >
+                <ArrowLeft size={18} />
+                Kembali ke Blog
+              </Link>
+            </div>
+          </aside>
+        </div>
+      </Container>
+    </main>
+  )
 }

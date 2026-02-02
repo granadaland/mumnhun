@@ -1,27 +1,18 @@
-import type { NextConfig } from 'next'
+import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
-      // WordPress media
-      {
-        protocol: 'https',
-        hostname: 'mumnhun.id',
-        pathname: '/wp-content/**',
-      },
-      // Cloudinary
       {
         protocol: 'https',
         hostname: 'res.cloudinary.com',
         pathname: '/**',
       },
-      // Pravatar (avatar placeholders)
       {
         protocol: 'https',
         hostname: 'i.pravatar.cc',
         pathname: '/**',
       },
-      // Unsplash (testimonial images)
       {
         protocol: 'https',
         hostname: 'images.unsplash.com',
@@ -29,6 +20,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-}
+};
 
-export default nextConfig
+export default nextConfig;

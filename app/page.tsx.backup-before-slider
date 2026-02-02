@@ -165,7 +165,6 @@ export default async function HomePage() {
                     src="https://res.cloudinary.com/dvqcs0zqi/image/upload/v1769914192/Sewa_Freezer_ASI_Jakarta_g6mjoz.webp"
                     alt="Layanan Sewa Freezer ASI Jakarta Terpercaya"
                     fill
-                    sizes="(max-width: 768px) 100vw, 50vw"
                     className="object-cover"
                     priority
                   />
@@ -447,7 +446,6 @@ export default async function HomePage() {
                           width={112}
                           height={112}
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                          loading="eager"
                         />
                       </div>
                       <div className="flex flex-col justify-center flex-1 min-w-0">
@@ -477,7 +475,6 @@ export default async function HomePage() {
                             width={112}
                             height={112}
                             className="w-full h-full object-cover"
-                            loading="eager"
                           />
                         </div>
                         <div className="flex flex-col justify-center">

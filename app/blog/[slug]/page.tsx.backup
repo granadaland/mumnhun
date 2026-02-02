@@ -1,0 +1,124 @@
+import { getPostBySlug, getFeaturedImageUrl } from '@/lib/wordpress'
+import { notFound } from 'next/navigation'
+import Image from 'next/image'
+import Link from 'next/link'
+import { Container } from '@/components/ui/container'
+import { Calendar, ArrowLeft } from 'lucide-react'
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const post = await getPostBySlug(slug)
+
+  if (!post) {
+    return {
+      title: 'Post Not Found'
+    }
+  }
+
+  const title = post.title.rendered.replace(/&#038;/g, '&')
+  const description = post.excerpt.rendered.replace(/<[^>]*>/g, '').substring(0, 160)
+
+  return {
+    title: `${title} | Mum'N Hun`,
+    description
+  }
+}
+
+export default async function BlogDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const post = await getPostBySlug(slug)
+
+  if (!post) {
+    notFound()
+  }
+
+  const imageUrl = getFeaturedImageUrl(post)
+  const title = post.title.rendered.replace(/&#038;/g, '&')
+
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-[#FFFBF7] to-white">
+      {/* Back Button */}
+      <section className="pt-32 pb-8 px-6">
+        <Container>
+          <Link
+            href="/blog"
+            className="inline-flex items-center gap-2 text-[#466A68] hover:text-[#2F4A48] font-semibold transition-colors"
+          >
+            <ArrowLeft size={20} />
+            Kembali ke Blog
+          </Link>
+        </Container>
+      </section>
+
+      {/* Article Header */}
+      <section className="pb-12 px-6">
+        <Container className="max-w-4xl">
+          {/* Title */}
+          <h1 className="text-3xl md:text-5xl font-bold text-[#382821] mb-6 leading-tight">
+            {title}
+          </h1>
+
+          {/* Meta */}
+          <div className="flex items-center gap-4 text-[#382821]/60 mb-8">
+            <span className="flex items-center gap-2">
+              <Calendar size={16} />
+              {new Date(post.date).toLocaleDateString('id-ID', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+              })}
+            </span>
+          </div>
+
+          {/* Featured Image */}
+          <div className="relative aspect-[16/9] rounded-3xl overflow-hidden shadow-2xl mb-12">
+            <Image
+              src={imageUrl}
+              alt={title}
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
+              className="object-cover"
+              priority
+            />
+          </div>
+        </Container>
+      </section>
+
+      {/* Article Content */}
+      <section className="pb-20 px-6">
+        <Container className="max-w-4xl">
+          <article
+            className="prose prose-lg max-w-none
+              prose-headings:text-[#382821] prose-headings:font-bold
+              prose-p:text-[#382821]/80 prose-p:leading-relaxed
+              prose-a:text-[#466A68] prose-a:no-underline hover:prose-a:underline
+              prose-strong:text-[#382821]
+              prose-ul:text-[#382821]/80
+              prose-ol:text-[#382821]/80
+              prose-img:rounded-2xl prose-img:shadow-lg
+            "
+            dangerouslySetInnerHTML={{ __html: post.content.rendered }}
+          />
+        </Container>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-16 px-6 bg-gradient-to-r from-[#466A68] to-[#2F4A48]">
+        <Container className="max-w-4xl text-center">
+          <h2 className="text-3xl font-bold text-white mb-4">
+            Butuh Freezer ASI Berkualitas?
+          </h2>
+          <p className="text-white/90 mb-8 text-lg">
+            Sewa freezer ASI premium dari Mum'N Hun. Steril, hemat energi, dan siap diantar!
+          </p>
+          <Link
+            href="https://wa.me/6282122229350?text=Halo%20Mum%27N%20Hun%2C%20saya%20mau%20tanya%20tentang%20sewa%20freezer%20ASI"
+            className="inline-flex items-center gap-2 bg-white text-[#466A68] px-8 py-4 rounded-full font-bold hover:shadow-xl transition-all hover:-translate-y-1"
+          >
+            Hubungi Kami via WhatsApp
+          </Link>
+        </Container>
+      </section>
+    </main>
+  )
+}
