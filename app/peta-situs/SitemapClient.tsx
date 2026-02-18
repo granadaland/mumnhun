@@ -43,7 +43,7 @@ export default function SitemapClient({ categories }: { categories: CategoryWith
     }
 
     return (
-        <main className="min-h-screen bg-gradient-to-b from-[#FFFBF7] to-white pt-32 pb-20">
+        <main className="min-h-screen bg-gradient-to-b from-[#FFFBF7] to-white pt-40 md:pt-48 pb-20">
             <Container className="max-w-7xl px-6">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}

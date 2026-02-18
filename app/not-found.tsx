@@ -5,7 +5,7 @@ import { Home, Search } from "lucide-react"
 
 export default function NotFound() {
     return (
-        <div className="py-16 md:py-24">
+        <div className="pt-40 pb-16 md:pt-48 md:pb-24">
             <Container className="text-center">
                 <div className="text-8xl font-bold text-mumnhun-200 mb-4">404</div>
                 <h1 className="text-3xl font-bold mb-4">
