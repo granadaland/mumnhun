@@ -589,37 +589,78 @@ export async function getRecommendedPosts(postId: string, categoryId: string | u
     return posts
 }
 
+
 /**
- * Get sitemap data (categories with posts)
+ * Get sitemap data (categories, pages, tags)
  */
 export async function getSitemapData() {
-    const categories = await prisma.category.findMany({
-        orderBy: { name: "asc" },
-        include: {
-            posts: {
-                where: {
-                    post: {
-                        status: "PUBLISHED",
-                    }
-                },
-                include: {
-                    post: {
-                        select: {
-                            id: true,
-                            title: true,
-                            slug: true,
-                            publishedAt: true,
+    const [categories, pages, tags] = await Promise.all([
+        prisma.category.findMany({
+            orderBy: { name: "asc" },
+            include: {
+                posts: {
+                    where: {
+                        post: {
+                            status: "PUBLISHED",
                         }
-                    }
-                },
-                orderBy: {
-                    post: {
-                        publishedAt: "desc"
+                    },
+                    include: {
+                        post: {
+                            select: {
+                                id: true,
+                                title: true,
+                                slug: true,
+                                publishedAt: true,
+                            }
+                        }
+                    },
+                    orderBy: {
+                        post: {
+                            publishedAt: "desc"
+                        }
                     }
                 }
             }
-        }
-    })
+        }),
+        prisma.page.findMany({
+            where: {
+                status: "PUBLISHED",
+            },
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                publishedAt: true,
+            },
+            orderBy: {
+                title: "asc",
+            },
+        }),
+        prisma.tag.findMany({
+            where: {
+                posts: {
+                    some: {
+                        post: {
+                            status: "PUBLISHED"
+                        }
+                    }
+                }
+            },
+            select: {
+                id: true,
+                name: true,
+                slug: true,
+                _count: {
+                    select: {
+                        posts: true
+                    }
+                }
+            },
+            orderBy: {
+                name: "asc",
+            }
+        })
+    ])
 
-    return categories
+    return { categories, pages, tags }
 }
