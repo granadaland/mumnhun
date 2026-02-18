@@ -139,6 +139,7 @@ function getPostThumbnail(post: { content?: string; featuredImage: string | null
 }
 
 type PostTagItem = { tag: { name: string } }
+type RelatedPost = Awaited<ReturnType<typeof getRelatedPosts>>[number]
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
@@ -522,7 +523,7 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
                   Baca Juga
                 </h3>
                 <div className="space-y-3">
-                  {relatedPosts.map((related) => (
+                  {relatedPosts.map((related: RelatedPost) => (
                     <Link
                       key={related.id}
                       href={`/${related.slug}`}
