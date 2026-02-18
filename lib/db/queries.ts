@@ -588,3 +588,38 @@ export async function getRecommendedPosts(postId: string, categoryId: string | u
 
     return posts
 }
+
+/**
+ * Get sitemap data (categories with posts)
+ */
+export async function getSitemapData() {
+    const categories = await prisma.category.findMany({
+        orderBy: { name: "asc" },
+        include: {
+            posts: {
+                where: {
+                    post: {
+                        status: "PUBLISHED",
+                    }
+                },
+                include: {
+                    post: {
+                        select: {
+                            id: true,
+                            title: true,
+                            slug: true,
+                            publishedAt: true,
+                        }
+                    }
+                },
+                orderBy: {
+                    post: {
+                        publishedAt: "desc"
+                    }
+                }
+            }
+        }
+    })
+
+    return categories
+}
