@@ -15,8 +15,13 @@ interface CategoryPageProps {
 
 // Generate static params for all categories
 export async function generateStaticParams() {
-    const categories = await getCategories()
-    return categories.map((cat) => ({ slug: cat.slug }))
+    try {
+        const categories = await getCategories()
+        return categories.map((cat) => ({ slug: cat.slug }))
+    } catch (error) {
+        console.warn("[category/[slug]] Static params skipped because database is not reachable during build.", error)
+        return []
+    }
 }
 
 // Generate metadata for SEO
