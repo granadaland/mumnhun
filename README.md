@@ -1,6 +1,6 @@
 # Mum 'n' Hun - Blog Parenting Indonesia
 
-Blog parenting modern untuk ibu dan ayah Indonesia. Dibangun dengan Next.js 16, TypeScript, Tailwind CSS, dan Supabase.
+Website layanan sewa freezer ASI. Dibangun dengan Next.js 16, TypeScript, Tailwind CSS, dan Supabase.
 
 ## 🚀 Tech Stack
 
