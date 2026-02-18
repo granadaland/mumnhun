@@ -62,6 +62,7 @@ cp .env.example .env.local
 ```
 
 Required variables:
+
 - `DATABASE_URL` - Supabase PostgreSQL connection string
 - `DIRECT_URL` - Direct database connection (for migrations)
 - `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
@@ -124,7 +125,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 |-------|-------------|
 | `/` | Homepage |
 | `/blog` | Blog list with pagination |
-| `/blog/[slug]` | Blog post detail |
+| `/[slug]` | Blog post detail |
 | `/category/[slug]` | Posts by category |
 | `/tag/[slug]` | Posts by tag |
 | `/petunjuk` | Site guide/instructions |

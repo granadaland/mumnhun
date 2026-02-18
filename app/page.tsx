@@ -5,21 +5,50 @@ import { BenefitCard, FaqAccordion } from "@/components/home"
 import { TestimonialsSection } from "@/components/home/testimonials-section"
 import { PostCard } from "@/components/blog/post-card"
 import { HeroSlider } from "@/components/hero-slider"
+import { HeroImageSlider } from "@/components/hero-image-slider"
 import { getPosts } from "@/lib/db/queries"
 import {
   PRICING_PACKAGES,
   SERVICE_BENEFITS,
   FAQ_DATA,
   WHATSAPP_LINK,
+  SITE_URL,
+  SITE_NAME,
+  CONTACT_INFO,
 } from "@/lib/constants"
 import Image from "next/image"
 import Link from "next/link"
 import { Star, ShieldCheck, ArrowRight } from "lucide-react"
+import { Metadata } from "next"
+
+// Homepage-specific SEO metadata
+export const metadata: Metadata = {
+  title: "Sewa Freezer ASI Bulanan Jabodetabek",
+  description:
+    "Sewa Freezer ASI bulanan untuk Jakarta, Bogor, Depok, Tangerang, dan Bekasi. Unit steril, hemat energi, gratis antar-jemput, dan dukungan cepat untuk ibu menyusui.",
+  keywords: [
+    "Sewa Freezer ASI",
+    "Sewa Freezer ASI Terdekat",
+    "Rental Kulkas ASI",
+    "Sewa Freezer ASI Bulanan",
+  ],
+  openGraph: {
+    title: "Sewa Freezer ASI Bulanan Jabodetabek",
+    description:
+      "Layanan sewa freezer ASI steril dan terawat dengan pengiriman cepat area Jabodetabek.",
+    url: SITE_URL,
+    type: "website",
+    siteName: SITE_NAME,
+  },
+  alternates: {
+    canonical: SITE_URL,
+  },
+}
 
 async function getHeroSlides() {
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/hero`, {
-      cache: 'no-store'
+      next: { revalidate: 3600 } // Cache for 1 hour
     })
     if (!res.ok) return []
     return res.json()
@@ -32,11 +61,54 @@ async function getHeroSlides() {
 export default async function HomePage() {
   const [slides, { posts: latestPosts }] = await Promise.all([
     getHeroSlides(),
-    getPosts(1, 3)
+    getPosts({ page: 1, limit: 3 })
   ])
+
+  const websiteJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE_NAME,
+    url: SITE_URL,
+    inLanguage: "id-ID",
+    potentialAction: {
+      "@type": "SearchAction",
+      target: `${SITE_URL}/blog?search={search_term_string}`,
+      "query-input": "required name=search_term_string",
+    },
+  }
+
+  const organizationJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: SITE_NAME,
+    url: SITE_URL,
+    contactPoint: [
+      {
+        "@type": "ContactPoint",
+        telephone: CONTACT_INFO.phone,
+        contactType: "customer service",
+        areaServed: "ID",
+        availableLanguage: ["id"],
+      },
+    ],
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: "Jakarta",
+      addressCountry: "ID",
+    },
+  }
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+      />
+
       {/* ═══════════════════════════════════════════════════════ */}
       {/* SECTION 1: HERO - Mockup Design                        */}
       {/* ═══════════════════════════════════════════════════════ */}
@@ -60,29 +132,30 @@ export default async function HomePage() {
               </div>
 
               {/* Hero Heading with Gradient Text */}
-              <h1 className="text-4xl md:text-6xl xl:text-7xl font-bold text-[#382821] leading-[1.1] mb-6 tracking-tight">
-                Kualitas ASI Terjaga, <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#466A68] to-[#2F4A48] relative">
-                  Hati Ibu Tenang
-                  <svg
-                    className="absolute w-full h-3 -bottom-1 left-0 text-[#C48B77]/30 -z-10"
-                    viewBox="0 0 100 10"
-                    preserveAspectRatio="none"
-                  >
-                    <path
-                      d="M0 5 Q 50 10 100 5"
-                      stroke="currentColor"
-                      strokeWidth="8"
-                      fill="none"
-                    />
-                  </svg>
-                </span>
+              <h1 className="text-4xl md:text-6xl xl:text-7xl font-bold text-[#382821] leading-[1.1] mb-2 tracking-tight">
+                Sewa Freezer ASI
               </h1>
+              <p className="text-2xl md:text-3xl xl:text-4xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-[#466A68] to-[#2F4A48] mb-6 relative w-fit">
+                Kualitas ASI Tetap Terjaga
+                <svg
+                  className="absolute w-full h-2 -bottom-1 left-0 text-[#C48B77]/30 -z-10"
+                  viewBox="0 0 100 10"
+                  preserveAspectRatio="none"
+                >
+                  <path
+                    d="M0 5 Q 50 10 100 5"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    fill="none"
+                  />
+                </svg>
+              </p>
 
               {/* Hero Description */}
               <p className="text-[#382821]/70 text-lg md:text-xl mb-10 leading-relaxed max-w-xl mx-auto lg:mx-0 font-light">
-                Layanan sewa freezer ASI premium dengan standar medis. Unit
-                steril, hemat energi, dan pengiriman cepat se-Jabodetabek.
+                Layanan sewa freezer ASI premium untuk ibu yang mencari sewa
+                freezer ASI terdekat di Jabodetabek. Unit steril, hemat energi,
+                dan pengiriman cepat.
               </p>
 
               {/* CTA Buttons */}
@@ -122,7 +195,7 @@ export default async function HomePage() {
             </div>
 
             {/* RIGHT: Hero Image - Premium Style */}
-            <div className="flex-1 relative w-full max-w-xl lg:max-w-none">
+            <div className="flex-1 relative w-full max-w-xl lg:max-w-lg">
               {/* Soft Glow Effect */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-white/30 rounded-full blur-3xl -z-10" />
 
@@ -131,18 +204,12 @@ export default async function HomePage() {
                 <div className="absolute -top-6 -left-6 z-20 bg-white/90 backdrop-blur-xl p-4 rounded-2xl shadow-xl shadow-stone-200/50 border border-white animate-bounce-slow hidden md:block">
                   <div className="flex items-center gap-3">
                     <div className="flex -space-x-2">
-                      {[1, 2, 3].map((i) => (
+                      {['S', 'R', 'A'].map((initial, i) => (
                         <div
                           key={i}
-                          className="w-8 h-8 rounded-full bg-gray-200 border-2 border-white overflow-hidden"
+                          className="w-8 h-8 rounded-full bg-gradient-to-br from-[#466A68] to-[#2F4A48] border-2 border-white flex items-center justify-center text-white text-xs font-bold"
                         >
-                          <Image
-                            src={`https://i.pravatar.cc/100?img=${20 + i}`}
-                            alt="user"
-                            width={32}
-                            height={32}
-                            className="w-full h-full object-cover"
-                          />
+                          {initial}
                         </div>
                       ))}
                     </div>
@@ -159,21 +226,11 @@ export default async function HomePage() {
                   </div>
                 </div>
 
-                {/* Main Image Container */}
-                <div className="relative rounded-[3rem] overflow-hidden shadow-2xl shadow-stone-900/10 border-8 border-white/40 aspect-[4/3] transform transition-transform duration-700 hover:scale-[1.01]">
-                  <Image
-                    src="https://res.cloudinary.com/dvqcs0zqi/image/upload/v1769914192/Sewa_Freezer_ASI_Jakarta_g6mjoz.webp"
-                    alt="Layanan Sewa Freezer ASI Jakarta Terpercaya"
-                    fill
-                    sizes="(max-width: 768px) 100vw, 50vw"
-                    className="object-cover"
-                    priority
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                </div>
+                {/* Main Image Slider */}
+                <HeroImageSlider />
 
                 {/* Floating Card: Feature */}
-                <div className="absolute -bottom-8 -right-4 md:-right-10 z-20 bg-white p-5 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-gray-100 flex items-center gap-4 animate-float">
+                <div className="absolute -bottom-8 right-0 md:-right-10 z-20 bg-white p-5 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-gray-100 flex items-center gap-4 animate-float max-w-[200px] md:max-w-none">
                   <div className="w-12 h-12 bg-[#466A68]/10 rounded-full flex items-center justify-center text-[#466A68]">
                     <ShieldCheck size={24} />
                   </div>
@@ -248,17 +305,17 @@ export default async function HomePage() {
               </div>
 
               {/* Stats Row */}
-              <div className="grid grid-cols-3 gap-6 pt-8 border-t border-[#382821]/10">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-6 pt-8 border-t border-[#382821]/10">
                 <div className="text-center lg:text-left">
                   <p className="text-3xl md:text-4xl font-bold text-[#382821]">2010</p>
                   <p className="text-sm text-[#382821]/50 font-medium">Berdiri Sejak</p>
                 </div>
-                <div className="text-center lg:text-left border-l border-[#382821]/10 pl-6">
+                <div className="text-center lg:text-left sm:border-l border-[#382821]/10 sm:pl-6">
                   <p className="text-3xl md:text-4xl font-bold text-[#382821]">700+</p>
                   <p className="text-sm text-[#382821]/50 font-medium">Ibu Terbantu</p>
                 </div>
-                <div className="text-center lg:text-left border-l border-[#382821]/10 pl-6">
-                  <p className="text-2xl md:text-3xl font-bold text-[#382821]">JABODETABEK</p>
+                <div className="text-center lg:text-left sm:border-l border-[#382821]/10 sm:pl-6">
+                  <p className="text-xl md:text-3xl font-bold text-[#382821] break-all sm:break-normal">JABODETABEK</p>
                   <p className="text-sm text-[#382821]/50 font-medium">Area Layanan</p>
                 </div>
               </div>
@@ -271,7 +328,7 @@ export default async function HomePage() {
       {/* ═══════════════════════════════════════════════════════ */}
       {/* SECTION 2: BENEFITS - 6 Cards (2x3 Grid)               */}
       {/* ═══════════════════════════════════════════════════════ */}
-      <section className="py-20 md:py-24 px-6 relative bg-[#F0E7DB]">
+      <section className="py-20 md:py-24 px-6 relative bg-[#F0E7DB] overflow-hidden">
         <Container>
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-5xl font-bold text-[#382821] tracking-tight">
@@ -321,7 +378,7 @@ export default async function HomePage() {
                 key={pkg.id}
                 className={`relative flex flex-col w-full md:w-1/3 max-w-sm rounded-[2.5rem] p-8 lg:p-10 transition-all duration-500 group ${pkg.popular
                   ? "bg-white/90 backdrop-blur-xl ring-4 ring-[#466A68]/10 shadow-2xl shadow-[#466A68]/10 scale-100 md:scale-110 z-10"
-                  : "bg-white/40 backdrop-blur-md border border-white/60 hover:border-[#466A68]/30 hover:bg-white/80 hover:shadow-xl hover:-translate-y-2"
+                  : "bg-white/80 backdrop-blur-md border border-white shadow-sm hover:border-[#466A68]/30 hover:bg-white hover:shadow-xl hover:-translate-y-2"
                   }`}
               >
                 {/* Popular Badge */}
@@ -425,29 +482,38 @@ export default async function HomePage() {
 
             {/* Right: Latest Articles */}
             <div>
-              <h3 className="text-lg font-bold text-[#382821] uppercase tracking-wider mb-8 flex items-center gap-3">
-                <span className="w-8 h-0.5 bg-[#C48B77] rounded-full" />
-                Artikel
-              </h3>
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-lg font-bold text-[#382821] uppercase tracking-wider flex items-center gap-3">
+                  <span className="w-8 h-0.5 bg-[#C48B77] rounded-full" />
+                  Artikel Terbaru
+                </h3>
+                <Link
+                  href="/blog"
+                  className="text-sm font-semibold text-[#466A68] hover:text-[#2F4A48] transition-colors flex items-center gap-1"
+                >
+                  Lihat Semua
+                  <ArrowRight size={14} />
+                </Link>
+              </div>
               <div className="space-y-4">
                 {latestPosts.length > 0 ? (
                   latestPosts.slice(0, 3).map((post: any) => (
                     <Link
                       key={post.id}
-                      href={`/blog/${post.slug}`}
+                      href={`/${post.slug}`}
                       className="group flex gap-5 p-4 rounded-3xl bg-white/40 hover:bg-white/80 border border-white/60 hover:shadow-xl hover:shadow-stone-200/50 backdrop-blur-sm cursor-pointer transition-all duration-300"
                     >
-                      <div className="w-28 h-28 shrink-0 rounded-2xl overflow-hidden shadow-sm">
+                      <div className="w-28 h-28 shrink-0 rounded-2xl overflow-hidden shadow-sm bg-[#E8DDD4]">
                         <Image
                           src={
                             post.featuredImage ||
-                            "https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=400&q=80"
+                            "https://res.cloudinary.com/dvqcs0zqi/image/upload/v1769914192/Sewa_Freezer_ASI_Jakarta_g6mjoz.webp"
                           }
                           alt={post.title}
                           width={112}
                           height={112}
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                          loading="eager"
+                          loading="lazy"
                         />
                       </div>
                       <div className="flex flex-col justify-center flex-1 min-w-0">
@@ -462,28 +528,16 @@ export default async function HomePage() {
                   ))
                 ) : (
                   <div className="space-y-4">
-                    {[1, 2].map((i) => (
+                    {[1, 2, 3].map((i) => (
                       <div
                         key={i}
-                        className="flex gap-5 p-4 rounded-3xl bg-white/40 border border-white/60 backdrop-blur-sm"
+                        className="flex gap-5 p-4 rounded-3xl bg-white/40 border border-white/60 backdrop-blur-sm animate-pulse"
                       >
-                        <div className="w-28 h-28 shrink-0 rounded-2xl overflow-hidden shadow-sm bg-gray-200">
-                          <Image
-                            src={`https://images.unsplash.com/photo-${i === 1
-                              ? "1555252333-9f8e92e65df9"
-                              : "1515488042361-ee00e0ddd4e4"
-                              }?w=400&q=80`}
-                            alt={`Artikel ${i}`}
-                            width={112}
-                            height={112}
-                            className="w-full h-full object-cover"
-                            loading="eager"
-                          />
-                        </div>
-                        <div className="flex flex-col justify-center">
-                          <div className="w-16 h-4 bg-gray-200 rounded mb-3" />
-                          <div className="w-40 h-5 bg-gray-200 rounded mb-2" />
-                          <div className="w-32 h-5 bg-gray-200 rounded" />
+                        <div className="w-28 h-28 shrink-0 rounded-2xl bg-gradient-to-br from-[#E8DDD4] to-[#D4BCAA]" />
+                        <div className="flex flex-col justify-center flex-1">
+                          <div className="w-16 h-4 bg-[#E8DDD4] rounded mb-3" />
+                          <div className="w-full h-5 bg-[#E8DDD4] rounded mb-2" />
+                          <div className="w-3/4 h-5 bg-[#D4BCAA] rounded" />
                         </div>
                       </div>
                     ))}

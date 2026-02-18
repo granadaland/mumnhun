@@ -20,8 +20,10 @@ export async function generateStaticParams() {
 }
 
 // Generate metadata for SEO
-export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: CategoryPageProps): Promise<Metadata> {
     const { slug } = await params
+    const searchParamsResolved = await searchParams
+    const page = Number(searchParamsResolved.page) || 1
     const result = await getPostsByCategory(slug)
 
     if (!result) {
@@ -29,16 +31,36 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     }
 
     const { category } = result
-    const title = `Kategori: ${category.name}`
+    const title = page > 1 ? `Kategori: ${category.name} - Halaman ${page}` : `Kategori: ${category.name}`
     const description = category.description || `Artikel tentang ${category.name} di ${SITE_NAME}`
+    const canonicalParams = new URLSearchParams()
+
+    if (page > 1) {
+        canonicalParams.set("page", String(page))
+    }
+
+    const canonicalSuffix = canonicalParams.toString()
+    const canonicalUrl = canonicalSuffix
+        ? `${SITE_URL}/category/${slug}?${canonicalSuffix}`
+        : `${SITE_URL}/category/${slug}`
 
     return {
         title,
         description,
+        alternates: {
+            canonical: canonicalUrl,
+        },
         openGraph: {
             title,
             description,
-            url: `${SITE_URL}/category/${slug}/`,
+            url: canonicalUrl,
+            type: "website",
+            siteName: SITE_NAME,
+        },
+        twitter: {
+            card: "summary_large_image",
+            title,
+            description,
         },
     }
 }

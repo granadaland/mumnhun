@@ -14,8 +14,10 @@ interface TagPageProps {
 }
 
 // Generate metadata for SEO
-export async function generateMetadata({ params }: TagPageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: TagPageProps): Promise<Metadata> {
     const { slug } = await params
+    const searchParamsResolved = await searchParams
+    const page = Number(searchParamsResolved.page) || 1
     const result = await getPostsByTag(slug)
 
     if (!result) {
@@ -23,16 +25,36 @@ export async function generateMetadata({ params }: TagPageProps): Promise<Metada
     }
 
     const { tag } = result
-    const title = `Tag: ${tag.name}`
+    const title = page > 1 ? `Tag: ${tag.name} - Halaman ${page}` : `Tag: ${tag.name}`
     const description = `Artikel dengan tag ${tag.name} di ${SITE_NAME}`
+    const canonicalParams = new URLSearchParams()
+
+    if (page > 1) {
+        canonicalParams.set("page", String(page))
+    }
+
+    const canonicalSuffix = canonicalParams.toString()
+    const canonicalUrl = canonicalSuffix
+        ? `${SITE_URL}/tag/${slug}?${canonicalSuffix}`
+        : `${SITE_URL}/tag/${slug}`
 
     return {
         title,
         description,
+        alternates: {
+            canonical: canonicalUrl,
+        },
         openGraph: {
             title,
             description,
-            url: `${SITE_URL}/tag/${slug}/`,
+            url: canonicalUrl,
+            type: "website",
+            siteName: SITE_NAME,
+        },
+        twitter: {
+            card: "summary_large_image",
+            title,
+            description,
         },
     }
 }

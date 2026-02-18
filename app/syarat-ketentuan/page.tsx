@@ -20,11 +20,29 @@ import {
     RefreshCw,
     Headphones,
 } from "lucide-react"
+import { SITE_NAME, SITE_URL } from "@/lib/constants"
 
 export const metadata: Metadata = {
-    title: "Syarat dan Ketentuan | Mum 'N Hun",
+    title: "Syarat dan Ketentuan",
     description:
         "Syarat dan ketentuan penyewaan freezer ASI Mum 'N Hun. Informasi lengkap tentang pembayaran, pengiriman, dan ketentuan sewa.",
+    alternates: {
+        canonical: `${SITE_URL}/syarat-ketentuan`,
+    },
+    openGraph: {
+        title: "Syarat dan Ketentuan",
+        description:
+            "Syarat dan ketentuan penyewaan freezer ASI Mum 'N Hun. Informasi lengkap tentang pembayaran, pengiriman, dan ketentuan sewa.",
+        url: `${SITE_URL}/syarat-ketentuan`,
+        type: "article",
+        siteName: SITE_NAME,
+    },
+    twitter: {
+        card: "summary_large_image",
+        title: "Syarat dan Ketentuan",
+        description:
+            "Syarat dan ketentuan penyewaan freezer ASI Mum 'N Hun. Informasi lengkap tentang pembayaran, pengiriman, dan ketentuan sewa.",
+    },
 }
 
 export default function SyaratKetentuanPage() {

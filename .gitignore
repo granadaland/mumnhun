@@ -40,3 +40,23 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local migration/backup artifacts (do not commit)
+/wordpress-backup/
+/backup.sql
+/full-backup.sql
+/internal-links-report.json
+/migration.log
+/ls la
+
+# accidental root junk artifacts from malformed copy/paste (conservative)
+/.css restored + article styles appended!*
+/ition *
+/t-style-type *
+/ *
+/olid
+
+# local assistant/editor metadata
+/.agent/
+/.kilocode/
+/.vscode/

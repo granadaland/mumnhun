@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import Image from "next/image"
 import { ChevronLeft, ChevronRight, Star, Quote } from "lucide-react"
 import { TESTIMONIALS } from "@/lib/constants"
 import { Container } from "@/components/layout/container"
@@ -77,8 +76,8 @@ export function TestimonialsSection() {
                                     key={idx}
                                     onClick={() => changeSlide(idx)}
                                     className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${idx === currentIndex
-                                            ? "bg-[#466A68] w-8"
-                                            : "bg-[#382821]/20 hover:bg-[#382821]/40"
+                                        ? "bg-[#466A68] w-8"
+                                        : "bg-[#382821]/20 hover:bg-[#382821]/40"
                                         }`}
                                     aria-label={`Go to testimonial ${idx + 1}`}
                                 />
@@ -108,20 +107,18 @@ export function TestimonialsSection() {
                     <div className="bg-white/60 backdrop-blur-2xl rounded-[3rem] p-8 md:p-16 shadow-soft border border-white/60 relative z-10 min-h-[420px] md:min-h-[350px] flex items-center">
                         <div
                             className={`flex flex-col md:flex-row gap-10 lg:gap-20 items-center w-full transition-all duration-300 ease-in-out ${isVisible
-                                    ? "opacity-100 translate-y-0"
-                                    : "opacity-0 translate-y-4"
+                                ? "opacity-100 translate-y-0"
+                                : "opacity-0 translate-y-4"
                                 }`}
                         >
-                            {/* Image Section */}
+                            {/* Avatar Section - CSS Initials */}
                             <div className="shrink-0 relative group">
                                 <div className="absolute inset-0 bg-gradient-to-tr from-[#466A68] to-[#C48B77] rounded-[2rem] blur-lg opacity-40 group-hover:opacity-60 transition-opacity" />
-                                <Image
-                                    src={testimonial.avatar}
-                                    alt={testimonial.name}
-                                    width={224}
-                                    height={224}
-                                    className="w-40 h-40 md:w-56 md:h-56 rounded-[2rem] object-cover shadow-lg border-4 border-white relative z-10 rotate-3 group-hover:rotate-0 transition-transform duration-500"
-                                />
+                                <div className="w-40 h-40 md:w-56 md:h-56 rounded-[2rem] bg-gradient-to-br from-[#466A68] to-[#2F4A48] shadow-lg border-4 border-white relative z-10 rotate-3 group-hover:rotate-0 transition-transform duration-500 flex items-center justify-center">
+                                    <span className="text-white text-5xl md:text-7xl font-bold">
+                                        {testimonial.initials}
+                                    </span>
+                                </div>
                                 <div className="absolute -bottom-5 right-0 bg-white px-4 py-2 rounded-full shadow-lg flex items-center gap-1.5 z-20 whitespace-nowrap border border-gray-100">
                                     <div className="flex text-yellow-400">
                                         {[...Array(5)].map((_, i) => (
@@ -160,8 +157,8 @@ export function TestimonialsSection() {
                                     key={idx}
                                     onClick={() => changeSlide(idx)}
                                     className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${idx === currentIndex
-                                            ? "bg-[#466A68] w-6"
-                                            : "bg-[#382821]/20"
+                                        ? "bg-[#466A68] w-6"
+                                        : "bg-[#382821]/20"
                                         }`}
                                     aria-label={`Go to testimonial ${idx + 1}`}
                                 />

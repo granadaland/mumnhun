@@ -1,5 +1,6 @@
 import Link from "next/link"
-import { Mail, Phone, MapPin, Clock, Instagram, Facebook, Twitter, Baby } from "lucide-react"
+import Image from "next/image"
+import { Mail, Phone, Instagram, Facebook, Twitter } from "lucide-react"
 import { Container } from "./container"
 import { SITE_NAME, CONTACT_INFO, WHATSAPP_LINK } from "@/lib/constants"
 
@@ -10,14 +11,15 @@ export function Footer() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 lg:gap-8">
                     {/* Column 1: Brand + Social (lg:col-span-4) */}
                     <div className="lg:col-span-4">
-                        {/* Logo */}
-                        <Link href="/" className="inline-flex items-center gap-2 mb-6">
-                            <div className="w-10 h-10 rounded-full bg-[#466A68] text-white flex items-center justify-center">
-                                <Baby size={20} strokeWidth={2} />
-                            </div>
-                            <span className="text-xl font-bold text-[#382821]">
-                                {SITE_NAME}
-                            </span>
+                        {/* Logo - same as header */}
+                        <Link href="/" className="inline-block mb-6">
+                            <Image
+                                src="https://res.cloudinary.com/dvqcs0zqi/image/upload/v1769979416/Logo_MumNhun_krpo1l.webp"
+                                alt="Mum 'N Hun Logo"
+                                width={140}
+                                height={56}
+                                className="w-[120px] h-auto object-contain"
+                            />
                         </Link>
 
                         {/* Description */}
@@ -120,25 +122,6 @@ export function Footer() {
                                 </div>
                             </div>
 
-                            {/* Address & Hours in row on large screens */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="bg-[#382821]/5 p-4 rounded-2xl">
-                                    <div className="flex items-start gap-3">
-                                        <MapPin className="h-4 w-4 text-[#466A68] mt-0.5 flex-shrink-0" />
-                                        <span className="text-sm text-[#382821]/70">
-                                            {CONTACT_INFO.address}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="bg-[#382821]/5 p-4 rounded-2xl">
-                                    <div className="flex items-start gap-3">
-                                        <Clock className="h-4 w-4 text-[#466A68] mt-0.5 flex-shrink-0" />
-                                        <span className="text-sm text-[#382821]/70">
-                                            {CONTACT_INFO.workHours}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -157,4 +140,3 @@ export function Footer() {
         </footer>
     )
 }
-

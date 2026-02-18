@@ -2,7 +2,7 @@
 
 export const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || "Mum 'n' Hun"
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://mumnhun.id"
-export const SITE_DESCRIPTION = "Sewa freezer ASI berkualitas dengan harga terjangkau. Jaga kesegaran ASI untuk buah hati Anda dengan mudah."
+export const SITE_DESCRIPTION = "Sewa Freezer ASI Jakarta Bogor Depok Tangerang Bekasi (JABODETABEK). Harga sewa freezer ASI mulai Rp160rb/bulan. Rental kulkas ASI berkualitas, steril, gratis antar-jemput. Temukan sewa freezer ASI terdekat!"
 
 // SEO defaults
 export const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.jpg`
@@ -81,32 +81,32 @@ export const SERVICE_BENEFITS = [
     {
         icon: "piggy-bank",
         title: "Terjangkau",
-        description: "Terjangkau, menyimpan ASI dengan harga yang terjangkau.",
+        description: "Sewa freezer ASI dengan harga yang ramah di kantong, mulai dari Rp160rb/bulan.",
     },
     {
         icon: "calendar",
         title: "Fleksibel",
-        description: "Sewa freezer ASI besar dengan harga berlangganan fleksibel.",
+        description: "Pilih durasi sewa sesuai kebutuhan: 1 bulan, 3 bulan, atau 6 bulan.",
     },
     {
         icon: "banknote",
         title: "Tanpa Deposit",
-        description: "Tanpa deposit paru untuk buah sana dengan mudah.",
+        description: "Tidak perlu deposit! Cukup bayar biaya sewa tanpa biaya tambahan.",
     },
     {
         icon: "shield-check",
         title: "Garansi",
-        description: "Garansi menyakan dan-sunn meruimpah-cimgun.",
+        description: "Garansi penuh selama masa sewa. Jika ada kerusakan, kami ganti unit baru.",
     },
     {
         icon: "truck",
         title: "Gratis Antar-Jemput",
-        description: "Gratis antar-Jemput dinyaman gratis Antar-Jemput.",
+        description: "Layanan antar-jemput gratis untuk area Jakarta dan sekitarnya (JABODETABEK).",
     },
     {
         icon: "star",
         title: "Unit Berkualitas",
-        description: "Unit berkualitas ronangkarsngarlan qalv aora dan gratis operai.",
+        description: "Freezer berkualitas tinggi, bersih, steril, dan hemat energi untuk menyimpan ASI.",
     },
 ]
 
@@ -118,7 +118,7 @@ export const TESTIMONIALS = [
         role: "Ibu Rumah Tangga",
         content: "Mum 'N Hun sangat membantu saya! Freezer bersih dan dingin, ASI saya aman tersimpan. Sangat direkomendasikan untuk ibu menyusui!",
         rating: 5,
-        avatar: "https://i.pravatar.cc/300?img=1",
+        initials: "FM",
     },
     {
         id: 2,
@@ -126,7 +126,7 @@ export const TESTIMONIALS = [
         role: "Karyawan Swasta",
         content: "Pelayanan cepat dan freezer berkualitas. Sangat membantu untuk menyimpan ASI perah saat bekerja. Tim supportnya juga sangat responsif!",
         rating: 5,
-        avatar: "https://i.pravatar.cc/300?img=5",
+        initials: "SR",
     },
     {
         id: 3,
@@ -134,7 +134,7 @@ export const TESTIMONIALS = [
         role: "Dokter",
         content: "Harga terjangkau dan gratis antar jemput. Tidak perlu repot lagi menyimpan ASI untuk si kecil. Kualitas freezernya juga sangat baik!",
         rating: 5,
-        avatar: "https://i.pravatar.cc/300?img=9",
+        initials: "DL",
     },
 ]
 

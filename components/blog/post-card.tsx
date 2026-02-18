@@ -33,7 +33,7 @@ export function PostCard({ post, priority = false, variant = "default" }: PostCa
     // Compact variant for sidebar/list display
     if (variant === "compact") {
         return (
-            <Link href={`/blog/${post.slug}/`}>
+            <Link href={`/${post.slug}`}>
                 <div className="flex gap-4 p-4 rounded-lg bg-cream-50 hover:bg-cream-100 transition-colors group">
                     {/* Thumbnail */}
                     <div className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-teal-100">
@@ -73,7 +73,7 @@ export function PostCard({ post, priority = false, variant = "default" }: PostCa
 
     // Default variant - full card
     return (
-        <Link href={`/blog/${post.slug}/`}>
+        <Link href={`/${post.slug}`}>
             <Card className="h-full overflow-hidden transition-all hover:shadow-lg hover:border-teal-200 cursor-pointer group">
                 {/* Featured Image */}
                 <div className="relative aspect-video overflow-hidden bg-teal-100">

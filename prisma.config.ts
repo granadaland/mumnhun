@@ -1,16 +1,7 @@
-import path from 'node:path'
-import { defineConfig } from 'prisma/config'
-import dotenv from 'dotenv'
+import 'dotenv/config'
 
-// Load environment variables
-dotenv.config()
-dotenv.config({ path: '.env.local' })
-
-export default defineConfig({
-    schema: path.join(__dirname, 'prisma', 'schema.prisma'),
-
-    // Database connection for schema push and migrations
+export default {
     datasource: {
-        url: process.env.DATABASE_URL!,
+        url: process.env.DATABASE_URL,
     },
-})
+}

@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { Poppins } from "next/font/google"
 import "./globals.css"
-import { Header, Footer } from "@/components/layout"
+import { LayoutWrapper } from "@/components/layout/layout-wrapper"
 import { SITE_NAME, SITE_DESCRIPTION, SITE_URL, DEFAULT_OG_IMAGE } from "@/lib/constants"
 
 const poppins = Poppins({
@@ -19,8 +19,9 @@ export const metadata: Metadata = {
   },
   description: SITE_DESCRIPTION,
   keywords: [
-    "parenting", "kehamilan", "bayi", "balita", "ibu", "anak",
-    "tips parenting", "tumbuh kembang", "Indonesia"
+    "sewa freezer ASI", "rental kulkas ASI", "harga sewa freezer ASI",
+    "sewa freezer ASI terdekat", "sewa freezer ASI Jakarta", "sewa freezer ASI murah",
+    "freezer ASI JABODETABEK", "penyimpanan ASI", "ASI perah", "ibu menyusui"
   ],
   authors: [{ name: SITE_NAME }],
   creator: SITE_NAME,
@@ -59,13 +60,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" className={poppins.variable}>
-      <body className="min-h-screen bg-background font-sans antialiased">
-        <div className="relative flex min-h-screen flex-col">
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </div>
+      <body className="min-h-screen bg-background font-sans antialiased overflow-x-hidden">
+        <LayoutWrapper>{children}</LayoutWrapper>
       </body>
     </html>
   )
 }
+

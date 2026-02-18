@@ -1,24 +1,28 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: '/blog/:slug',
+        destination: '/:slug',
+        permanent: true,
+      },
+    ]
+  },
+
   images: {
     remotePatterns: [
-      // WordPress media
+      // WordPress media (legacy)
       {
         protocol: 'https',
         hostname: 'mumnhun.id',
         pathname: '/wp-content/**',
       },
-      // Cloudinary
+      // Cloudinary CDN
       {
         protocol: 'https',
         hostname: 'res.cloudinary.com',
-        pathname: '/**',
-      },
-      // Pravatar (avatar placeholders)
-      {
-        protocol: 'https',
-        hostname: 'i.pravatar.cc',
         pathname: '/**',
       },
       // Unsplash (testimonial images)
@@ -28,6 +32,37 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+  },
+
+  // Security Headers
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'origin-when-cross-origin',
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block',
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()',
+          },
+        ],
+      },
+    ]
   },
 }
 

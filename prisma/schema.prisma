@@ -1,4 +1,4 @@
-// Prisma Schema for Mum'n'Hun Blog
+// Prisma Schema for Mum'n'Hun Blog + CMS
 // WordPress Migration: 306 posts, 7 categories, 401 tags
 
 generator client {
@@ -10,13 +10,14 @@ datasource db {
 }
 
 // =============================================================================
-// USER MODEL (for future admin CMS)
+// USER MODEL (Admin CMS)
 // =============================================================================
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
   name      String?
   role      Role     @default(AUTHOR)
+  avatarUrl String?  @map("avatar_url")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -37,22 +38,33 @@ enum Role {
 model Post {
   id              String      @id @default(cuid())
   title           String
-  slug            String      @unique // WordPress post_name, e.g., "tips-menyusui-bayi"
-  content         String      // HTML content from WordPress
-  excerpt         String?     // Short description
-  featuredImage   String?     @map("featured_image") // Supabase Storage URL
+  slug            String      @unique
+  content         String
+  excerpt         String?
+  featuredImage   String?     @map("featured_image")
   status          PostStatus  @default(DRAFT)
   publishedAt     DateTime?   @map("published_at")
+  scheduledAt     DateTime?   @map("scheduled_at")
   createdAt       DateTime    @default(now()) @map("created_at")
   updatedAt       DateTime    @updatedAt @map("updated_at")
+  readingTime     Int?        @map("reading_time")
   
   // WordPress metadata (for migration)
-  wpId            Int?        @unique @map("wp_id") // Original WordPress post ID
-  wpGuid          String?     @map("wp_guid") // Original WordPress GUID
+  wpId            Int?        @unique @map("wp_id")
+  wpGuid          String?     @map("wp_guid")
   
   // SEO
   metaTitle       String?     @map("meta_title")
   metaDescription String?     @map("meta_description")
+  focusKeyword    String?     @map("focus_keyword")
+  focusKeywords   String?     @map("focus_keywords")
+  canonicalUrl    String?     @map("canonical_url")
+  ogImage         String?     @map("og_image")
+  ogTitle         String?     @map("og_title")
+  ogDescription   String?     @map("og_description")
+  schemaType      String?     @map("schema_type")
+  schemaData      String?     @map("schema_data")
+  internalLinks   String?     @map("internal_links")
   
   // Relations
   authorId        String?     @map("author_id")
@@ -63,12 +75,14 @@ model Post {
   @@index([slug])
   @@index([status])
   @@index([publishedAt])
+  @@index([scheduledAt])
   @@map("posts")
 }
 
 enum PostStatus {
   DRAFT
   PUBLISHED
+  SCHEDULED
   ARCHIVED
 }
 
@@ -77,8 +91,8 @@ enum PostStatus {
 // =============================================================================
 model Category {
   id          String   @id @default(cuid())
-  name        String   // Indonesian: "Kehamilan", "Bayi", etc.
-  slug        String   @unique // URL-friendly: "kehamilan", "bayi"
+  name        String
+  slug        String   @unique
   description String?
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
@@ -144,42 +158,49 @@ model TagsOnPosts {
 // PAGE MODEL (Static pages: Petunjuk, Syarat, Kontak)
 // =============================================================================
 model Page {
-  id          String     @id @default(cuid())
-  title       String
-  slug        String     @unique // "petunjuk", "syarat-ketentuan", "kontak"
-  content     String
-  status      PostStatus @default(DRAFT)
-  publishedAt DateTime?  @map("published_at")
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
+  id              String     @id @default(cuid())
+  title           String
+  slug            String     @unique
+  content         String
+  status          PostStatus @default(DRAFT)
+  publishedAt     DateTime?  @map("published_at")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
   
   // SEO
-  metaTitle       String? @map("meta_title")
-  metaDescription String? @map("meta_description")
+  metaTitle       String?    @map("meta_title")
+  metaDescription String?    @map("meta_description")
+  focusKeyword    String?    @map("focus_keyword")
+  ogImage         String?    @map("og_image")
+  ogTitle         String?    @map("og_title")
+  ogDescription   String?    @map("og_description")
+  schemaType      String?    @map("schema_type")
+  schemaData      String?    @map("schema_data")
+  canonicalUrl    String?    @map("canonical_url")
   
   // WordPress metadata
-  wpId        Int?       @unique @map("wp_id")
+  wpId            Int?       @unique @map("wp_id")
 
   @@index([slug])
   @@map("pages")
 }
 
 // =============================================================================
-// MEDIA MODEL (Image metadata for 391MB WordPress uploads)
+// MEDIA MODEL (Image metadata)
 // =============================================================================
 model Media {
   id              String   @id @default(cuid())
-  filename        String   // Original filename
-  mimeType        String   @map("mime_type") // "image/jpeg", "image/png"
-  size            Int      // File size in bytes
-  width           Int?     // Image width
-  height          Int?     // Image height
-  alt             String?  // Alt text
+  filename        String
+  mimeType        String   @map("mime_type")
+  size            Int
+  width           Int?
+  height          Int?
+  alt             String?
   
   // URLs
-  url             String   // Supabase Storage URL
-  wpUrl           String?  @map("wp_url") // Original WordPress URL
-  wpPath          String?  @map("wp_path") // Original path: uploads/2024/01/image.jpg
+  url             String
+  wpUrl           String?  @map("wp_url")
+  wpPath          String?  @map("wp_path")
   
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
@@ -191,21 +212,115 @@ model Media {
   @@map("media")
 }
 
-// Hero section configuration
+// =============================================================================
+// HERO SECTION
+// =============================================================================
 model HeroSection {
   id              String   @id @default(cuid())
   title           String
   subtitle        String?
-  imageUrl        String?  // Cloudinary URL
-  imagePublicId   String?  // For transformations/deletion
+  imageUrl        String?
+  imagePublicId   String?
   ctaPrimaryText  String   @default("Cek Harga Sewa")
   ctaPrimaryLink  String   @default("/#pricing")
   ctaSecondaryText String? @default("Konsultasi Gratis")
   ctaSecondaryLink String?
   isActive        Boolean  @default(true)
-  order           Int      @default(0) // For slide ordering
+  order           Int      @default(0)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   
   @@map("hero_sections")
+}
+
+// =============================================================================
+// SITE SETTINGS (replaces hardcoded constants)
+// =============================================================================
+model SiteSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  type        String   @default("text")    // text, json, image, url, html
+  group       String   @default("general") // general, seo, social, footer, navigation, homepage
+  label       String?
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([group])
+  @@map("site_settings")
+}
+
+// =============================================================================
+// AI API KEYS (encrypted, rotary support — up to 5 keys)
+// =============================================================================
+model AiApiKey {
+  id          String    @id @default(cuid())
+  provider    String    @default("gemini")
+  apiKey      String    @map("api_key")
+  label       String?
+  isActive    Boolean   @default(true) @map("is_active")
+  usageCount  Int       @default(0) @map("usage_count")
+  lastUsedAt  DateTime? @map("last_used_at")
+  lastError   String?   @map("last_error")
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@map("ai_api_keys")
+}
+
+// =============================================================================
+// AI CHAT MESSAGES
+// =============================================================================
+model AiChatMessage {
+  id          String   @id @default(cuid())
+  role        String   // "user" | "assistant" | "system"
+  content     String
+  metadata    String?  // JSON: model used, tokens, etc.
+  sessionId   String   @map("session_id")
+  userId      String   @map("user_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([sessionId])
+  @@index([userId])
+  @@map("ai_chat_messages")
+}
+
+// =============================================================================
+// AI TASK QUEUE (batch operations: generate, rewrite, etc.)
+// =============================================================================
+model AiTask {
+  id          String    @id @default(cuid())
+  type        String    // generate_article, rewrite_article, seo_optimize, internal_links, scan
+  status      String    @default("pending") // pending, processing, completed, failed
+  input       String    // JSON input
+  output      String?   // JSON output/results
+  error       String?
+  progress    Int       @default(0) // 0-100
+  userId      String    @map("user_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  completedAt DateTime? @map("completed_at")
+
+  @@index([status])
+  @@index([userId])
+  @@map("ai_tasks")
+}
+
+// =============================================================================
+// SEO SCHEMAS (Structured Data / JSON-LD per page/post)
+// =============================================================================
+model SeoSchema {
+  id          String   @id @default(cuid())
+  entityType  String   @map("entity_type") // "post", "page", "homepage", "global"
+  entityId    String?  @map("entity_id")
+  schemaType  String   @map("schema_type") // "Article", "FAQPage", "LocalBusiness", etc.
+  schemaData  String   @map("schema_data") // JSON-LD content
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([entityType, entityId])
+  @@map("seo_schemas")
 }

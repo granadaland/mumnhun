@@ -18,11 +18,29 @@ import {
     Shield,
     ChevronDown,
 } from "lucide-react"
+import { SITE_NAME, SITE_URL } from "@/lib/constants"
 
 export const metadata: Metadata = {
-    title: "Petunjuk Penggunaan Freezer ASI | Mum 'N Hun",
+    title: "Petunjuk Penggunaan Freezer ASI",
     description:
         "Panduan lengkap penggunaan freezer ASI dari Mum 'N Hun. Tips penyimpanan ASI yang benar, cara defrost, dan perawatan freezer.",
+    alternates: {
+        canonical: `${SITE_URL}/petunjuk`,
+    },
+    openGraph: {
+        title: "Petunjuk Penggunaan Freezer ASI",
+        description:
+            "Panduan lengkap penggunaan freezer ASI dari Mum 'N Hun. Tips penyimpanan ASI yang benar, cara defrost, dan perawatan freezer.",
+        url: `${SITE_URL}/petunjuk`,
+        type: "article",
+        siteName: SITE_NAME,
+    },
+    twitter: {
+        card: "summary_large_image",
+        title: "Petunjuk Penggunaan Freezer ASI",
+        description:
+            "Panduan lengkap penggunaan freezer ASI dari Mum 'N Hun. Tips penyimpanan ASI yang benar, cara defrost, dan perawatan freezer.",
+    },
 }
 
 export default function PetunjukPage() {
