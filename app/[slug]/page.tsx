@@ -192,7 +192,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const ogImageUrl = post.ogImage || post.featuredImage || DEFAULT_OG_IMAGE
   const metadataKeywords = [
     post.focusKeyword,
-    ...post.tags.map((item) => item.tag.name),
+    ...post.tags.map((item: { tag: { name: string } }) => item.tag.name),
   ].filter((keyword): keyword is string => Boolean(keyword && keyword.trim()))
   const uniqueMetadataKeywords = Array.from(new Set(metadataKeywords))
   const publishedTime = post.publishedAt ? new Date(post.publishedAt).toISOString() : undefined
