@@ -138,6 +138,8 @@ function getPostThumbnail(post: { content?: string; featuredImage: string | null
   return post.featuredImage || '/images/placeholder.jpg';
 }
 
+type PostTagItem = { tag: { name: string } }
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
   const resolved = await resolvePublicSlug(slug)
@@ -192,7 +194,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const ogImageUrl = post.ogImage || post.featuredImage || DEFAULT_OG_IMAGE
   const metadataKeywords = [
     post.focusKeyword,
-    ...post.tags.map((item: { tag: { name: string } }) => item.tag.name),
+    ...post.tags.map((item: PostTagItem) => item.tag.name),
   ].filter((keyword): keyword is string => Boolean(keyword && keyword.trim()))
   const uniqueMetadataKeywords = Array.from(new Set(metadataKeywords))
   const publishedTime = post.publishedAt ? new Date(post.publishedAt).toISOString() : undefined
@@ -315,7 +317,7 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
   const seoDescription = post.metaDescription || post.excerpt || `Artikel ${post.title} di ${SITE_NAME}`
   const seoKeywords = [
     post.focusKeyword,
-    ...post.tags.map((item) => item.tag.name),
+    ...post.tags.map((item: PostTagItem) => item.tag.name),
   ].filter((keyword): keyword is string => Boolean(keyword && keyword.trim()))
   const uniqueSeoKeywords = Array.from(new Set(seoKeywords))
   const readingTime = post.readingTime ?? estimateReadingTime(post.content)
