@@ -75,7 +75,7 @@ export default function GeneralSettingsPage() {
     }
 
     const settingsConfig = [
-        { key: "site_name", label: "Nama Website", type: "text", placeholder: "Mum 'n' Hun" },
+        { key: "site_name", label: "Nama Website", type: "text", placeholder: "Mum 'N Hun" },
         { key: "site_description", label: "Deskripsi Website", type: "textarea", placeholder: "Deskripsi singkat website..." },
         { key: "site_url", label: "URL Website", type: "url", placeholder: "https://mumnhun.id" },
         { key: "site_logo", label: "Logo (Cloudinary URL)", type: "url", placeholder: "https://res.cloudinary.com/..." },
@@ -84,7 +84,7 @@ export default function GeneralSettingsPage() {
         { key: "contact_phone", label: "Nomor Telepon", type: "text", placeholder: "+62 xxx" },
         { key: "contact_whatsapp", label: "WhatsApp", type: "text", placeholder: "628xxx" },
         { key: "contact_address", label: "Alamat", type: "text", placeholder: "Jakarta, Indonesia" },
-        { key: "contact_work_hours", label: "Jam Kerja", type: "text", placeholder: "Senin - Jumat: 09:00 - 17:00 WIB" },
+        { key: "contact_work_hours", label: "Jam Kerja", type: "text", placeholder: "Setiap Hari (kecuali Jumat): 09.00 - 17.00 WIB" },
     ]
 
     return (

@@ -57,13 +57,13 @@ export function TestimonialsSection() {
                 <div className="flex flex-col md:flex-row items-end justify-between mb-16 gap-6">
                     <div className="text-center md:text-left">
                         <div className="inline-block px-4 py-1.5 rounded-full bg-[#466A68]/10 text-[#466A68] font-semibold text-sm mb-4">
-                            Cerita Sukses
+                            Mum &apos;N Hun Review
                         </div>
                         <h2 className="text-3xl md:text-5xl font-bold text-[#382821] tracking-tight mb-4">
                             Kata Mereka
                         </h2>
                         <p className="text-lg text-[#382821]/60 max-w-md">
-                            Cerita kebahagiaan dari para ibu hebat yang telah kami bantu.
+                            Cerita kebahagiaan dari para ibu hebat yang telah terbantu layanan rental freezer asi.
                         </p>
                     </div>
 
@@ -89,12 +89,14 @@ export function TestimonialsSection() {
                             <button
                                 onClick={handlePrev}
                                 className="w-14 h-14 rounded-full border border-[#382821]/10 hover:bg-[#466A68] hover:text-white hover:border-[#466A68] transition-all flex items-center justify-center text-[#382821]/60"
+                                aria-label="Lihat testimoni sebelumnya"
                             >
                                 <ChevronLeft size={24} />
                             </button>
                             <button
                                 onClick={handleNext}
                                 className="w-14 h-14 rounded-full border border-[#382821]/10 hover:bg-[#466A68] hover:text-white hover:border-[#466A68] transition-all flex items-center justify-center text-[#382821]/60"
+                                aria-label="Lihat testimoni berikutnya"
                             >
                                 <ChevronRight size={24} />
                             </button>
@@ -104,7 +106,7 @@ export function TestimonialsSection() {
 
                 <div className="relative">
                     {/* Glass Card */}
-                    <div className="bg-white/60 backdrop-blur-2xl rounded-[3rem] p-8 md:p-16 shadow-soft border border-white/60 relative z-10 min-h-[420px] md:min-h-[350px] flex items-center">
+                    <div className="bg-white/60 backdrop-blur-2xl rounded-[3rem] p-8 md:p-16 shadow-soft border border-white/60 relative z-10 min-h-[600px] md:min-h-[500px] flex items-center">
                         <div
                             className={`flex flex-col md:flex-row gap-10 lg:gap-20 items-center w-full transition-all duration-300 ease-in-out ${isVisible
                                 ? "opacity-100 translate-y-0"
@@ -132,7 +134,10 @@ export function TestimonialsSection() {
                             <div className="flex-1 text-center md:text-left relative">
                                 <Quote className="hidden md:block absolute -top-10 -left-6 text-[#466A68]/10 w-24 h-24 rotate-180" />
 
-                                <p className="text-xl md:text-3xl text-[#382821] font-medium leading-relaxed mb-8 relative z-10 tracking-tight">
+                                <p className={`text-[#382821] font-medium leading-relaxed mb-8 relative z-10 tracking-tight transition-all duration-300 ${testimonial.content.length > 200
+                                        ? "text-base md:text-xl"
+                                        : "text-xl md:text-3xl"
+                                    }`}>
                                     &ldquo;{testimonial.content}&rdquo;
                                 </p>
 
@@ -170,12 +175,14 @@ export function TestimonialsSection() {
                             <button
                                 onClick={handlePrev}
                                 className="w-12 h-12 bg-white rounded-full shadow-md flex items-center justify-center text-[#382821] active:scale-95"
+                                aria-label="Lihat testimoni sebelumnya"
                             >
                                 <ChevronLeft size={20} />
                             </button>
                             <button
                                 onClick={handleNext}
                                 className="w-12 h-12 bg-white rounded-full shadow-md flex items-center justify-center text-[#382821] active:scale-95"
+                                aria-label="Lihat testimoni berikutnya"
                             >
                                 <ChevronRight size={20} />
                             </button>
@@ -186,4 +193,3 @@ export function TestimonialsSection() {
         </section>
     )
 }
-

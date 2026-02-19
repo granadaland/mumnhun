@@ -43,9 +43,10 @@ type SitemapClientProps = {
     categories: CategoryWithPosts[]
     pages: Page[]
     tags: Tag[]
+    uncategorizedPosts: Post[]
 }
 
-export default function SitemapClient({ categories, pages, tags }: SitemapClientProps) {
+export default function SitemapClient({ categories, pages, tags, uncategorizedPosts }: SitemapClientProps) {
     // Filter categories that have at least one published post
     const activeCategories = categories.filter((cat) => cat.posts.length > 0)
 
@@ -195,6 +196,33 @@ export default function SitemapClient({ categories, pages, tags }: SitemapClient
                             ))}
                         </div>
                     </section>
+
+                    {/* Uncategorized Posts Section */}
+                    {uncategorizedPosts.length > 0 && (
+                        <section>
+                            <h2 className="text-2xl font-bold text-[#382821] mb-6 flex items-center gap-2 border-b border-gray-100 pb-2">
+                                <FileText className="text-[#466A68]" size={24} />
+                                Artikel Lainnya
+                            </h2>
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all p-6">
+                                <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
+                                    {uncategorizedPosts.map((post) => (
+                                        <li key={post.id} className="group/item">
+                                            <Link
+                                                href={`/${post.slug}`}
+                                                className="flex items-start gap-3 text-[#382821]/80 hover:text-[#466A68] transition-colors"
+                                            >
+                                                <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-300 group-hover/item:bg-[#466A68] transition-colors flex-shrink-0" />
+                                                <span className="text-sm font-medium line-clamp-2 group-hover/item:translate-x-1 transition-transform duration-300">
+                                                    {post.title}
+                                                </span>
+                                            </Link>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </section>
+                    )}
 
                     {/* 3. Tags Section */}
                     {tags.length > 0 && (

@@ -1,8 +1,45 @@
 import Link from "next/link"
 import Image from "next/image"
-import { Mail, Phone, Instagram, Facebook, Twitter } from "lucide-react"
+import { Mail, Phone, Instagram, Facebook, Twitter, Youtube } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 import { Container } from "./container"
-import { SITE_NAME, CONTACT_INFO, WHATSAPP_LINK } from "@/lib/constants"
+import { Logo } from "@/components/ui/logo"
+import { SITE_NAME, CONTACT_INFO, WHATSAPP_LINK, SOCIAL_URLS } from "@/lib/constants"
+
+type SocialLink = {
+    name: string
+    href: string | null
+    icon: LucideIcon
+}
+
+const SOCIAL_LINKS: SocialLink[] = [
+    {
+        name: "Instagram",
+        href: SOCIAL_URLS.instagram,
+        icon: Instagram,
+    },
+    {
+        name: "Facebook",
+        href: SOCIAL_URLS.facebook,
+        icon: Facebook,
+    },
+    {
+        name: "X (Twitter)",
+        href: SOCIAL_URLS.twitter,
+        icon: Twitter,
+    },
+    {
+        name: "YouTube",
+        href: SOCIAL_URLS.youtube,
+        icon: Youtube, // Need to import Youtube
+    },
+]
+
+const FOOTER_LEGAL_LINKS = [
+    { href: "/syarat-ketentuan", label: "Syarat & Ketentuan" },
+    { href: "/kontak", label: "Kontak" },
+    { href: "/sitemap", label: "Sitemap" },
+]
 
 export function Footer() {
     return (
@@ -13,13 +50,7 @@ export function Footer() {
                     <div className="lg:col-span-4">
                         {/* Logo - same as header */}
                         <Link href="/" className="inline-block mb-6">
-                            <Image
-                                src="https://res.cloudinary.com/dvqcs0zqi/image/upload/v1769979416/Logo_MumNhun_krpo1l.webp"
-                                alt="Mum 'N Hun Logo"
-                                width={140}
-                                height={56}
-                                className="w-[120px] h-auto object-contain"
-                            />
+                            <Logo className="w-[140px] h-auto" variant="default" />
                         </Link>
 
                         {/* Description */}
@@ -29,27 +60,35 @@ export function Footer() {
 
                         {/* Social Icons */}
                         <div className="flex gap-3">
-                            <Link
-                                href="#"
-                                className="w-10 h-10 rounded-full bg-[#382821] text-[#D4BCAA] flex items-center justify-center hover:bg-[#466A68] hover:-translate-y-1 transition-all shadow-lg"
-                                aria-label="Instagram"
-                            >
-                                <Instagram className="h-4 w-4" />
-                            </Link>
-                            <Link
-                                href="#"
-                                className="w-10 h-10 rounded-full bg-[#382821] text-[#D4BCAA] flex items-center justify-center hover:bg-[#466A68] hover:-translate-y-1 transition-all shadow-lg"
-                                aria-label="Facebook"
-                            >
-                                <Facebook className="h-4 w-4" />
-                            </Link>
-                            <Link
-                                href="#"
-                                className="w-10 h-10 rounded-full bg-[#382821] text-[#D4BCAA] flex items-center justify-center hover:bg-[#466A68] hover:-translate-y-1 transition-all shadow-lg"
-                                aria-label="Twitter"
-                            >
-                                <Twitter className="h-4 w-4" />
-                            </Link>
+                            {SOCIAL_LINKS.map((social) => {
+                                const Icon = social.icon
+
+                                if (!social.href) {
+                                    return (
+                                        <span
+                                            key={social.name}
+                                            aria-label={`${social.name} belum tersedia`}
+                                            title={`${social.name} segera tersedia`}
+                                            className="w-10 h-10 rounded-full bg-[#382821]/50 text-[#D4BCAA]/80 flex items-center justify-center cursor-not-allowed"
+                                        >
+                                            <Icon className="h-4 w-4" aria-hidden="true" />
+                                        </span>
+                                    )
+                                }
+
+                                return (
+                                    <Link
+                                        key={social.name}
+                                        href={social.href}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="w-10 h-10 rounded-full bg-[#382821] text-[#D4BCAA] flex items-center justify-center hover:bg-[#466A68] hover:-translate-y-1 transition-all shadow-lg"
+                                        aria-label={`Buka ${social.name}`}
+                                    >
+                                        <Icon className="h-4 w-4" aria-hidden="true" />
+                                    </Link>
+                                )
+                            })}
                         </div>
                     </div>
 
@@ -61,7 +100,7 @@ export function Footer() {
                         <ul className="space-y-3">
                             {[
                                 { href: "/#pricing", label: "Sewa Freezer ASI" },
-                                { href: "/petunjuk", label: "Petunjuk Penggunaan" },
+                                { href: "/petunjuk-pemakaian", label: "Petunjuk Penggunaan" },
                                 { href: "/syarat-ketentuan", label: "Syarat & Ketentuan" },
                                 { href: "/blog", label: "Artikel & Tips" },
                                 { href: "/kontak", label: "Kontak Kami" },
@@ -129,11 +168,14 @@ export function Footer() {
                 {/* Bottom Copyright */}
                 <div className="border-t border-[#382821]/10 pt-8 mt-12 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-[#382821]/50">
                     <p>
-                        © {new Date().getFullYear()} {SITE_NAME}. All rights reserved.
+                        &copy; {new Date().getFullYear()} Made With ❤️ {SITE_NAME}. All rights reserved.
                     </p>
                     <div className="flex gap-6">
-                        <Link href="/privacy" className="hover:text-[#466A68] transition-colors">Privacy Policy</Link>
-                        <Link href="/terms" className="hover:text-[#466A68] transition-colors">Terms of Service</Link>
+                        {FOOTER_LEGAL_LINKS.map((link) => (
+                            <Link key={link.href} href={link.href} className="hover:text-[#466A68] transition-colors">
+                                {link.label}
+                            </Link>
+                        ))}
                     </div>
                 </div>
             </Container>

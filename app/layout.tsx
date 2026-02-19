@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { Poppins } from "next/font/google"
+import { Poppins, Playfair_Display } from "next/font/google"
 import "./globals.css"
 import { LayoutWrapper } from "@/components/layout/layout-wrapper"
 import { SITE_NAME, SITE_DESCRIPTION, SITE_URL, DEFAULT_OG_IMAGE } from "@/lib/constants"
@@ -9,6 +9,14 @@ const poppins = Poppins({
   weight: ["300", "400", "500", "600", "700"],
   display: "swap",
   variable: "--font-sans",
+})
+
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800", "900"],
+  style: ["normal", "italic"],
+  display: "swap",
+  variable: "--font-serif",
 })
 
 export const metadata: Metadata = {
@@ -59,7 +67,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="id" className={poppins.variable}>
+    <html lang="id" className={`${poppins.variable} ${playfair.variable}`}>
       <body className="min-h-screen bg-background font-sans antialiased overflow-x-hidden">
         <LayoutWrapper>{children}</LayoutWrapper>
       </body>

@@ -26,7 +26,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             priority: 0.9,
         },
         {
-            url: `${SITE_URL}/petunjuk`,
+            url: `${SITE_URL}/petunjuk-pemakaian`,
             lastModified: STATIC_SITEMAP_LAST_MODIFIED.petunjuk,
             changeFrequency: "monthly" as const,
             priority: 0.5,

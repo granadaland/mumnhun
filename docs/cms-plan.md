@@ -1,4 +1,4 @@
-# Mum 'n' Hun — Custom CMS Plan
+# Mum 'N Hun — Custom CMS Plan
 
 > **Dokumen Perencanaan CMS Admin Dashboard**
 > Versi 1.0 · Februari 2026

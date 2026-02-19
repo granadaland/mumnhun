@@ -5,7 +5,8 @@ import Image from "next/image"
 import { useState, useEffect } from "react"
 import { Menu, X, MessageCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { SITE_NAME, NAV_LINKS, WHATSAPP_LINK } from "@/lib/constants"
+import { Logo } from "@/components/ui/logo"
+import { NAV_LINKS, WHATSAPP_LINK } from "@/lib/constants"
 
 export function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -29,13 +30,9 @@ export function Header() {
             >
                 {/* Logo */}
                 <Link href="/">
-                    <Image
-                        src="https://res.cloudinary.com/dvqcs0zqi/image/upload/v1769979416/Logo_MumNhun_krpo1l.webp"
-                        alt="Mum 'N Hun Logo"
-                        width={140}
-                        height={56}
-                        className="w-[100px] h-auto md:w-[130px] object-contain"
-                        priority
+                    <Logo
+                        className="w-[120px] h-auto md:w-[150px]"
+                        variant={isScrolled ? "default" : "default"} // Determine if we need light/dark variants later based on hero bg
                     />
                 </Link>
 
@@ -81,6 +78,7 @@ export function Header() {
                     size="icon"
                     className="md:hidden text-[#382821]"
                     onClick={() => setIsMenuOpen(!isMenuOpen)}
+                    aria-label={isMenuOpen ? "Tutup menu navigasi" : "Buka menu navigasi"}
                 >
                     {isMenuOpen ? (
                         <X className="h-5 w-5" />
@@ -127,4 +125,3 @@ export function Header() {
         </nav>
     )
 }
-

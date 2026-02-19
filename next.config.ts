@@ -8,6 +8,25 @@ const nextConfig: NextConfig = {
         destination: '/:slug',
         permanent: true,
       },
+      {
+        source: '/peta-situs',
+        destination: '/sitemap',
+        permanent: true,
+      },
+      {
+        source: '/petunjuk',
+        destination: '/petunjuk-pemakaian',
+        permanent: true,
+      },
+    ]
+  },
+
+  async rewrites() {
+    return [
+      {
+        source: '/sitemap',
+        destination: '/html-sitemap',
+      },
     ]
   },
 

@@ -594,7 +594,7 @@ export async function getRecommendedPosts(postId: string, categoryId: string | u
  * Get sitemap data (categories, pages, tags)
  */
 export async function getSitemapData() {
-    const [categories, pages, tags] = await Promise.all([
+    const [categories, pages, tags, uncategorizedPosts] = await Promise.all([
         prisma.category.findMany({
             orderBy: { name: "asc" },
             include: {
@@ -659,8 +659,25 @@ export async function getSitemapData() {
             orderBy: {
                 name: "asc",
             }
+        }),
+        prisma.post.findMany({
+            where: {
+                status: "PUBLISHED",
+                categories: {
+                    none: {}
+                }
+            },
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                publishedAt: true,
+            },
+            orderBy: {
+                publishedAt: "desc"
+            }
         })
     ])
 
-    return { categories, pages, tags }
+    return { categories, pages, tags, uncategorizedPosts }
 }

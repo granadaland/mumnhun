@@ -1,8 +1,8 @@
 // App-wide constants
 
-export const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || "Mum 'n' Hun"
+export const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || "Mum 'N Hun"
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://mumnhun.id"
-export const SITE_DESCRIPTION = "Sewa Freezer ASI Jakarta Bogor Depok Tangerang Bekasi (JABODETABEK). Harga sewa freezer ASI mulai Rp160rb/bulan. Rental kulkas ASI berkualitas, steril, gratis antar-jemput. Temukan sewa freezer ASI terdekat!"
+export const SITE_DESCRIPTION = "Sewa freezer ASI murah untuk wilayah Jakarta Selatan, Depok, Jakarta Timur, Jakarta Utara, Jakarta Pusat, Bogor, Tangerang, Bintaro, Bekasi, BSD"
 
 // SEO defaults
 export const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.jpg`
@@ -21,13 +21,20 @@ export const CONTACT_INFO = {
     phone: "+62 815 5332 8867",
     whatsapp: WHATSAPP_NUMBER,
     address: "Jakarta, Indonesia",
-    workHours: "Senin - Jumat: 09:00 - 17:00 WIB",
+    workHours: "Setiap Hari (kecuali Jumat): 09.00 - 17.00 WIB",
+}
+
+export const SOCIAL_URLS = {
+    facebook: "https://www.facebook.com/people/Mum-n-Hun/61561111410911/",
+    twitter: "https://x.com/mumnhun",
+    youtube: "https://www.youtube.com/@Mumnhun",
+    instagram: "https://www.instagram.com/sewafreezerasijabodetabek/",
 }
 
 // Navigation Links
 export const NAV_LINKS = [
     { href: "/", label: "Beranda" },
-    { href: "/petunjuk", label: "Petunjuk" },
+    { href: "/petunjuk-pemakaian", label: "Petunjuk" },
     { href: "/syarat-ketentuan", label: "Syarat" },
     { href: "/blog", label: "Blog" },
     { href: "/kontak", label: "Kontak" },
@@ -39,10 +46,10 @@ export const PRICING_PACKAGES = [
         id: "1-bulan",
         duration: "1 Bulan",
         price: 160000,
-        priceDisplay: "Rp160k",
+        priceDisplay: "Rp160.000",
         features: [
             "Tanpa Deposit",
-            "Gratis Antar-Jemput",
+            "Layanan Antar-Jemput",
             "Garansi Unit",
             "Konsultasi Laktasi",
         ],
@@ -52,12 +59,12 @@ export const PRICING_PACKAGES = [
         id: "3-bulan",
         duration: "3 Bulan",
         price: 325000,
-        priceDisplay: "Rp325k",
+        priceDisplay: "Rp325.000",
         features: [
             "Tanpa Deposit",
-            "Gratis Antar-Jemput",
+            "Layanan Antar-Jemput",
             "Garansi Unit",
-            "Lebih Hemat special gift",
+            "Lebih hemat",
         ],
         popular: true,
     },
@@ -65,12 +72,12 @@ export const PRICING_PACKAGES = [
         id: "6-bulan",
         duration: "6 Bulan",
         price: 550000,
-        priceDisplay: "Rp550k",
+        priceDisplay: "Rp550.000",
         features: [
-            "Max Savings",
-            "Gratis Antar-Jemput",
+            "Paket paling hemat",
+            "Layanan Antar-Jemput",
             "Garansi Unit",
-            "Priority on priority special gift",
+            "Prioritas dukungan",
         ],
         popular: false,
     },
@@ -114,27 +121,59 @@ export const SERVICE_BENEFITS = [
 export const TESTIMONIALS = [
     {
         id: 1,
-        name: "Fauzin Moenitawati",
-        role: "Ibu Rumah Tangga",
-        content: "Mum 'N Hun sangat membantu saya! Freezer bersih dan dingin, ASI saya aman tersimpan. Sangat direkomendasikan untuk ibu menyusui!",
+        name: "Zhed K",
+        role: "Pelanggan Happy",
+        content: "Respon cepat dan baik, 3 bulan pakai freezernya ga ada masalah, dan udah cari2 ini tempat sewa yang murah.. dan pastinya kalo mau sewa lagi udah pasti kesini.",
         rating: 5,
-        initials: "FM",
+        initials: "ZK",
     },
     {
         id: 2,
-        name: "Siti Rahayu",
-        role: "Karyawan Swasta",
-        content: "Pelayanan cepat dan freezer berkualitas. Sangat membantu untuk menyimpan ASI perah saat bekerja. Tim supportnya juga sangat responsif!",
+        name: "Diah Novitasari",
+        role: "Ibu Menyusui",
+        content: "dear Mum and Hun, Pak Rizky, terima kasih banyak atas jasanya, yg saya pakai selama kurang lebih 6 bulan. berkat penyewaan freezer ini, saya bisa simpan stok utk ASIP anak saya. freezernya dlm kondisi baik dan berfungsi baik, selama saya sewa, tidak ada masalah. penyewa pun profesional, sangat ramah dan customer oriented. semoga sukses selalu usahanya.",
+        rating: 5,
+        initials: "DN",
+    },
+    {
+        id: 3,
+        name: "Mellisa Arfiany Shanur",
+        role: "Pelanggan Setia",
+        content: "Saya sudah 2x sewa freezer asi di sini. Saya senang karena freezer nya yang deep freezer (buka atas), bunga es nya nggak terlalu banyak dibandingkan dengan yang buka depan, kalaupun banyak ya karena sudah berbulan2 blm dibersihkan, lalu owner nya baik, tolerance kalau saya suka telat transfer heheh.. dan yang paling utama harga sewa nya murah dibanding yang lainnya.. no need deposit, sepertinya si bapak owner memegang sistem “kepercayaan”. Alhamdulillah selalu happy. Anak pertama saya sewa sekitar 1,5tahun. Anak kedua saya sewa 1 tahun saja.. sukses selalu ya usahakanya pak..",
+        rating: 5,
+        initials: "MS",
+    },
+    {
+        id: 4,
+        name: "Annisa Septiyani",
+        role: "Ibu Menyusui",
+        content: "Tau tempat penyewaan freezer ini dari ipar dan ikutan sewa juga. Ownernya super baik, ramah banget, selalu ingetin biaya sewa dengan bahasa yg halus banget, sampe gak enak sendiri kalo belum transfer hehe. Naaah yang dicari ibu-ibu nih, AFFORDABLE RENT COST! Walaupun pengirimannya dari Depok tapi bisa juga dianter ke daerah Ciledug dengan aman.\n\nTerima kasih Mum n Hun sudah jadi tempat penyimpanan asip anak saya selama 1 tahun 1 bulan. Agak sedih sih pas mau balikin freezer. Sukses dan berkah terus untuk owner& para kurir Mum n Hun.",
+        rating: 5,
+        initials: "AS",
+    },
+    {
+        id: 5,
+        name: "Siti Rohmani",
+        role: "Pelanggan Happy",
+        content: "pertama kalinya sewa freezer disini alhamdulillah sangat terbantu..anak masih bisa full ASIP meski jauh dr ibunya yaaa walaupun ga bisa smp 2th 😥..respon owner nya sangat ramah dan cepat. terima kasih banyak next mau sewa lg disini kl ad baby lg hehehe sukses terus usaha nya aamiin..",
         rating: 5,
         initials: "SR",
     },
     {
-        id: 3,
-        name: "Dewi Lestari",
-        role: "Dokter",
-        content: "Harga terjangkau dan gratis antar jemput. Tidak perlu repot lagi menyimpan ASI untuk si kecil. Kualitas freezernya juga sangat baik!",
+        id: 6,
+        name: "Twins Fatih Fatimah",
+        role: "Ibu Bayi Kembar",
+        content: "Alhamdulillah saya bbisa berikan ASI full untuk baby kembar, krn bantuan sewa freezer dengan harga murah dan terjangkau...\nTerimakasih pelayanan baik fast respon, selama 22 bula sewa freezer tidak pernah rusak, oke Terimakasih",
         rating: 5,
-        initials: "DL",
+        initials: "TF",
+    },
+    {
+        id: 7,
+        name: "Firsia Anggraini",
+        role: "Ibu Menyusui",
+        content: "Alhamdulillah banget bisa dpt tempat penyewaan freezer yang murah banget harga nya, ga ribet harus pake banyak persyaratan, atau dp duluan. Langsung di anter bahkan di taro di ruangan yg disediain. Watt nya kecil. Kembang es nya juga sedikit. Menolong banget buat busui.",
+        rating: 5,
+        initials: "FA",
     },
 ]
 
@@ -150,7 +189,11 @@ export const FAQ_DATA = [
     },
     {
         question: "Berapa biaya antar?",
-        answer: "Gratis! Kami menyediakan layanan antar-jemput gratis untuk area Jakarta dan sekitarnya.",
+        answer: "mulai dari Rp 100.000",
+    },
+    {
+        question: "Area mana saja yang dijangkau?",
+        answer: "Kami melayani seluruh wilayah Jakarta (Selatan, Barat, Timur, Utara, Pusat), Bogor, Depok, Tangerang (termasuk Bintaro, BSD, Serpong, Tangerang Selatan, Ciputat, Cinere), dan Bekasi.",
     },
     {
         question: "Apakah perlu deposit?",

@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 }
 
 export default async function SitemapPage() {
-    const categories = await getSitemapData()
+    const { categories, pages, tags, uncategorizedPosts } = await getSitemapData()
 
-    return <SitemapClient categories={categories} />
+    return <SitemapClient categories={categories} pages={pages} tags={tags} uncategorizedPosts={uncategorizedPosts} />
 }

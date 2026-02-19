@@ -1,68 +1,115 @@
 import { Container } from "@/components/layout"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { BenefitCard, FaqAccordion } from "@/components/home"
 import { TestimonialsSection } from "@/components/home/testimonials-section"
-import { PostCard } from "@/components/blog/post-card"
-import { HeroSlider } from "@/components/hero-slider"
 import { HeroImageSlider } from "@/components/hero-image-slider"
 import { getPosts } from "@/lib/db/queries"
 import {
+  DEFAULT_OG_IMAGE,
   PRICING_PACKAGES,
   SERVICE_BENEFITS,
   FAQ_DATA,
+  TESTIMONIALS,
   WHATSAPP_LINK,
+  WHATSAPP_NUMBER,
   SITE_URL,
   SITE_NAME,
   CONTACT_INFO,
 } from "@/lib/constants"
 import Image from "next/image"
 import Link from "next/link"
-import { Star, ShieldCheck, ArrowRight } from "lucide-react"
-import { Metadata } from "next"
+import { Star, ShieldCheck, ArrowRight, MessageCircle, Clock3 } from "lucide-react"
+import type { Metadata } from "next"
+
+const RENTAL_STEPS = [
+  {
+    title: "Konsultasi via WhatsApp",
+    description:
+      "Klik tombol WhatsApp, sampaikan kebutuhan Anda, lalu tim kami bantu pilih paket sewa freezer ASI yang paling sesuai.",
+  },
+  {
+    title: "Konfirmasi Paket & Jadwal",
+    description:
+      "Setelah paket dipilih, kami konfirmasi area layanan, jadwal antar, dan detail pembayaran secara transparan.",
+  },
+  {
+    title: "Freezer Diantar & Siap Pakai",
+    description:
+      "Unit steril kami antar ke rumah. Anda tinggal pakai dengan tenang, termasuk dukungan selama masa sewa.",
+  },
+]
+
+const rupiahFormatter = new Intl.NumberFormat("id-ID")
+type LatestPost = Awaited<ReturnType<typeof getPosts>>["posts"][number]
+
+function getPackageWhatsAppLink(duration: string, priceDisplay: string) {
+  const message = `Halo, saya ingin sewa freezer ASI paket ${duration} (${priceDisplay}). Mohon info jadwal pengiriman dan cara pembayarannya.`
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`
+}
 
 // Homepage-specific SEO metadata
 export const metadata: Metadata = {
-  title: "Sewa Freezer ASI Bulanan Jabodetabek",
+  title: "Sewa Freezer ASI | Rental Kulkas ASI Bulanan | Mum 'N Hun",
   description:
-    "Sewa Freezer ASI bulanan untuk Jakarta, Bogor, Depok, Tangerang, dan Bekasi. Unit steril, hemat energi, gratis antar-jemput, dan dukungan cepat untuk ibu menyusui.",
+    "Sewa freezer ASI murah untuk wilayah Jakarta Selatan, Depok, Jakarta Timur, Jakarta Utara, Jakarta Pusat, Bogor, Tangerang, Bintaro, Bekasi, BSD",
   keywords: [
     "Sewa Freezer ASI",
-    "Sewa Freezer ASI Terdekat",
     "Rental Kulkas ASI",
     "Sewa Freezer ASI Bulanan",
+    "Sewa Freezer ASI Terdekat",
+    "Sewa Freezer ASI Jakarta",
+    "Sewa Freezer ASI Jabodetabek",
   ],
+  alternates: {
+    canonical: `${SITE_URL}/`,
+  },
   openGraph: {
-    title: "Sewa Freezer ASI Bulanan Jabodetabek",
+    title: "Sewa Freezer ASI | Rental Kulkas ASI Bulanan | Mum 'N Hun",
     description:
-      "Layanan sewa freezer ASI steril dan terawat dengan pengiriman cepat area Jabodetabek.",
-    url: SITE_URL,
+      "Sewa freezer ASI murah untuk wilayah Jakarta Selatan, Depok, Jakarta Timur, Jakarta Utara, Jakarta Pusat, Bogor, Tangerang, Bintaro, Bekasi, BSD",
+    url: `${SITE_URL}/`,
     type: "website",
     siteName: SITE_NAME,
+    locale: "id_ID",
+    images: [
+      {
+        url: DEFAULT_OG_IMAGE,
+        width: 1200,
+        height: 630,
+        alt: "Sewa Freezer ASI Bulanan Jabodetabek",
+      },
+    ],
   },
-  alternates: {
-    canonical: SITE_URL,
+  twitter: {
+    card: "summary_large_image",
+    title: "Sewa Freezer ASI | Rental Kulkas ASI",
+    description:
+      "Sewa freezer ASI terdekat area Jabodetabek. Unit steril, garansi unit, dan respon WhatsApp cepat.",
+    images: [DEFAULT_OG_IMAGE],
   },
-}
-
-async function getHeroSlides() {
-  try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/hero`, {
-      next: { revalidate: 3600 } // Cache for 1 hour
-    })
-    if (!res.ok) return []
-    return res.json()
-  } catch (error) {
-    console.error('Failed to fetch hero slides:', error)
-    return []
-  }
 }
 
 export default async function HomePage() {
-  const [slides, { posts: latestPosts }] = await Promise.all([
-    getHeroSlides(),
-    getPosts({ page: 1, limit: 3 })
-  ])
+  const { posts: latestPosts } = await getPosts({ page: 1, limit: 3 })
+
+  const averageRating = Number(
+    (
+      TESTIMONIALS.reduce((total, testimonial) => total + testimonial.rating, 0) /
+      TESTIMONIALS.length
+    ).toFixed(1)
+  )
+  const pricingOffers = PRICING_PACKAGES.map((pkg) => ({
+    "@type": "Offer",
+    name: `Paket Sewa ${pkg.duration}`,
+    price: pkg.price,
+    priceCurrency: "IDR",
+    availability: "https://schema.org/InStock",
+    url: `${SITE_URL}/#pricing`,
+    itemOffered: {
+      "@type": "Service",
+      name: `Sewa Freezer ASI ${pkg.duration}`,
+    },
+  }))
 
   const websiteJsonLd = {
     "@context": "https://schema.org",
@@ -77,11 +124,35 @@ export default async function HomePage() {
     },
   }
 
-  const organizationJsonLd = {
+  const localBusinessJsonLd = {
     "@context": "https://schema.org",
-    "@type": "Organization",
+    "@type": "LocalBusiness",
     name: SITE_NAME,
     url: SITE_URL,
+    image: [DEFAULT_OG_IMAGE],
+    description:
+      "Sewa freezer ASI murah untuk wilayah Jakarta Selatan, Depok, Jakarta Timur, Jakarta Utara, Jakarta Pusat, Bogor, Tangerang, Bintaro, Bekasi, BSD",
+    telephone: CONTACT_INFO.phone,
+    email: CONTACT_INFO.email,
+    areaServed: [
+      "Jakarta",
+      "Bogor",
+      "Depok",
+      "Tangerang",
+      "Bekasi",
+      "Jakarta Selatan",
+      "Jakarta Barat",
+      "Jakarta Timur",
+      "Jakarta Utara",
+      "Jakarta Pusat",
+      "BSD",
+      "Bintaro",
+      "Serpong",
+      "Cinere",
+      "Tangerang Selatan",
+      "Ciputat",
+    ],
+    priceRange: "Rp160.000 - Rp550.000",
     contactPoint: [
       {
         "@type": "ContactPoint",
@@ -91,11 +162,61 @@ export default async function HomePage() {
         availableLanguage: ["id"],
       },
     ],
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: averageRating,
+      reviewCount: TESTIMONIALS.length,
+    },
+    makesOffer: pricingOffers,
     address: {
       "@type": "PostalAddress",
       addressLocality: "Jakarta",
       addressCountry: "ID",
     },
+  }
+
+  const serviceJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    name: "Sewa Freezer ASI Bulanan",
+    serviceType: "Rental Kulkas ASI",
+    provider: {
+      "@type": "LocalBusiness",
+      name: SITE_NAME,
+      url: SITE_URL,
+    },
+    areaServed: [
+      "Jakarta",
+      "Bogor",
+      "Depok",
+      "Tangerang",
+      "Bekasi",
+      "Jakarta Selatan",
+      "Jakarta Barat",
+      "Jakarta Timur",
+      "Jakarta Utara",
+      "Jakarta Pusat",
+      "BSD",
+      "Bintaro",
+      "Serpong",
+      "Cinere",
+      "Tangerang Selatan",
+      "Ciputat",
+    ],
+    offers: pricingOffers,
+  }
+
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: FAQ_DATA.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.answer,
+      },
+    })),
   }
 
   return (
@@ -106,7 +227,15 @@ export default async function HomePage() {
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
       {/* ═══════════════════════════════════════════════════════ */}
@@ -153,9 +282,9 @@ export default async function HomePage() {
 
               {/* Hero Description */}
               <p className="text-[#382821]/70 text-lg md:text-xl mb-10 leading-relaxed max-w-xl mx-auto lg:mx-0 font-light">
-                Layanan sewa freezer ASI premium untuk ibu yang mencari sewa
-                freezer ASI terdekat di Jabodetabek. Unit steril, hemat energi,
-                dan pengiriman cepat.
+                Layanan <strong className="font-semibold text-[#382821]">rental kulkas ASI</strong> untuk ibu yang mencari
+                <strong className="font-semibold text-[#382821]"> sewa freezer ASI terdekat</strong> area Jabodetabek.
+                Unit steril, hemat energi, dan siap antar cepat. Lihat juga <Link href="#pricing" className="underline decoration-[#466A68]/50 underline-offset-4 hover:text-[#466A68]">paket sewa freezer ASI bulanan</Link> yang paling hemat.
               </p>
 
               {/* CTA Buttons */}
@@ -165,10 +294,12 @@ export default async function HomePage() {
                   className="group w-full sm:w-auto bg-[#466A68] hover:bg-[#2F4A48] text-white px-8 py-4 rounded-full font-semibold transition-all duration-300 shadow-lg shadow-[#466A68]/30 hover:shadow-[#466A68]/50 hover:-translate-y-1 flex items-center justify-center gap-3"
                   asChild
                 >
-                  <Link href={WHATSAPP_LINK}>
-                    Cek Harga Sewa
+                  <Link href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" aria-label="Hubungi WhatsApp untuk sewa freezer ASI">
+                    <MessageCircle size={18} aria-hidden="true" />
+                    Sewa via WhatsApp
                     <ArrowRight
                       size={18}
+                      aria-hidden="true"
                       className="group-hover:translate-x-1 transition-transform"
                     />
                   </Link>
@@ -179,18 +310,29 @@ export default async function HomePage() {
                   className="w-full sm:w-auto bg-white/50 border border-white hover:bg-white text-[#382821] px-8 py-4 rounded-full font-semibold transition-all shadow-md hover:shadow-lg backdrop-blur-sm"
                   asChild
                 >
-                  <Link href={WHATSAPP_LINK}>Konsultasi Gratis</Link>
+                  <Link href="#pricing" aria-label="Lihat harga sewa freezer ASI bulanan">
+                    Lihat Harga Bulanan
+                  </Link>
                 </Button>
               </div>
 
+              <p className="mt-4 text-sm text-[#382821]/60">
+                Butuh detail lengkap? Lihat <Link href="/petunjuk" className="font-medium underline decoration-[#466A68]/50 underline-offset-4 hover:text-[#466A68]">petunjuk penggunaan freezer ASI</Link> dan <Link href="/syarat-ketentuan" className="font-medium underline decoration-[#466A68]/50 underline-offset-4 hover:text-[#466A68]">syarat & ketentuan sewa</Link>.
+              </p>
+
               {/* Trust Indicators */}
-              <div className="mt-10 flex items-center justify-center lg:justify-start gap-6 text-sm text-[#382821]/60">
+              <div className="mt-10 flex flex-wrap items-center justify-center lg:justify-start gap-x-6 gap-y-3 text-sm text-[#382821]/70">
                 <div className="flex items-center gap-2">
-                  <ShieldCheck size={18} className="text-[#466A68]" />
-                  <span>Garansi Unit</span>
+                  <Clock3 size={18} className="text-[#466A68]" aria-hidden="true" />
+                  <span>Respon WhatsApp ±5 Menit (jam kerja)</span>
                 </div>
-                <div className="w-1 h-1 bg-[#382821]/20 rounded-full" />
-                <div>700+ Pelanggan Happy</div>
+                <div className="w-1 h-1 bg-[#382821]/20 rounded-full hidden sm:block" />
+                <div className="flex items-center gap-2">
+                  <ShieldCheck size={18} className="text-[#466A68]" aria-hidden="true" />
+                  <span>Garansi unit selama masa sewa</span>
+                </div>
+                <div className="w-1 h-1 bg-[#382821]/20 rounded-full hidden md:block" />
+                <div>10k+ ibu terbantu</div>
               </div>
             </div>
 
@@ -220,7 +362,7 @@ export default async function HomePage() {
                         ))}
                       </div>
                       <span className="text-xs font-bold text-[#382821]">
-                        4.9/5.0 Rating
+                        4.7/5.0 dari 5k+ review
                       </span>
                     </div>
                   </div>
@@ -246,6 +388,38 @@ export default async function HomePage() {
               </div>
             </div>
           </div>
+        </Container>
+      </section>
+
+
+      {/* ═══════════════════════════════════════════════════════ */}
+      {/* SECTION: CARA SEWA - 3 LANGKAH                         */}
+      {/* ═══════════════════════════════════════════════════════ */}
+      <section className="py-16 md:py-20 px-6 bg-[#FFFBF7]" aria-labelledby="cara-sewa-title">
+        <Container>
+          <div className="text-center max-w-3xl mx-auto mb-12">
+            <h2 id="cara-sewa-title" className="text-3xl md:text-4xl font-bold text-[#382821] tracking-tight">
+              Cara Sewa Freezer ASI dalam 3 Langkah
+            </h2>
+            <p className="mt-4 text-[#382821]/70 leading-relaxed">
+              Proses simpel, cepat, dan jelas agar Anda bisa fokus pada kebutuhan Si Kecil tanpa ribet.
+            </p>
+          </div>
+
+          <ol className="grid md:grid-cols-3 gap-6 lg:gap-8">
+            {RENTAL_STEPS.map((step, index) => (
+              <li
+                key={step.title}
+                className="rounded-3xl border border-[#382821]/10 bg-white/80 backdrop-blur-sm p-6 lg:p-8 shadow-sm"
+              >
+                <span className="inline-flex w-10 h-10 items-center justify-center rounded-full bg-[#466A68] text-white font-bold mb-4">
+                  {index + 1}
+                </span>
+                <h3 className="text-xl font-bold text-[#382821] mb-3">{step.title}</h3>
+                <p className="text-[#382821]/70 leading-relaxed">{step.description}</p>
+              </li>
+            ))}
+          </ol>
         </Container>
       </section>
 
@@ -300,23 +474,31 @@ export default async function HomePage() {
                   <strong className="text-[#382821]">sewa freezer ASI</strong> terpercaya, Mum &apos;N Hun menyediakan unit freezer khusus yang dirancang untuk menjaga nutrisi dan kesegaran ASI perah dalam jangka panjang.
                 </p>
                 <p>
-                  Kami melayani pengiriman <strong className="text-[#382821]">sewa freezer ASI Jakarta</strong>, Bogor, Depok, Tangerang, dan Bekasi. Lebih dari <strong className="text-[#382821]">700 ibu menyusui</strong> telah mempercayakan penyimpanan ASI mereka kepada kami.
+                  Kami melayani pengiriman <strong className="text-[#382821]">sewa freezer ASI Jakarta</strong>, Bogor, Depok, Tangerang, dan Bekasi. Lebih dari <strong className="text-[#382821]">10.000+ ibu menyusui</strong> telah mempercayakan penyimpanan ASI mereka kepada kami.
                 </p>
               </div>
 
-              {/* Stats Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-6 pt-8 border-t border-[#382821]/10">
-                <div className="text-center lg:text-left">
+            </div>
+          </div>
+
+          {/* Stats Row - Full Width Under Video & About Content */}
+          <div className="mt-12 lg:mt-14 pt-8 border-t border-[#382821]/10">
+            <div className="rounded-[2rem] bg-gradient-to-br from-white/80 via-[#FFF9F4]/85 to-[#F4EEE7]/75 backdrop-blur-sm border border-white/80 shadow-lg shadow-stone-200/40 p-4 sm:p-5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                <div className="rounded-2xl bg-gradient-to-br from-[#FFF9F4] via-white to-[#F4EEE7] px-5 py-5 text-center border border-[#C48B77]/20 shadow-sm shadow-[#C48B77]/10">
+                  <span className="mx-auto mb-3 block h-1.5 w-14 rounded-full bg-gradient-to-r from-[#C48B77]/75 to-[#E8DDD4]/80" />
                   <p className="text-3xl md:text-4xl font-bold text-[#382821]">2010</p>
-                  <p className="text-sm text-[#382821]/50 font-medium">Berdiri Sejak</p>
+                  <p className="mt-1 text-sm text-[#382821]/55 font-medium">Berdiri Sejak</p>
                 </div>
-                <div className="text-center lg:text-left sm:border-l border-[#382821]/10 sm:pl-6">
-                  <p className="text-3xl md:text-4xl font-bold text-[#382821]">700+</p>
-                  <p className="text-sm text-[#382821]/50 font-medium">Ibu Terbantu</p>
+                <div className="rounded-2xl bg-gradient-to-br from-[#F6FAF9] via-white to-[#EAF3F2] px-5 py-5 text-center border border-[#466A68]/20 shadow-sm shadow-[#466A68]/10">
+                  <span className="mx-auto mb-3 block h-1.5 w-14 rounded-full bg-gradient-to-r from-[#466A68]/75 to-[#9CB9B7]/80" />
+                  <p className="text-3xl md:text-4xl font-bold text-[#382821]">10k+</p>
+                  <p className="mt-1 text-sm text-[#382821]/55 font-medium">Ibu Terbantu</p>
                 </div>
-                <div className="text-center lg:text-left sm:border-l border-[#382821]/10 sm:pl-6">
-                  <p className="text-xl md:text-3xl font-bold text-[#382821] break-all sm:break-normal">JABODETABEK</p>
-                  <p className="text-sm text-[#382821]/50 font-medium">Area Layanan</p>
+                <div className="rounded-2xl bg-gradient-to-br from-[#FFFDF8] via-white to-[#F2EADF] px-5 py-5 text-center border border-[#B08A79]/20 shadow-sm shadow-[#C48B77]/10">
+                  <span className="mx-auto mb-3 block h-1.5 w-14 rounded-full bg-gradient-to-r from-[#466A68]/65 to-[#C48B77]/70" />
+                  <p className="text-2xl md:text-3xl font-bold text-[#382821] leading-tight">Jabodetabek</p>
+                  <p className="mt-1 text-sm text-[#382821]/55 font-medium">Area Layanan</p>
                 </div>
               </div>
             </div>
@@ -357,7 +539,7 @@ export default async function HomePage() {
       {/* ═══════════════════════════════════════════════════════ */}
       {/* SECTION 3: PRICING - 3 Horizontal Cards                */}
       {/* ═══════════════════════════════════════════════════════ */}
-      <section className="py-20 md:py-24 px-6 relative bg-white/40 overflow-hidden">
+      <section id="pricing" className="py-20 md:py-24 px-6 relative bg-white/40 overflow-hidden" aria-labelledby="pricing-title">
         {/* Background Decor */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] bg-[#466A68]/5 blur-[120px] rounded-full -z-10" />
 
@@ -366,9 +548,12 @@ export default async function HomePage() {
             <div className="inline-block px-4 py-1.5 rounded-full bg-[#C48B77]/10 text-[#C48B77] font-semibold text-sm mb-4">
               Harga Transparan
             </div>
-            <h2 className="text-3xl md:text-5xl font-bold text-[#382821] tracking-tight">
-              Pilihan Paket Sewa
+            <h2 id="pricing-title" className="text-3xl md:text-5xl font-bold text-[#382821] tracking-tight">
+              Pilihan Paket Sewa Freezer ASI Bulanan
             </h2>
+            <p className="mt-4 max-w-2xl mx-auto text-[#382821]/70 leading-relaxed">
+              Harga jelas tanpa biaya tersembunyi. Pilih paket yang paling sesuai dengan kebutuhan penyimpanan ASI Anda.
+            </p>
           </div>
 
           {/* 3 Pricing Cards in Flex Row */}
@@ -377,7 +562,7 @@ export default async function HomePage() {
               <div
                 key={pkg.id}
                 className={`relative flex flex-col w-full md:w-1/3 max-w-sm rounded-[2.5rem] p-8 lg:p-10 transition-all duration-500 group ${pkg.popular
-                  ? "bg-white/90 backdrop-blur-xl ring-4 ring-[#466A68]/10 shadow-2xl shadow-[#466A68]/10 scale-100 md:scale-110 z-10"
+                  ? "bg-white/90 backdrop-blur-xl ring-4 ring-[#466A68]/10 shadow-2xl shadow-[#466A68]/10 scale-100 md:scale-110 z-10 pt-16 md:pt-14"
                   : "bg-white/80 backdrop-blur-md border border-white shadow-sm hover:border-[#466A68]/30 hover:bg-white hover:shadow-xl hover:-translate-y-2"
                   }`}
               >
@@ -399,8 +584,9 @@ export default async function HomePage() {
                     Rp
                   </span>
                   <span className="text-4xl lg:text-5xl font-bold tracking-tight text-[#382821]">
-                    {pkg.priceDisplay.replace("Rp", "").replace(/\s/g, "")}
+                    {rupiahFormatter.format(pkg.price)}
                   </span>
+                  <p className="text-sm text-[#382821]/60 mt-2">per paket sewa</p>
                 </div>
 
                 {/* Features */}
@@ -440,7 +626,14 @@ export default async function HomePage() {
                     }`}
                   asChild
                 >
-                  <Link href={WHATSAPP_LINK}>Pilih Paket</Link>
+                  <Link
+                    href={getPackageWhatsAppLink(pkg.duration, pkg.priceDisplay)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Pilih paket sewa ${pkg.duration} via WhatsApp`}
+                  >
+                    Pilih Paket
+                  </Link>
                 </Button>
               </div>
             ))}
@@ -497,7 +690,7 @@ export default async function HomePage() {
               </div>
               <div className="space-y-4">
                 {latestPosts.length > 0 ? (
-                  latestPosts.slice(0, 3).map((post: any) => (
+                  latestPosts.slice(0, 3).map((post: LatestPost) => (
                     <Link
                       key={post.id}
                       href={`/${post.slug}`}

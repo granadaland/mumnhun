@@ -25,13 +25,13 @@ export const metadata: Metadata = {
     description:
         "Panduan lengkap penggunaan freezer ASI dari Mum 'N Hun. Tips penyimpanan ASI yang benar, cara defrost, dan perawatan freezer.",
     alternates: {
-        canonical: `${SITE_URL}/petunjuk`,
+        canonical: `${SITE_URL}/petunjuk-pemakaian`,
     },
     openGraph: {
         title: "Petunjuk Penggunaan Freezer ASI",
         description:
             "Panduan lengkap penggunaan freezer ASI dari Mum 'N Hun. Tips penyimpanan ASI yang benar, cara defrost, dan perawatan freezer.",
-        url: `${SITE_URL}/petunjuk`,
+        url: `${SITE_URL}/petunjuk-pemakaian`,
         type: "article",
         siteName: SITE_NAME,
     },

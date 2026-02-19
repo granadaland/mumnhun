@@ -3,7 +3,7 @@ import { Mail, MapPin, Clock, MessageCircle, ArrowRight, Instagram, Facebook, Yo
 import { Container } from "@/components/layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { SITE_NAME, SITE_URL } from "@/lib/constants"
+import { SITE_NAME, SITE_URL, CONTACT_INFO, SOCIAL_URLS } from "@/lib/constants"
 import Link from "next/link"
 
 export const metadata: Metadata = {
@@ -81,7 +81,7 @@ export default function KontakPage() {
                                     <div>
                                         <h3 className="font-bold text-[#382821] text-lg mb-1">Jam Operasional</h3>
                                         <p className="text-[#382821]/60 text-sm mb-2">Layanan Customer Service</p>
-                                        <p className="text-[#382821] font-medium">Senin - Jumat: 09:00 - 17:00 WIB</p>
+                                        <p className="text-[#382821] font-medium">{CONTACT_INFO.workHours}</p>
                                     </div>
                                 </div>
                             </div>
@@ -95,13 +95,13 @@ export default function KontakPage() {
                                     Ikuti kami untuk tips harian seputar parenting dan ASI.
                                 </p>
                                 <div className="flex gap-4 relative z-10">
-                                    <a href="#" className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center hover:bg-white hover:text-[#466A68] transition-all">
+                                    <a href={SOCIAL_URLS.instagram || "#"} className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center hover:bg-white hover:text-[#466A68] transition-all">
                                         <Instagram className="w-5 h-5" />
                                     </a>
-                                    <a href="#" className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center hover:bg-white hover:text-[#466A68] transition-all">
+                                    <a href={SOCIAL_URLS.facebook} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center hover:bg-white hover:text-[#466A68] transition-all">
                                         <Facebook className="w-5 h-5" />
                                     </a>
-                                    <a href="#" className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center hover:bg-white hover:text-[#466A68] transition-all">
+                                    <a href={SOCIAL_URLS.youtube} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center hover:bg-white hover:text-[#466A68] transition-all">
                                         <Youtube className="w-5 h-5" />
                                     </a>
                                 </div>
