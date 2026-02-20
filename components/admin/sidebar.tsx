@@ -141,30 +141,30 @@ export function AdminSidebar() {
     }
 
     const SidebarContent = () => (
-        <div className="flex flex-col h-full bg-[#1A1513]">
+        <div className="flex flex-col h-full bg-white relative z-10">
             {/* Logo */}
-            <div className="flex items-center justify-between px-4 h-16 border-b border-[#D4BCAA]/10">
+            <div className="flex items-center justify-between px-4 h-16 border-b border-[#D4BCAA]/20">
                 {!collapsed && (
                     <Link href="/admin" className="flex items-center gap-3 group">
-                        <div className="w-8 h-8 bg-gradient-to-br from-[#466A68] to-[#2F4A48] rounded-lg flex items-center justify-center shadow-lg group-hover:shadow-[#466A68]/20 transition-all">
-                            <span className="text-white font-bold text-sm">M</span>
+                        <div className="w-8 h-8 bg-[#466A68] text-white rounded-lg flex items-center justify-center shadow-md shadow-[#466A68]/20 group-hover:scale-105 transition-transform duration-200">
+                            <span className="font-bold text-sm">M</span>
                         </div>
                         <div className="flex flex-col">
-                            <span className="font-bold text-[#F9F6F0] text-sm leading-tight">Admin Console</span>
-                            <span className="text-[10px] text-[#A89A8E]">Mum &apos;n Hun</span>
+                            <span className="font-bold text-[#0F0A09] text-sm leading-tight tracking-tight">Admin Console</span>
+                            <span className="text-[10px] font-medium text-[#8C7A6B]">Mum &apos;n Hun</span>
                         </div>
                     </Link>
                 )}
                 {collapsed && (
-                    <Link href="/admin" className="mx-auto mt-2 block">
-                        <div className="w-8 h-8 bg-gradient-to-br from-[#466A68] to-[#2F4A48] rounded-lg flex items-center justify-center shadow-lg">
-                            <span className="text-white font-bold text-sm">M</span>
+                    <Link href="/admin" className="mx-auto mt-2 block group">
+                        <div className="w-8 h-8 bg-[#466A68] text-white rounded-lg flex items-center justify-center shadow-md shadow-[#466A68]/20 group-hover:scale-105 transition-transform duration-200">
+                            <span className="font-bold text-sm">M</span>
                         </div>
                     </Link>
                 )}
                 <button
                     onClick={() => setCollapsed(!collapsed)}
-                    className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg text-[#A89A8E] hover:text-[#F9F6F0] hover:bg-[#D4BCAA]/10 transition-all"
+                    className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg text-[#8C7A6B] hover:text-[#0F0A09] hover:bg-[#F9F6F0] transition-colors"
                 >
                     {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
                 </button>
@@ -172,20 +172,20 @@ export function AdminSidebar() {
 
             {/* Search */}
             {!collapsed && (
-                <div className="px-4 pt-4 pb-2">
-                    <div className="flex items-center gap-2 px-3 py-2 bg-[#0F0A09] rounded-lg border border-[#D4BCAA]/10 hover:border-[#D4BCAA]/30 transition-colors focus-within:border-[#466A68] focus-within:ring-1 focus-within:ring-[#466A68]/50">
-                        <Search className="h-4 w-4 text-[#A89A8E]" />
+                <div className="px-4 pt-5 pb-3">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-[#F9F6F0] rounded-lg border border-transparent hover:border-[#D4BCAA]/40 transition-colors focus-within:bg-white focus-within:border-[#466A68] focus-within:ring-2 focus-within:ring-[#466A68]/10 shadow-inner">
+                        <Search className="h-4 w-4 text-[#8C7A6B]" />
                         <input
                             type="text"
                             placeholder="Cari menu..."
-                            className="bg-transparent text-sm text-[#F9F6F0] placeholder-[#A89A8E]/60 outline-none w-full"
+                            className="bg-transparent text-sm text-[#0F0A09] placeholder-[#8C7A6B] outline-none w-full font-medium"
                         />
                     </div>
                 </div>
             )}
 
             {/* Navigation */}
-            <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5 no-scrollbar">
+            <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-2 no-scrollbar">
                 {navGroups.map((group) => {
                     const isOpen = openGroups[group.id] || false
                     const hasActiveChild = group.items.some(item => isActive(item.href))
@@ -196,9 +196,9 @@ export function AdminSidebar() {
                             <button
                                 onClick={() => toggleGroup(group.id)}
                                 className={cn(
-                                    "w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors",
+                                    "w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors",
                                     collapsed ? "justify-center" : "",
-                                    hasActiveChild ? "text-[#466A68]" : "text-[#A89A8E]/70 hover:text-[#A89A8E]"
+                                    hasActiveChild ? "text-[#466A68]" : "text-[#8C7A6B] hover:text-[#0F0A09]"
                                 )}
                                 title={collapsed ? group.title : undefined}
                             >
@@ -216,7 +216,7 @@ export function AdminSidebar() {
                             <div className={cn(
                                 "space-y-0.5 overflow-hidden transition-all duration-200 ease-in-out",
                                 !collapsed && isOpen ? "max-h-96 mt-1" : "max-h-0",
-                                collapsed && "max-h-none opacity-100 mt-1" // Always show icons if collapsed (or hide them based on preference, let's keep them hidden if collapsed unless hovered, but usually collapsed means show all icons. Actually let's just show all items as icons if collapsed)
+                                collapsed && "max-h-none opacity-100 mt-1"
                             )}>
                                 {(isOpen || collapsed) && group.items.map((item) => {
                                     const active = isActive(item.href)
@@ -226,31 +226,31 @@ export function AdminSidebar() {
                                             href={item.href}
                                             onClick={() => setMobileOpen(false)}
                                             className={cn(
-                                                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all group relative",
+                                                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all group relative font-medium",
                                                 active
-                                                    ? "bg-[#466A68]/15 text-[#466A68] font-medium"
-                                                    : "text-[#A89A8E] hover:text-[#F9F6F0] hover:bg-[#D4BCAA]/5"
+                                                    ? "bg-[#466A68]/10 text-[#466A68]"
+                                                    : "text-[#8C7A6B] hover:text-[#0F0A09] hover:bg-[#F9F6F0]"
                                             )}
                                             title={collapsed ? item.label : undefined}
                                         >
-                                            <span className={cn("shrink-0 transition-colors", active ? "text-[#466A68]" : "text-[#A89A8E] group-hover:text-[#D4BCAA]/80")}>
+                                            <span className={cn("shrink-0 transition-colors", active ? "text-[#466A68]" : "text-[#8C7A6B] group-hover:text-[#466A68]")}>
                                                 {item.icon}
                                             </span>
                                             {!collapsed && (
                                                 <>
                                                     <span className="truncate">{item.label}</span>
                                                     {item.badge && (
-                                                        <span className="ml-auto px-1.5 py-0.5 text-[10px] font-bold bg-[#466A68]/20 text-[#466A68] rounded-md border border-[#466A68]/30">
+                                                        <span className="ml-auto px-1.5 py-0.5 text-xs font-bold bg-[#466A68]/10 text-[#466A68] rounded-md border border-[#466A68]/20 shadow-sm leading-none">
                                                             {item.badge}
                                                         </span>
                                                     )}
                                                 </>
                                             )}
                                             {active && !collapsed && (
-                                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#466A68] rounded-r-full shadow-[0_0_8px_rgba(70,106,104,0.6)]" />
+                                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#466A68] rounded-r-full shadow-sm shadow-[#466A68]/50" />
                                             )}
                                             {active && collapsed && (
-                                                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#466A68] rounded-l-full" />
+                                                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#466A68] rounded-l-full" />
                                             )}
                                         </Link>
                                     )
@@ -262,14 +262,14 @@ export function AdminSidebar() {
             </nav>
 
             {/* Logout */}
-            <div className="border-t border-[#D4BCAA]/10 p-4">
+            <div className="border-t border-[#D4BCAA]/20 p-4 bg-[#FAFAFA]">
                 <button
                     onClick={handleLogout}
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-[#A89A8E] hover:text-red-400 hover:bg-red-500/10 transition-all w-full group"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-[#8C7A6B] font-semibold hover:text-red-600 hover:bg-red-500/10 transition-all w-full group shadow-sm bg-white border border-[#D4BCAA]/20"
                     title={collapsed ? "Keluar" : undefined}
                 >
                     <LogOut className="h-4 w-4 shrink-0 group-hover:-translate-x-0.5 transition-transform" />
-                    {!collapsed && <span className="font-medium">Keluar</span>}
+                    {!collapsed && <span>Keluar</span>}
                 </button>
             </div>
         </div>
@@ -280,7 +280,7 @@ export function AdminSidebar() {
             {/* Mobile toggle */}
             <button
                 onClick={() => setMobileOpen(!mobileOpen)}
-                className="lg:hidden fixed top-4 left-4 z-50 w-10 h-10 bg-[#1A1513] border border-[#D4BCAA]/10 rounded-lg flex items-center justify-center text-[#A89A8E] hover:text-[#F9F6F0] transition-all shadow-lg"
+                className="lg:hidden fixed top-4 left-4 z-50 w-10 h-10 bg-white border border-[#D4BCAA]/20 rounded-lg flex items-center justify-center text-[#8C7A6B] hover:text-[#0F0A09] transition-all shadow-md"
             >
                 {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
@@ -288,7 +288,7 @@ export function AdminSidebar() {
             {/* Mobile overlay */}
             {mobileOpen && (
                 <div
-                    className="lg:hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-40 transition-opacity"
+                    className="lg:hidden fixed inset-0 bg-[#0F0A09]/40 backdrop-blur-sm z-40 transition-opacity"
                     onClick={() => setMobileOpen(false)}
                 />
             )}
@@ -296,7 +296,7 @@ export function AdminSidebar() {
             {/* Sidebar */}
             <aside
                 className={cn(
-                    "fixed lg:sticky top-0 left-0 h-screen bg-[#1A1513] border-r border-[#D4BCAA]/10 z-40 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] shadow-2xl lg:shadow-none",
+                    "fixed lg:sticky top-0 left-0 h-screen bg-white border-r border-[#D4BCAA]/20 z-40 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] shadow-[2px_0_24px_rgba(0,0,0,0.02)]",
                     collapsed ? "w-20" : "w-64",
                     mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
                 )}

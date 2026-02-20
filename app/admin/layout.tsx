@@ -15,21 +15,21 @@ export default async function AdminLayout({
     await requireAdminPage()
 
     return (
-        <div className="min-h-screen bg-[#0F0A09] flex text-[#F9F6F0]">
+        <div className="min-h-screen bg-[#F9F6F0] flex text-[#0F0A09]">
             <AdminSidebar />
             <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
                 {/* Top Bar */}
-                <header className="h-16 border-b border-[#D4BCAA]/5 bg-[#1A1513]/80 backdrop-blur-md flex items-center justify-between px-6 lg:px-8 sticky top-0 z-30">
+                <header className="h-16 border-b border-[#D4BCAA]/20 bg-white/80 backdrop-blur-md flex items-center justify-between px-6 lg:px-8 sticky top-0 z-30">
                     <div className="lg:hidden w-10" /> {/* Spacer for mobile menu button */}
-                    <h2 className="text-[#A89A8E] font-medium text-sm hidden lg:block uppercase tracking-widest">
+                    <h2 className="text-[#8C7A6B] font-semibold text-sm hidden lg:block uppercase tracking-widest">
                         Admin Dashboard
                     </h2>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-4">
                         <a
                             href="/"
                             target="_blank"
                             rel="noreferrer"
-                            className="text-xs text-[#D4BCAA]/50 hover:text-[#466A68] transition-colors"
+                            className="bg-white border border-[#D4BCAA]/20 text-xs font-medium px-3 py-1.5 rounded-lg text-[#8C7A6B] hover:text-[#466A68] hover:border-[#466A68]/30 hover:bg-[#466A68]/5 transition-all shadow-sm"
                         >
                             Lihat Website →
                         </a>
