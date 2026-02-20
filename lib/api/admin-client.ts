@@ -1,6 +1,6 @@
 "use client"
 
-import { ADMIN_CSRF_HEADER, getAdminCsrfToken } from "@/lib/security/csrf-client"
+import { ADMIN_CSRF_HEADER, CsrfTokenRequestError, getAdminCsrfToken } from "@/lib/security/csrf-client"
 
 export type AdminRequestMethod = "GET" | "POST" | "PUT" | "DELETE"
 
@@ -110,6 +110,24 @@ function getHttpErrorMessage(payload: unknown, status: number, statusText: strin
     return `Request gagal (${status})`
 }
 
+function mapCsrfInitFailureToAdminError(error: unknown): AdminClientError | null {
+    if (!(error instanceof CsrfTokenRequestError)) return null
+
+    const hasServerContext = typeof error.status === "number" || typeof error.payload !== "undefined"
+
+    if (hasServerContext) {
+        return new AdminClientError(error.message, {
+            status: error.status,
+            payload: error.payload,
+            code: "HTTP_ERROR",
+        })
+    }
+
+    return new AdminClientError("Gagal menginisialisasi token keamanan admin. Periksa koneksi lalu coba lagi.", {
+        code: "NETWORK_ERROR",
+    })
+}
+
 async function performRequest<TResponse, TBody>(
     endpoint: string,
     method: AdminRequestMethod,
@@ -146,7 +164,14 @@ async function performRequest<TResponse, TBody>(
         }
 
         if (method !== "GET" && !headers.has(ADMIN_CSRF_HEADER)) {
-            const csrfToken = await getAdminCsrfToken()
+            const csrfToken = await getAdminCsrfToken().catch((csrfError) => {
+                const mappedError = mapCsrfInitFailureToAdminError(csrfError)
+                if (mappedError) {
+                    throw mappedError
+                }
+
+                throw csrfError
+            })
             headers.set(ADMIN_CSRF_HEADER, csrfToken)
         }
 

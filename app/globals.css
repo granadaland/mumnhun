@@ -182,6 +182,7 @@
     @apply bg-background text-foreground;
   }
 }
+
 /* Article Content Styling - Added for blog posts */
 .article-content {
   color: #382821;
@@ -281,10 +282,43 @@
   .article-content h2 {
     font-size: 1.75rem !important;
   }
+
   .article-content h3 {
     font-size: 1.5rem !important;
   }
+
   .article-content h4 {
     font-size: 1.25rem !important;
   }
+}
+
+/* Scrollbar Utilities */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+/* Global Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(168, 154, 142, 0.3);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(70, 106, 104, 0.8);
 }

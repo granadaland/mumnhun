@@ -185,7 +185,7 @@ export function AdminSidebar() {
             )}
 
             {/* Navigation */}
-            <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5 scrollbar-thin scrollbar-thumb-[#D4BCAA]/10 scrollbar-track-transparent">
+            <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5 no-scrollbar">
                 {navGroups.map((group) => {
                     const isOpen = openGroups[group.id] || false
                     const hasActiveChild = group.items.some(item => isActive(item.href))

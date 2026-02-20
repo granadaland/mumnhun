@@ -715,6 +715,33 @@ describe("Critical admin routes: authz and payload validation", () => {
             expect(body).toEqual({ error: "Too Many Requests", retryAfterSec: 30 })
             expect(mockCreateRateLimitExceededResponse).toHaveBeenCalledTimes(1)
         })
+
+        it("mengembalikan errorCode stabil saat konfigurasi CSRF hilang", async () => {
+            mockRequireAdminApi.mockResolvedValueOnce({
+                ok: true,
+                identity: adminIdentity,
+            })
+
+            const previousSecret = process.env.CSRF_SECRET
+            delete process.env.CSRF_SECRET
+
+            try {
+                const response = await getCsrfToken()
+                const body = await response.json()
+
+                expect(response.status).toBe(500)
+                expect(body).toMatchObject({
+                    success: false,
+                    errorCode: "CSRF_CONFIG_MISSING",
+                })
+            } finally {
+                if (typeof previousSecret === "string") {
+                    process.env.CSRF_SECRET = previousSecret
+                } else {
+                    delete process.env.CSRF_SECRET
+                }
+            }
+        })
     })
 
     describe("/api/admin/media hardening", () => {

@@ -70,6 +70,32 @@ function mapApiKeyErrorCode(errorCode: string | null, reason: string | null, fal
     }
 }
 
+function mapCsrfErrorMessage(errorCode: string | null, status: number | null, fallback: string): string | null {
+    switch (errorCode) {
+        case "CSRF_CONFIG_MISSING":
+            return "Konfigurasi keamanan CSRF di server belum lengkap. Hubungi developer."
+        case "CSRF_TOKEN_INIT_FAILED":
+            return "Server gagal menyiapkan token keamanan. Coba lagi dalam beberapa saat."
+        default:
+            break
+    }
+
+    if (status === 401) {
+        return "Sesi admin berakhir. Silakan login ulang lalu coba lagi."
+    }
+
+    if (status === 403) {
+        return "Permintaan ditolak oleh proteksi keamanan. Muat ulang halaman lalu coba lagi."
+    }
+
+    const normalizedFallback = fallback.toLowerCase()
+    if (status === 500 && normalizedFallback.includes("token keamanan")) {
+        return "Layanan token keamanan admin sedang bermasalah. Coba lagi beberapa saat."
+    }
+
+    return null
+}
+
 function getClientErrorMessage(error: unknown, fallback: string): string {
     if (error instanceof AdminClientError) {
         if (error.code === "TIMEOUT") {
@@ -77,6 +103,9 @@ function getClientErrorMessage(error: unknown, fallback: string): string {
         }
 
         if (error.code === "NETWORK_ERROR") {
+            if (error.message.toLowerCase().includes("token keamanan")) {
+                return "Gagal menginisialisasi token keamanan admin. Periksa koneksi lalu coba lagi."
+            }
             return "Tidak bisa terhubung ke server admin. Periksa koneksi lalu coba lagi."
         }
 
@@ -93,6 +122,12 @@ function getClientErrorMessage(error: unknown, fallback: string): string {
                     : null
 
         const normalizedFallbackMessage = payloadMessage ?? error.message ?? fallback
+
+        const csrfMessage = mapCsrfErrorMessage(errorCode, error.status, normalizedFallbackMessage)
+        if (csrfMessage) {
+            return csrfMessage
+        }
+
         return mapApiKeyErrorCode(errorCode, reason, normalizedFallbackMessage)
     }
 
