@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -24,9 +24,11 @@ import {
     Menu,
     X,
     LogOut,
+    ChevronDown,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
+import { cn } from "@/lib/utils"
 
 type NavItem = {
     href: string
@@ -36,12 +38,14 @@ type NavItem = {
 }
 
 type NavGroup = {
+    id: string
     title: string
     items: NavItem[]
 }
 
 const navGroups: NavGroup[] = [
     {
+        id: "dashboard",
         title: "Dashboard",
         items: [
             { href: "/admin", label: "Overview", icon: <LayoutDashboard className="h-4 w-4" /> },
@@ -49,6 +53,7 @@ const navGroups: NavGroup[] = [
         ],
     },
     {
+        id: "content",
         title: "Konten",
         items: [
             { href: "/admin/posts", label: "Artikel", icon: <FileText className="h-4 w-4" /> },
@@ -60,6 +65,7 @@ const navGroups: NavGroup[] = [
         ],
     },
     {
+        id: "seo",
         title: "SEO",
         items: [
             { href: "/admin/seo", label: "SEO Dashboard", icon: <BarChart3 className="h-4 w-4" /> },
@@ -68,17 +74,19 @@ const navGroups: NavGroup[] = [
         ],
     },
     {
+        id: "ai",
         title: "AI Tools",
         items: [
             { href: "/admin/ai", label: "AI Dashboard", icon: <Bot className="h-4 w-4" /> },
-            { href: "/admin/ai/generate", label: "Generate Artikel", icon: <SparklesIcon className="h-4 w-4" /> },
-            { href: "/admin/ai/rewrite", label: "Rewrite Artikel", icon: <FileText className="h-4 w-4" /> },
+            { href: "/admin/ai/generate", label: "Generate", icon: <SparklesIcon className="h-4 w-4" /> },
+            { href: "/admin/ai/rewrite", label: "Rewrite", icon: <FileText className="h-4 w-4" /> },
             { href: "/admin/ai/internal-links", label: "Internal Links", icon: <LinkIcon className="h-4 w-4" /> },
-            { href: "/admin/ai/scanner", label: "Website Scanner", icon: <Globe className="h-4 w-4" /> },
+            { href: "/admin/ai/scanner", label: "Scanner", icon: <Globe className="h-4 w-4" /> },
             { href: "/admin/chat", label: "AI Chat", icon: <MessageSquare className="h-4 w-4" />, badge: "AI" },
         ],
     },
     {
+        id: "settings",
         title: "Pengaturan",
         items: [
             { href: "/admin/settings", label: "Umum", icon: <Settings className="h-4 w-4" /> },
@@ -92,8 +100,24 @@ const navGroups: NavGroup[] = [
 export function AdminSidebar() {
     const [collapsed, setCollapsed] = useState(false)
     const [mobileOpen, setMobileOpen] = useState(false)
+    const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+        dashboard: true,
+        content: true,
+    })
     const pathname = usePathname()
     const router = useRouter()
+
+    useEffect(() => {
+        // Auto-open groups that contain the active path
+        navGroups.forEach((group) => {
+            const hasActiveItem = group.items.some(item =>
+                item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href)
+            )
+            if (hasActiveItem) {
+                setOpenGroups(prev => ({ ...prev, [group.id]: true }))
+            }
+        })
+    }, [pathname])
 
     const handleLogout = async () => {
         const supabase = createClient()
@@ -107,21 +131,40 @@ export function AdminSidebar() {
         return pathname.startsWith(href)
     }
 
+    const toggleGroup = (id: string) => {
+        if (collapsed) {
+            setCollapsed(false)
+            setOpenGroups(prev => ({ ...prev, [id]: true }))
+            return
+        }
+        setOpenGroups(prev => ({ ...prev, [id]: !prev[id] }))
+    }
+
     const SidebarContent = () => (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full bg-[#1A1513]">
             {/* Logo */}
             <div className="flex items-center justify-between px-4 h-16 border-b border-[#D4BCAA]/10">
                 {!collapsed && (
-                    <Link href="/admin" className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-gradient-to-br from-[#466A68] to-[#3a5856] rounded-lg flex items-center justify-center">
+                    <Link href="/admin" className="flex items-center gap-3 group">
+                        <div className="w-8 h-8 bg-gradient-to-br from-[#466A68] to-[#2F4A48] rounded-lg flex items-center justify-center shadow-lg group-hover:shadow-[#466A68]/20 transition-all">
                             <span className="text-white font-bold text-sm">M</span>
                         </div>
-                        <span className="font-bold text-[#F4EEE7] text-sm">CMS Admin</span>
+                        <div className="flex flex-col">
+                            <span className="font-bold text-[#F9F6F0] text-sm leading-tight">Admin Console</span>
+                            <span className="text-[10px] text-[#A89A8E]">Mum &apos;n Hun</span>
+                        </div>
+                    </Link>
+                )}
+                {collapsed && (
+                    <Link href="/admin" className="mx-auto mt-2 block">
+                        <div className="w-8 h-8 bg-gradient-to-br from-[#466A68] to-[#2F4A48] rounded-lg flex items-center justify-center shadow-lg">
+                            <span className="text-white font-bold text-sm">M</span>
+                        </div>
                     </Link>
                 )}
                 <button
                     onClick={() => setCollapsed(!collapsed)}
-                    className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg text-[#D4BCAA]/50 hover:text-[#F4EEE7] hover:bg-[#D4BCAA]/10 transition-all"
+                    className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg text-[#A89A8E] hover:text-[#F9F6F0] hover:bg-[#D4BCAA]/10 transition-all"
                 >
                     {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
                 </button>
@@ -129,70 +172,104 @@ export function AdminSidebar() {
 
             {/* Search */}
             {!collapsed && (
-                <div className="px-3 pt-4 pb-2">
-                    <div className="flex items-center gap-2 px-3 py-2 bg-[#1a1412] rounded-lg border border-[#D4BCAA]/10">
-                        <Search className="h-4 w-4 text-[#D4BCAA]/40" />
+                <div className="px-4 pt-4 pb-2">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-[#0F0A09] rounded-lg border border-[#D4BCAA]/10 hover:border-[#D4BCAA]/30 transition-colors focus-within:border-[#466A68] focus-within:ring-1 focus-within:ring-[#466A68]/50">
+                        <Search className="h-4 w-4 text-[#A89A8E]" />
                         <input
                             type="text"
-                            placeholder="Cari..."
-                            className="bg-transparent text-sm text-[#F4EEE7] placeholder-[#D4BCAA]/30 outline-none w-full"
+                            placeholder="Cari menu..."
+                            className="bg-transparent text-sm text-[#F9F6F0] placeholder-[#A89A8E]/60 outline-none w-full"
                         />
                     </div>
                 </div>
             )}
 
             {/* Navigation */}
-            <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-4 scrollbar-thin">
-                {navGroups.map((group) => (
-                    <div key={group.title}>
-                        {!collapsed && (
-                            <p className="px-3 text-[10px] font-semibold text-[#D4BCAA]/40 uppercase tracking-wider mb-1">
-                                {group.title}
-                            </p>
-                        )}
-                        <div className="space-y-0.5">
-                            {group.items.map((item) => (
-                                <Link
-                                    key={item.href}
-                                    href={item.href}
-                                    onClick={() => setMobileOpen(false)}
-                                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all group relative ${isActive(item.href)
-                                        ? "bg-[#466A68]/20 text-[#466A68] font-medium"
-                                        : "text-[#D4BCAA]/60 hover:text-[#F4EEE7] hover:bg-[#D4BCAA]/5"
-                                        }`}
-                                    title={collapsed ? item.label : undefined}
-                                >
-                                    <span className={isActive(item.href) ? "text-[#466A68]" : "text-[#D4BCAA]/40 group-hover:text-[#D4BCAA]/70"}>
-                                        {item.icon}
-                                    </span>
-                                    {!collapsed && (
-                                        <>
-                                            <span>{item.label}</span>
-                                            {item.badge && (
-                                                <span className="ml-auto px-1.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-[#466A68] to-[#3a5856] text-white rounded-md">
-                                                    {item.badge}
-                                                </span>
+            <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5 scrollbar-thin scrollbar-thumb-[#D4BCAA]/10 scrollbar-track-transparent">
+                {navGroups.map((group) => {
+                    const isOpen = openGroups[group.id] || false
+                    const hasActiveChild = group.items.some(item => isActive(item.href))
+
+                    return (
+                        <div key={group.id} className="pt-1">
+                            {/* Group Header */}
+                            <button
+                                onClick={() => toggleGroup(group.id)}
+                                className={cn(
+                                    "w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors",
+                                    collapsed ? "justify-center" : "",
+                                    hasActiveChild ? "text-[#466A68]" : "text-[#A89A8E]/70 hover:text-[#A89A8E]"
+                                )}
+                                title={collapsed ? group.title : undefined}
+                            >
+                                {!collapsed ? (
+                                    <>
+                                        <span>{group.title}</span>
+                                        <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", isOpen ? "rotate-180" : "")} />
+                                    </>
+                                ) : (
+                                    <span className="w-1.5 h-1.5 rounded-full bg-current opacity-50" />
+                                )}
+                            </button>
+
+                            {/* Group Items */}
+                            <div className={cn(
+                                "space-y-0.5 overflow-hidden transition-all duration-200 ease-in-out",
+                                !collapsed && isOpen ? "max-h-96 mt-1" : "max-h-0",
+                                collapsed && "max-h-none opacity-100 mt-1" // Always show icons if collapsed (or hide them based on preference, let's keep them hidden if collapsed unless hovered, but usually collapsed means show all icons. Actually let's just show all items as icons if collapsed)
+                            )}>
+                                {(isOpen || collapsed) && group.items.map((item) => {
+                                    const active = isActive(item.href)
+                                    return (
+                                        <Link
+                                            key={item.href}
+                                            href={item.href}
+                                            onClick={() => setMobileOpen(false)}
+                                            className={cn(
+                                                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all group relative",
+                                                active
+                                                    ? "bg-[#466A68]/15 text-[#466A68] font-medium"
+                                                    : "text-[#A89A8E] hover:text-[#F9F6F0] hover:bg-[#D4BCAA]/5"
                                             )}
-                                        </>
-                                    )}
-                                    {isActive(item.href) && (
-                                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-[#466A68] rounded-r" />
-                                    )}
-                                </Link>
-                            ))}
+                                            title={collapsed ? item.label : undefined}
+                                        >
+                                            <span className={cn("shrink-0 transition-colors", active ? "text-[#466A68]" : "text-[#A89A8E] group-hover:text-[#D4BCAA]/80")}>
+                                                {item.icon}
+                                            </span>
+                                            {!collapsed && (
+                                                <>
+                                                    <span className="truncate">{item.label}</span>
+                                                    {item.badge && (
+                                                        <span className="ml-auto px-1.5 py-0.5 text-[10px] font-bold bg-[#466A68]/20 text-[#466A68] rounded-md border border-[#466A68]/30">
+                                                            {item.badge}
+                                                        </span>
+                                                    )}
+                                                </>
+                                            )}
+                                            {active && !collapsed && (
+                                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#466A68] rounded-r-full shadow-[0_0_8px_rgba(70,106,104,0.6)]" />
+                                            )}
+                                            {active && collapsed && (
+                                                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#466A68] rounded-l-full" />
+                                            )}
+                                        </Link>
+                                    )
+                                })}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    )
+                })}
             </nav>
 
             {/* Logout */}
-            <div className="border-t border-[#D4BCAA]/10 p-3">
+            <div className="border-t border-[#D4BCAA]/10 p-4">
                 <button
                     onClick={handleLogout}
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-[#D4BCAA]/60 hover:text-red-400 hover:bg-red-500/5 transition-all w-full"
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-[#A89A8E] hover:text-red-400 hover:bg-red-500/10 transition-all w-full group"
+                    title={collapsed ? "Keluar" : undefined}
                 >
-                    <LogOut className="h-4 w-4" />
-                    {!collapsed && <span>Keluar</span>}
+                    <LogOut className="h-4 w-4 shrink-0 group-hover:-translate-x-0.5 transition-transform" />
+                    {!collapsed && <span className="font-medium">Keluar</span>}
                 </button>
             </div>
         </div>
@@ -203,7 +280,7 @@ export function AdminSidebar() {
             {/* Mobile toggle */}
             <button
                 onClick={() => setMobileOpen(!mobileOpen)}
-                className="lg:hidden fixed top-4 left-4 z-50 w-10 h-10 bg-[#2a2018] border border-[#D4BCAA]/15 rounded-lg flex items-center justify-center text-[#D4BCAA] hover:text-[#F4EEE7] transition-all shadow-lg"
+                className="lg:hidden fixed top-4 left-4 z-50 w-10 h-10 bg-[#1A1513] border border-[#D4BCAA]/10 rounded-lg flex items-center justify-center text-[#A89A8E] hover:text-[#F9F6F0] transition-all shadow-lg"
             >
                 {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
@@ -211,15 +288,18 @@ export function AdminSidebar() {
             {/* Mobile overlay */}
             {mobileOpen && (
                 <div
-                    className="lg:hidden fixed inset-0 bg-black/60 z-40"
+                    className="lg:hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-40 transition-opacity"
                     onClick={() => setMobileOpen(false)}
                 />
             )}
 
             {/* Sidebar */}
             <aside
-                className={`fixed lg:sticky top-0 left-0 h-screen bg-[#2a2018] border-r border-[#D4BCAA]/10 z-40 transition-all duration-300 ${collapsed ? "w-16" : "w-64"
-                    } ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
+                className={cn(
+                    "fixed lg:sticky top-0 left-0 h-screen bg-[#1A1513] border-r border-[#D4BCAA]/10 z-40 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] shadow-2xl lg:shadow-none",
+                    collapsed ? "w-20" : "w-64",
+                    mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+                )}
             >
                 <SidebarContent />
             </aside>
