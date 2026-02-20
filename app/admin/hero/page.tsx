@@ -126,8 +126,8 @@ export default function HeroSectionPage() {
         <div className="space-y-6 max-w-4xl">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-[#F4EEE7]">Hero Section</h1>
-                    <p className="text-[#D4BCAA]/50 text-sm mt-1">Kelola slide banner homepage</p>
+                    <h1 className="text-2xl font-bold text-[#0F0A09]">Hero Section</h1>
+                    <p className="text-[#8C7A6B]/50 text-sm mt-1">Kelola slide banner homepage</p>
                 </div>
                 <button onClick={() => setAdding(true)} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#466A68] to-[#3a5856] text-white text-sm font-medium rounded-lg transition-all shadow-lg">
                     <Plus className="h-4 w-4" />
@@ -137,23 +137,23 @@ export default function HeroSectionPage() {
 
             {/* Add Form */}
             {adding && (
-                <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl p-5 space-y-3">
+                <div className="bg-white border border-[#D4BCAA]/20 rounded-xl p-5 space-y-3">
                     <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-[#F4EEE7]">Slide Baru</h3>
-                        <button onClick={() => setAdding(false)} className="text-[#D4BCAA]/30 hover:text-[#F4EEE7]"><X className="h-4 w-4" /></button>
+                        <h3 className="text-sm font-semibold text-[#0F0A09]">Slide Baru</h3>
+                        <button onClick={() => setAdding(false)} className="text-[#8C7A6B]/30 hover:text-[#0F0A09]"><X className="h-4 w-4" /></button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <input type="text" value={newForm.title} onChange={(e) => setNewForm({ ...newForm, title: e.target.value })} placeholder="Judul slide" className="px-4 py-2.5 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-[#F4EEE7] text-sm placeholder-[#D4BCAA]/25 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
-                        <input type="text" value={newForm.subtitle} onChange={(e) => setNewForm({ ...newForm, subtitle: e.target.value })} placeholder="Subtitle (opsional)" className="px-4 py-2.5 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-[#F4EEE7] text-sm placeholder-[#D4BCAA]/25 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
+                        <input type="text" value={newForm.title} onChange={(e) => setNewForm({ ...newForm, title: e.target.value })} placeholder="Judul slide" className="px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
+                        <input type="text" value={newForm.subtitle} onChange={(e) => setNewForm({ ...newForm, subtitle: e.target.value })} placeholder="Subtitle (opsional)" className="px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
                     </div>
-                    <input type="url" value={newForm.imageUrl} onChange={(e) => setNewForm({ ...newForm, imageUrl: e.target.value })} placeholder="URL gambar" className="w-full px-4 py-2.5 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-[#F4EEE7] text-sm placeholder-[#D4BCAA]/25 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
+                    <input type="url" value={newForm.imageUrl} onChange={(e) => setNewForm({ ...newForm, imageUrl: e.target.value })} placeholder="URL gambar" className="w-full px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <input type="text" value={newForm.ctaPrimaryText} onChange={(e) => setNewForm({ ...newForm, ctaPrimaryText: e.target.value })} placeholder="Teks CTA Utama" className="px-4 py-2.5 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-[#F4EEE7] text-sm placeholder-[#D4BCAA]/25 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
-                        <input type="text" value={newForm.ctaPrimaryLink} onChange={(e) => setNewForm({ ...newForm, ctaPrimaryLink: e.target.value })} placeholder="URL CTA Utama" className="px-4 py-2.5 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-[#F4EEE7] text-sm placeholder-[#D4BCAA]/25 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
+                        <input type="text" value={newForm.ctaPrimaryText} onChange={(e) => setNewForm({ ...newForm, ctaPrimaryText: e.target.value })} placeholder="Teks CTA Utama" className="px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
+                        <input type="text" value={newForm.ctaPrimaryLink} onChange={(e) => setNewForm({ ...newForm, ctaPrimaryLink: e.target.value })} placeholder="URL CTA Utama" className="px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <input type="text" value={newForm.ctaSecondaryText} onChange={(e) => setNewForm({ ...newForm, ctaSecondaryText: e.target.value })} placeholder="Teks CTA Sekunder (opsional)" className="px-4 py-2.5 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-[#F4EEE7] text-sm placeholder-[#D4BCAA]/25 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
-                        <input type="text" value={newForm.ctaSecondaryLink} onChange={(e) => setNewForm({ ...newForm, ctaSecondaryLink: e.target.value })} placeholder="URL CTA Sekunder (opsional)" className="px-4 py-2.5 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-[#F4EEE7] text-sm placeholder-[#D4BCAA]/25 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
+                        <input type="text" value={newForm.ctaSecondaryText} onChange={(e) => setNewForm({ ...newForm, ctaSecondaryText: e.target.value })} placeholder="Teks CTA Sekunder (opsional)" className="px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
+                        <input type="text" value={newForm.ctaSecondaryLink} onChange={(e) => setNewForm({ ...newForm, ctaSecondaryLink: e.target.value })} placeholder="URL CTA Sekunder (opsional)" className="px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
                     </div>
                     <button onClick={handleAdd} disabled={saving} className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#466A68] to-[#3a5856] text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-all">
                         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
@@ -165,51 +165,51 @@ export default function HeroSectionPage() {
             {/* Slides List */}
             <div className="space-y-3">
                 {slides.length === 0 ? (
-                    <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl flex flex-col items-center justify-center h-40 text-[#D4BCAA]/30">
+                    <div className="bg-white border border-[#D4BCAA]/20 rounded-xl flex flex-col items-center justify-center h-40 text-[#8C7A6B]/30">
                         <ImageIcon className="h-6 w-6 mb-2" />
                         <p className="text-sm">Belum ada slide</p>
                     </div>
                 ) : (
                     slides.map((slide) => (
-                        <div key={slide.id} className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl overflow-hidden">
+                        <div key={slide.id} className="bg-white border border-[#D4BCAA]/20 rounded-xl overflow-hidden">
                             {editingId === slide.id ? (
                                 <div className="p-5 space-y-3">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <input type="text" value={editForm.title || ""} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} placeholder="Judul" className="px-3 py-2 bg-[#1a1412] border border-[#466A68]/30 rounded-lg text-[#F4EEE7] text-sm outline-none" />
-                                        <input type="text" value={editForm.subtitle || ""} onChange={(e) => setEditForm({ ...editForm, subtitle: e.target.value })} placeholder="Subtitle" className="px-3 py-2 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-[#F4EEE7] text-sm outline-none" />
+                                        <input type="text" value={editForm.title || ""} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} placeholder="Judul" className="px-3 py-2 bg-white border border-[#466A68]/30 rounded-lg text-[#0F0A09] text-sm outline-none" />
+                                        <input type="text" value={editForm.subtitle || ""} onChange={(e) => setEditForm({ ...editForm, subtitle: e.target.value })} placeholder="Subtitle" className="px-3 py-2 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm outline-none" />
                                     </div>
-                                    <input type="url" value={editForm.imageUrl || ""} onChange={(e) => setEditForm({ ...editForm, imageUrl: e.target.value })} placeholder="URL gambar" className="w-full px-3 py-2 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-[#F4EEE7] text-sm outline-none" />
+                                    <input type="url" value={editForm.imageUrl || ""} onChange={(e) => setEditForm({ ...editForm, imageUrl: e.target.value })} placeholder="URL gambar" className="w-full px-3 py-2 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm outline-none" />
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <input type="text" value={editForm.ctaPrimaryText || ""} onChange={(e) => setEditForm({ ...editForm, ctaPrimaryText: e.target.value })} placeholder="Teks CTA Utama" className="px-3 py-2 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-[#F4EEE7] text-sm outline-none" />
-                                        <input type="text" value={editForm.ctaPrimaryLink || ""} onChange={(e) => setEditForm({ ...editForm, ctaPrimaryLink: e.target.value })} placeholder="URL CTA Utama" className="px-3 py-2 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-[#F4EEE7] text-sm outline-none" />
+                                        <input type="text" value={editForm.ctaPrimaryText || ""} onChange={(e) => setEditForm({ ...editForm, ctaPrimaryText: e.target.value })} placeholder="Teks CTA Utama" className="px-3 py-2 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm outline-none" />
+                                        <input type="text" value={editForm.ctaPrimaryLink || ""} onChange={(e) => setEditForm({ ...editForm, ctaPrimaryLink: e.target.value })} placeholder="URL CTA Utama" className="px-3 py-2 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm outline-none" />
                                     </div>
                                     <div className="flex gap-2">
-                                        <button onClick={() => handleUpdate(slide.id)} disabled={saving} className="px-3 py-1.5 bg-green-500/10 text-green-400 text-sm rounded-lg disabled:opacity-50 hover:bg-green-500/20 transition-colors flex items-center gap-1">
+                                        <button onClick={() => handleUpdate(slide.id)} disabled={saving} className="px-3 py-1.5 bg-green-500/10 text-green-600 text-sm rounded-lg disabled:opacity-50 hover:bg-green-500/20 transition-colors flex items-center gap-1">
                                             {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />} Simpan
                                         </button>
-                                        <button onClick={() => setEditingId(null)} className="px-3 py-1.5 text-[#D4BCAA]/50 text-sm hover:text-[#F4EEE7] transition-colors">Batal</button>
+                                        <button onClick={() => setEditingId(null)} className="px-3 py-1.5 text-[#8C7A6B]/50 text-sm hover:text-[#0F0A09] transition-colors">Batal</button>
                                     </div>
                                 </div>
                             ) : (
                                 <div className="flex items-center gap-4 p-4">
-                                    <GripVertical className="h-4 w-4 text-[#D4BCAA]/15 flex-shrink-0 cursor-grab" />
-                                    <div className="w-24 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-[#1a1412]">
+                                    <GripVertical className="h-4 w-4 text-[#8C7A6B]/15 flex-shrink-0 cursor-grab" />
+                                    <div className="w-24 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-white">
                                         {/* eslint-disable-next-line @next/next/no-img-element */}
                                         {slide.imageUrl && <img src={slide.imageUrl} alt={slide.title} className="w-full h-full object-cover" />}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className={`text-sm font-medium ${slide.isActive ? "text-[#F4EEE7]" : "text-[#D4BCAA]/40 line-through"}`}>{slide.title}</p>
-                                        {slide.subtitle && <p className="text-xs text-[#D4BCAA]/30 mt-0.5 truncate">{slide.subtitle}</p>}
+                                        <p className={`text-sm font-medium ${slide.isActive ? "text-[#0F0A09]" : "text-[#8C7A6B]/40 line-through"}`}>{slide.title}</p>
+                                        {slide.subtitle && <p className="text-xs text-[#8C7A6B]/30 mt-0.5 truncate">{slide.subtitle}</p>}
                                         <p className="text-[10px] text-[#466A68]/60 mt-0.5">CTA: {slide.ctaPrimaryText}</p>
                                     </div>
                                     <div className="flex items-center gap-1 flex-shrink-0">
-                                        <button onClick={() => handleToggle(slide)} className={`p-1.5 transition-colors ${slide.isActive ? "text-green-400 hover:text-green-300" : "text-[#D4BCAA]/20 hover:text-[#D4BCAA]/50"}`}>
+                                        <button onClick={() => handleToggle(slide)} className={`p-1.5 transition-colors ${slide.isActive ? "text-green-600 hover:text-green-700" : "text-[#8C7A6B]/20 hover:text-[#8C7A6B]/50"}`}>
                                             {slide.isActive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                                         </button>
-                                        <button onClick={() => { setEditingId(slide.id); setEditForm(slide) }} className="p-1.5 text-[#D4BCAA]/30 hover:text-[#466A68] transition-colors">
+                                        <button onClick={() => { setEditingId(slide.id); setEditForm(slide) }} className="p-1.5 text-[#8C7A6B]/30 hover:text-[#466A68] transition-colors">
                                             <Pencil className="h-4 w-4" />
                                         </button>
-                                        <button onClick={() => handleDelete(slide.id)} className="p-1.5 text-[#D4BCAA]/30 hover:text-red-400 transition-colors">
+                                        <button onClick={() => handleDelete(slide.id)} className="p-1.5 text-[#8C7A6B]/30 hover:text-red-600 transition-colors">
                                             <Trash2 className="h-4 w-4" />
                                         </button>
                                     </div>

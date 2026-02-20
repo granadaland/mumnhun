@@ -6,6 +6,8 @@ import {
 } from "lucide-react"
 import { ADMIN_CSRF_HEADER, getAdminCsrfToken } from "@/lib/security/csrf-client"
 
+const CHAT_REQUEST_TIMEOUT_MS = 120000
+
 type ChatMessage = {
     id: string
     role: "user" | "assistant"
@@ -25,21 +27,21 @@ function formatMarkdown(text: string): string {
 
     // Code blocks
     html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_m, _lang, code) =>
-        `<pre class="bg-[#1a1412] rounded-lg p-3 my-2 overflow-x-auto text-xs font-mono text-[#D4BCAA]/80"><code>${code.trim()}</code></pre>`
+        `<pre class="bg-white rounded-lg p-3 my-2 overflow-x-auto text-xs font-mono text-[#8C7A6B]/80"><code>${code.trim()}</code></pre>`
     )
     // Inline code
-    html = html.replace(/`([^`]+)`/g, '<code class="bg-[#1a1412] px-1.5 py-0.5 rounded text-xs font-mono text-[#466A68]">$1</code>')
+    html = html.replace(/`([^`]+)`/g, '<code class="bg-white px-1.5 py-0.5 rounded text-xs font-mono text-[#466A68]">$1</code>')
     // Bold
-    html = html.replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-[#F4EEE7]">$1</strong>')
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-[#0F0A09]">$1</strong>')
     // Italic
     html = html.replace(/\*(.+?)\*/g, '<em>$1</em>')
     // Headers
-    html = html.replace(/^### (.+)$/gm, '<h4 class="font-semibold text-[#F4EEE7] mt-3 mb-1 text-sm">$1</h4>')
-    html = html.replace(/^## (.+)$/gm, '<h3 class="font-semibold text-[#F4EEE7] mt-3 mb-1">$1</h3>')
+    html = html.replace(/^### (.+)$/gm, '<h4 class="font-semibold text-[#0F0A09] mt-3 mb-1 text-sm">$1</h4>')
+    html = html.replace(/^## (.+)$/gm, '<h3 class="font-semibold text-[#0F0A09] mt-3 mb-1">$1</h3>')
     // Unordered lists
-    html = html.replace(/^- (.+)$/gm, '<li class="ml-4 list-disc text-[#D4BCAA]/80">$1</li>')
+    html = html.replace(/^- (.+)$/gm, '<li class="ml-4 list-disc text-[#8C7A6B]/80">$1</li>')
     // Ordered lists
-    html = html.replace(/^\d+\. (.+)$/gm, '<li class="ml-4 list-decimal text-[#D4BCAA]/80">$1</li>')
+    html = html.replace(/^\d+\. (.+)$/gm, '<li class="ml-4 list-decimal text-[#8C7A6B]/80">$1</li>')
     // Paragraphs (double newlines)
     html = html.replace(/\n\n/g, '</p><p class="mb-2">')
     // Single newlines
@@ -115,6 +117,9 @@ export default function AiChatPage() {
 
         try {
             const csrfToken = await getAdminCsrfToken()
+            const controller = new AbortController()
+            const timeoutHandle = setTimeout(() => controller.abort(), CHAT_REQUEST_TIMEOUT_MS)
+
             const res = await fetch("/api/admin/chat", {
                 method: "POST",
                 headers: {
@@ -122,7 +127,10 @@ export default function AiChatPage() {
                     [ADMIN_CSRF_HEADER]: csrfToken,
                 },
                 body: JSON.stringify({ message: text, sessionId }),
+                signal: controller.signal,
             })
+
+            clearTimeout(timeoutHandle)
 
             const data = await res.json()
 
@@ -139,13 +147,19 @@ export default function AiChatPage() {
                     },
                 ])
             }
-        } catch {
+        } catch (error) {
+            const isTimeout =
+                error instanceof DOMException &&
+                error.name === "AbortError"
+
             setMessages((prev) => [
                 ...prev,
                 {
                     id: `err_${Date.now()}`,
                     role: "assistant" as const,
-                    content: "⚠️ Koneksi gagal. Silakan coba lagi.",
+                    content: isTimeout
+                        ? "⚠️ Request timeout. Respons AI terlalu lama, silakan coba lagi."
+                        : "⚠️ Koneksi gagal. Silakan coba lagi.",
                     createdAt: new Date().toISOString(),
                 },
             ])
@@ -167,17 +181,17 @@ export default function AiChatPage() {
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
                 <div>
-                    <h1 className="text-xl font-bold text-[#F4EEE7] flex items-center gap-2">
+                    <h1 className="text-xl font-bold text-[#0F0A09] flex items-center gap-2">
                         <Sparkles className="h-5 w-5 text-[#466A68]" />
                         AI Chat Assistant
                     </h1>
-                    <p className="text-xs text-[#D4BCAA]/40 mt-0.5">
+                    <p className="text-xs text-[#8C7A6B]/40 mt-0.5">
                         Powered by Google Gemini — Tanya seputar konten, SEO, dan strategi blog
                     </p>
                 </div>
                 <button
                     onClick={startNewChat}
-                    className="flex items-center gap-2 px-3 py-2 text-xs font-medium border border-[#D4BCAA]/15 text-[#D4BCAA]/60 rounded-lg hover:bg-[#D4BCAA]/5 hover:text-[#F4EEE7] transition-all"
+                    className="flex items-center gap-2 px-3 py-2 text-xs font-medium border border-[#D4BCAA]/15 text-[#8C7A6B]/60 rounded-lg hover:bg-[#D4BCAA]/5 hover:text-[#0F0A09] transition-all"
                 >
                     <Plus className="h-3.5 w-3.5" />
                     Chat Baru
@@ -185,7 +199,7 @@ export default function AiChatPage() {
             </div>
 
             {/* Chat Area */}
-            <div className="flex-1 bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl overflow-hidden flex flex-col">
+            <div className="flex-1 bg-white border border-[#D4BCAA]/20 rounded-xl overflow-hidden flex flex-col">
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
                     {loadingHistory ? (
@@ -198,10 +212,10 @@ export default function AiChatPage() {
                                 <div className="w-14 h-14 bg-gradient-to-br from-[#466A68]/20 to-[#466A68]/5 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#466A68]/10">
                                     <MessageSquare className="h-7 w-7 text-[#466A68]" />
                                 </div>
-                                <h3 className="text-[#F4EEE7] font-semibold mb-2">
+                                <h3 className="text-[#0F0A09] font-semibold mb-2">
                                     Mulai Percakapan
                                 </h3>
-                                <p className="text-xs text-[#D4BCAA]/40 leading-relaxed mb-4">
+                                <p className="text-xs text-[#8C7A6B]/40 leading-relaxed mb-4">
                                     Tanyakan ide konten, strategi SEO, tips copywriting, atau bantuan pengelolaan blog.
                                 </p>
                                 <div className="flex flex-wrap gap-2 justify-center">
@@ -238,8 +252,8 @@ export default function AiChatPage() {
                                     )}
                                     <div
                                         className={`max-w-[75%] rounded-xl px-4 py-3 text-sm leading-relaxed ${msg.role === "user"
-                                                ? "bg-[#466A68] text-white rounded-br-sm"
-                                                : "bg-[#1a1412] border border-[#D4BCAA]/8 text-[#D4BCAA]/80 rounded-bl-sm"
+                                            ? "bg-[#466A68] text-white rounded-br-sm"
+                                            : "bg-white border border-[#D4BCAA]/20 text-[#8C7A6B]/80 rounded-bl-sm"
                                             }`}
                                     >
                                         {msg.role === "assistant" ? (
@@ -263,8 +277,8 @@ export default function AiChatPage() {
                                     <div className="flex-shrink-0 w-7 h-7 bg-gradient-to-br from-[#466A68]/20 to-[#466A68]/5 rounded-lg flex items-center justify-center border border-[#466A68]/15 mt-0.5">
                                         <Bot className="h-3.5 w-3.5 text-[#466A68]" />
                                     </div>
-                                    <div className="bg-[#1a1412] border border-[#D4BCAA]/8 rounded-xl rounded-bl-sm px-4 py-3">
-                                        <div className="flex items-center gap-2 text-sm text-[#D4BCAA]/40">
+                                    <div className="bg-white border border-[#D4BCAA]/20 rounded-xl rounded-bl-sm px-4 py-3">
+                                        <div className="flex items-center gap-2 text-sm text-[#8C7A6B]/40">
                                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                             Sedang berpikir...
                                         </div>
@@ -277,7 +291,7 @@ export default function AiChatPage() {
                 </div>
 
                 {/* Input Area */}
-                <div className="border-t border-[#D4BCAA]/8 px-4 py-3 bg-[#2a2018]">
+                <div className="border-t border-[#D4BCAA]/20 px-4 py-3 bg-white">
                     <div className="flex items-end gap-2">
                         <textarea
                             ref={inputRef}
@@ -286,7 +300,7 @@ export default function AiChatPage() {
                             onKeyDown={handleKeyDown}
                             placeholder="Ketik pesan... (Enter untuk kirim, Shift+Enter untuk baris baru)"
                             rows={1}
-                            className="flex-1 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg px-4 py-2.5 text-sm text-[#F4EEE7] placeholder-[#D4BCAA]/25 outline-none focus:ring-2 focus:ring-[#466A68]/30 resize-none transition-all max-h-32"
+                            className="flex-1 bg-white border border-[#D4BCAA]/20 rounded-lg px-4 py-2.5 text-sm text-[#0F0A09] placeholder-[#8C7A6B]/60 outline-none focus:ring-2 focus:ring-[#466A68]/30 resize-none transition-all max-h-32"
                             style={{ minHeight: "42px" }}
                             onInput={(e) => {
                                 const target = e.target as HTMLTextAreaElement
@@ -307,7 +321,7 @@ export default function AiChatPage() {
                             )}
                         </button>
                     </div>
-                    <p className="text-[10px] text-[#D4BCAA]/20 mt-1.5 text-center">
+                    <p className="text-[10px] text-[#8C7A6B]/20 mt-1.5 text-center">
                         AI dapat membuat kesalahan. Periksa informasi penting.
                     </p>
                 </div>

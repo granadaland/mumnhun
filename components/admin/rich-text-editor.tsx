@@ -44,7 +44,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Tulis konten 
         },
         editorProps: {
             attributes: {
-                class: "prose prose-invert prose-sm max-w-none min-h-[300px] px-5 py-4 focus:outline-none text-[#F4EEE7]/90 leading-relaxed",
+                class: "prose prose-invert prose-sm max-w-none min-h-[300px] px-5 py-4 focus:outline-none text-[#0F0A09]/90 leading-relaxed",
             },
         },
     })
@@ -82,7 +82,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Tulis konten 
             title={title}
             className={`p-1.5 rounded transition-colors ${active
                 ? "bg-[#466A68]/20 text-[#466A68]"
-                : "text-[#D4BCAA]/40 hover:text-[#D4BCAA]/70 hover:bg-[#D4BCAA]/5"
+                : "text-[#8C7A6B]/40 hover:text-[#8C7A6B]/70 hover:bg-[#D4BCAA]/5"
                 }`}
         >
             {children}
@@ -90,9 +90,9 @@ export function RichTextEditor({ content, onChange, placeholder = "Tulis konten 
     )
 
     return (
-        <div className="bg-[#1a1412] border border-[#D4BCAA]/10 rounded-xl overflow-hidden">
+        <div className="bg-white border border-[#D4BCAA]/20 rounded-xl overflow-hidden">
             {/* Toolbar */}
-            <div className="flex flex-wrap items-center gap-0.5 px-3 py-2 border-b border-[#D4BCAA]/10 bg-[#2a2018]/50">
+            <div className="flex flex-wrap items-center gap-0.5 px-3 py-2 border-b border-[#D4BCAA]/20 bg-white/50">
                 <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive("bold")} title="Bold">
                     <Bold className="h-4 w-4" />
                 </ToolbarButton>

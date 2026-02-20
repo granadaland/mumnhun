@@ -9,153 +9,73 @@ import {
     toAiKeyFailureHttpStatus,
 } from "@/lib/security/ai-key-status"
 import { logAdminError, logAdminInfo, logAdminWarn } from "@/lib/observability/admin-log"
-import { summarizeUnknownError } from "@/lib/security/admin-helpers"
+import { summarizeUnknownError, adminJsonValidationError } from "@/lib/security/admin-helpers"
 
-const generateArticleSchema = z.object({
-    topic: z.string().trim().min(3, "Topic/keyword minimal 3 karakter").max(200),
-    tone: z.string().trim().min(2).max(80).optional(),
-    targetWordCount: z.coerce.number().int().min(300).max(3000).optional(),
+const rewriteRequestSchema = z.object({
+    postId: z.string().cuid(),
+    tone: z.string().trim().max(80).optional(),
+    focusKeyword: z.string().trim().max(120).optional(),
 })
 
-const aiArticleOutputSchema = z.object({
-    title: z.string().trim().min(10).max(180),
-    contentHtml: z.string().trim().min(200),
-    excerpt: z.string().trim().min(30).max(320),
-    metaTitle: z.string().trim().min(10).max(70),
-    metaDescription: z.string().trim().min(30).max(170),
-    focusKeyword: z.string().trim().min(2).max(120),
-    slugSuggestion: z.string().trim().min(3).max(180),
+const rewriteOutputSchema = z.object({
+    title: z.string().trim().max(180),
+    contentHtml: z.string().trim().min(50),
+    excerpt: z.string().trim().max(320).optional(),
 })
 
 type GeminiResponse = {
-    candidates?: Array<{
-        content?: {
-            parts?: Array<{ text?: string }>
-        }
-    }>
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
+    text?: string
 }
 
 const GEMINI_MODEL_CANDIDATES = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-flash-001"]
 
 function toJsonString(value: unknown): string {
-    try {
-        return JSON.stringify(value)
-    } catch {
-        return "{}"
-    }
-}
-
-function errorJson(message: string, status: number, data?: unknown) {
-    return NextResponse.json(
-        {
-            success: false,
-            error: message,
-            ...(typeof data === "undefined" ? {} : { data }),
-        },
-        { status }
-    )
+    return JSON.stringify(value)
 }
 
 function errorJsonWithCode(message: string, status: number, errorCode: string, data?: unknown) {
-    return NextResponse.json(
-        {
-            success: false,
-            error: message,
-            errorCode,
-            ...(typeof data === "undefined" ? {} : { data }),
-        },
-        { status }
-    )
+    return NextResponse.json({ success: false, error: message, errorCode, data }, { status })
 }
 
-function slugify(text: string): string {
-    return text
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-+|-+$/g, "")
-}
-
-function estimateReadingTime(contentHtml: string): number {
-    const words = contentHtml.replace(/<[^>]*>/g, " ").split(/\s+/).filter(Boolean).length
-    return Math.max(1, Math.ceil(words / 200))
-}
-
-async function ensureUniquePostSlug(base: string): Promise<string> {
-    const normalizedBase = slugify(base) || `artikel-${Date.now()}`
-    let attempt = 0
-
-    while (attempt < 50) {
-        const candidate = attempt === 0 ? normalizedBase : `${normalizedBase}-${attempt + 1}`
-        const existing = await prisma.post.findUnique({ where: { slug: candidate }, select: { id: true } })
-
-        if (!existing) {
-            return candidate
-        }
-
-        attempt += 1
-    }
-
-    return `${normalizedBase}-${Date.now()}`
-}
-
-function buildPrompt(input: z.infer<typeof generateArticleSchema>): string {
-    const toneText = input.tone?.trim() ? input.tone.trim() : "informatif"
-    const targetWordCount = input.targetWordCount ?? 900
-
-    return [
-        "Tulis artikel blog berbahasa Indonesia yang siap dipublikasikan.",
-        `Topik utama: ${input.topic}`,
-        `Tone: ${toneText}`,
-        `Target jumlah kata: sekitar ${targetWordCount} kata`,
-        "",
-        "Keluaran HARUS valid JSON object tanpa markdown code fence.",
-        "Gunakan struktur persis berikut:",
-        "{",
-        '  "title": "...",',
-        '  "contentHtml": "...",',
-        '  "excerpt": "...",',
-        '  "metaTitle": "...",',
-        '  "metaDescription": "...",',
-        '  "focusKeyword": "...",',
-        '  "slugSuggestion": "..."',
-        "}",
-        "",
-        "Ketentuan penting:",
-        "- contentHtml harus berupa HTML sederhana dan valid.",
-        "- Sertakan <h2> untuk subjudul, <p> untuk paragraf, dan setidaknya satu <ul><li>.",
-        "- Jangan gunakan <script> atau style inline.",
-        "- excerpt maksimal 320 karakter.",
-        "- metaTitle maksimal 70 karakter.",
-        "- metaDescription maksimal 170 karakter.",
-        "- slugSuggestion berupa slug URL-friendly (huruf kecil, dash).",
-    ].join("\n")
+function errorJson(message: string, status: number, data?: unknown) {
+    return NextResponse.json({ success: false, error: message, data }, { status })
 }
 
 function extractJsonObject(raw: string): string {
-    const trimmed = raw.trim()
-    if (trimmed.startsWith("{")) return trimmed
-
-    const codeFenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i)
-    if (codeFenceMatch?.[1]) {
-        return codeFenceMatch[1].trim()
-    }
-
-    const firstBrace = trimmed.indexOf("{")
-    const lastBrace = trimmed.lastIndexOf("}")
-    if (firstBrace >= 0 && lastBrace > firstBrace) {
-        return trimmed.slice(firstBrace, lastBrace + 1)
-    }
-
-    throw new Error("AI response tidak berformat JSON")
+    const start = raw.indexOf("{")
+    const end = raw.lastIndexOf("}")
+    if (start === -1 || end === -1 || end < start) return raw
+    return raw.slice(start, end + 1)
 }
 
-async function callGeminiGenerateArticle(apiKey: string, input: z.infer<typeof generateArticleSchema>) {
+function buildRewritePrompt(post: any, tone?: string, keyword?: string): string {
+    let prompt = `Tolong tulis ulang (rewrite) artikel blog berikut ini secara menyeluruh agar unik, segar, dan bebas plagiarisme.
+Tetap pertahankan informasi kuncinya, namun ubah cara penyampaian, struktur kalimat, dan paragrafnya.
+Pastikan format output tetap berupa HTML yang rapi (menggunakan <p>, <h2>, <h3>, <ul>, dsb). Jangan sertakan <h1>.
+
+Judul Asli: ${post.title}
+Konten Asli:
+${post.content}
+
+`
+    if (tone) {
+        prompt += `Target Gaya Bahasa (Tone): ${tone}\n`
+    }
+    if (keyword) {
+        prompt += `Fokus Keyword SEO: ${keyword}\n`
+    }
+
+    prompt += `\nKenbalikan hasilnya HANYA dalam format JSON dengan struktur: "title" (opsional judul baru), "contentHtml" (konten hasil rewrite lengkap), dan "excerpt" (ringkasan pendek maksimal 300 karakter).`
+
+    return prompt
+}
+
+async function callGeminiRewrite(apiKey: string, prompt: string) {
     const controller = new AbortController()
     const timeoutHandle = setTimeout(() => {
         controller.abort()
-    }, 90000)
+    }, 60000) // 60s for rewriting
 
     try {
         let lastModelError: Error | null = null
@@ -168,11 +88,9 @@ async function callGeminiGenerateArticle(apiKey: string, input: z.infer<typeof g
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    contents: [{ role: "user", parts: [{ text: buildPrompt(input) }] }],
+                    contents: [{ role: "user", parts: [{ text: prompt }] }],
                     generationConfig: {
                         temperature: 0.7,
-                        topP: 0.9,
-                        maxOutputTokens: 4096,
                         responseMimeType: "application/json",
                     },
                 }),
@@ -192,17 +110,14 @@ async function callGeminiGenerateArticle(apiKey: string, input: z.infer<typeof g
             }
 
             const payload = (await response.json()) as GeminiResponse
-            const candidateText = payload.candidates?.[0]?.content?.parts
-                ?.map((part) => part.text || "")
-                .join("\n")
-                .trim()
+            const candidateText = payload.candidates?.[0]?.content?.parts?.[0]?.text || ""
 
             if (!candidateText) {
                 throw new Error("Gemini tidak mengembalikan konten")
             }
 
             const jsonText = extractJsonObject(candidateText)
-            const parsed = aiArticleOutputSchema.safeParse(JSON.parse(jsonText))
+            const parsed = rewriteOutputSchema.safeParse(JSON.parse(jsonText))
 
             if (!parsed.success) {
                 throw new Error(`Output AI tidak valid: ${parsed.error.issues[0]?.message || "unknown"}`)
@@ -218,44 +133,48 @@ async function callGeminiGenerateArticle(apiKey: string, input: z.infer<typeof g
 }
 
 export async function POST(request: NextRequest) {
-    const adminCheck = await requireAdminMutationApi(request, { action: "ai-generate:create" })
+    const adminCheck = await requireAdminMutationApi(request, { action: "ai-rewrite:create" })
     if (!adminCheck.ok) return adminCheck.response
 
     const requestId = crypto.randomUUID()
 
-    let payload: z.infer<typeof generateArticleSchema>
+    let payload: z.infer<typeof rewriteRequestSchema>
     try {
         const body = await request.json()
-        const parsed = generateArticleSchema.safeParse(body)
-
+        const parsed = rewriteRequestSchema.safeParse(body)
         if (!parsed.success) {
             logAdminWarn({
                 requestId,
-                action: "ai-generate:create",
+                action: "ai-rewrite:create",
                 userId: adminCheck.identity.id,
                 role: adminCheck.identity.role,
                 roleSource: adminCheck.identity.source,
                 status: 400,
                 validation: { ok: false, reason: "invalid_payload" },
             })
-
-            return errorJson("Validation failed", 400, {
-                issues: parsed.error.issues.map((issue) => ({
-                    path: issue.path.join("."),
-                    code: issue.code,
-                    message: issue.message,
-                })),
-            })
+            return adminJsonValidationError(parsed.error)
         }
-
         payload = parsed.data
     } catch {
         return errorJson("Invalid request payload", 400)
     }
 
+    const postToRewrite = await prisma.post.findUnique({
+        where: { id: payload.postId },
+        select: { id: true, title: true, content: true },
+    })
+
+    if (!postToRewrite) {
+        return errorJson("Artikel tidak ditemukan", 404)
+    }
+
+    if (!postToRewrite.content || postToRewrite.content.length < 50) {
+        return errorJson("Konten artikel terlalu pendek untuk di-rewrite", 400)
+    }
+
     const task = await prisma.aiTask.create({
         data: {
-            type: "generate_article",
+            type: "rewrite_article",
             status: "pending",
             progress: 0,
             userId: adminCheck.identity.id,
@@ -281,9 +200,9 @@ export async function POST(request: NextRequest) {
         const attemptedKeyIds: string[] = []
         const maxAttempts = Math.min(activeKeys.length, 3)
 
-        let aiResult: z.infer<typeof aiArticleOutputSchema> | null = null
+        let aiResult: z.infer<typeof rewriteOutputSchema> | null = null
         let selectedKeyId: string | null = null
-        let lastErrorMessage = "AI generation failed"
+        let lastErrorMessage = "AI rewrite failed"
 
         for (let index = 0; index < maxAttempts; index += 1) {
             const keyRecord = activeKeys[index]
@@ -299,7 +218,8 @@ export async function POST(request: NextRequest) {
 
             try {
                 const decryptedKey = decryptStoredApiKey(keyRecord.apiKey)
-                aiResult = await callGeminiGenerateArticle(decryptedKey, payload)
+                const prompt = buildRewritePrompt(postToRewrite, payload.tone, payload.focusKeyword)
+                aiResult = await callGeminiRewrite(decryptedKey, prompt)
                 selectedKeyId = keyRecord.id
 
                 await prisma.aiApiKey.update({
@@ -330,48 +250,14 @@ export async function POST(request: NextRequest) {
             throw new Error(`Semua API key gagal: ${lastErrorMessage}`)
         }
 
-        await prisma.aiTask.update({
-            where: { id: task.id },
-            data: { progress: 80 },
-        })
-
-        const slug = await ensureUniquePostSlug(aiResult.slugSuggestion || aiResult.title || payload.topic)
-
-        const dbUser = adminCheck.identity.email
-            ? await prisma.user.findUnique({
-                where: { email: adminCheck.identity.email },
-                select: { id: true },
-            })
-            : null
-
-        const post = await prisma.post.create({
-            data: {
-                title: aiResult.title,
-                slug,
-                content: aiResult.contentHtml,
-                excerpt: aiResult.excerpt,
-                status: "DRAFT",
-                readingTime: estimateReadingTime(aiResult.contentHtml),
-                metaTitle: aiResult.metaTitle,
-                metaDescription: aiResult.metaDescription,
-                focusKeyword: aiResult.focusKeyword,
-                authorId: dbUser?.id,
-            },
-            select: {
-                id: true,
-                slug: true,
-                title: true,
-                status: true,
-            },
-        })
-
         const taskOutput = {
-            postId: post.id,
-            postSlug: post.slug,
-            postTitle: post.title,
+            postId: postToRewrite.id,
+            originalTitle: postToRewrite.title,
+            rewrittenTitle: aiResult.title,
+            rewrittenContentHtml: aiResult.contentHtml,
+            rewrittenExcerpt: aiResult.excerpt,
             usedKeyId: selectedKeyId,
             attemptedKeyIds,
-            editUrl: `/admin/posts/${post.id}/edit`,
         }
 
         await prisma.aiTask.update({
@@ -387,14 +273,14 @@ export async function POST(request: NextRequest) {
 
         logAdminInfo({
             requestId,
-            action: "ai-generate:create",
+            action: "ai-rewrite:create",
             userId: adminCheck.identity.id,
             role: adminCheck.identity.role,
             roleSource: adminCheck.identity.source,
             status: 200,
             payloadSummary: {
                 taskId: task.id,
-                postId: post.id,
+                postId: postToRewrite.id,
                 attempts: attemptedKeyIds.length,
                 usedKeyId: selectedKeyId,
             },
@@ -406,13 +292,7 @@ export async function POST(request: NextRequest) {
             data: {
                 taskId: task.id,
                 taskStatus: "completed",
-                post: {
-                    id: post.id,
-                    slug: post.slug,
-                    title: post.title,
-                    status: post.status,
-                    editUrl: `/admin/posts/${post.id}/edit`,
-                },
+                result: taskOutput,
             },
         })
     } catch (error) {
@@ -431,7 +311,7 @@ export async function POST(request: NextRequest) {
 
         logAdminError({
             requestId,
-            action: "ai-generate:create",
+            action: "ai-rewrite:create",
             userId: adminCheck.identity.id,
             role: adminCheck.identity.role,
             roleSource: adminCheck.identity.source,
@@ -441,7 +321,7 @@ export async function POST(request: NextRequest) {
         })
 
         return errorJsonWithCode(
-            "Gagal generate artikel AI",
+            "Gagal me-rewrite artikel AI",
             toAiKeyFailureHttpStatus(failure),
             failure.code,
             { taskId: task.id }

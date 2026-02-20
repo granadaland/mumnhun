@@ -154,17 +154,17 @@ function getConnectionStatusMeta(status: ConnectionStatus): { label: string; cla
         case "connected":
             return {
                 label: "Connected",
-                className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
+                className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700",
             }
         case "failed":
             return {
                 label: "Failed",
-                className: "border-red-500/30 bg-red-500/10 text-red-300",
+                className: "border-red-500/30 bg-red-500/10 text-red-700",
             }
         default:
             return {
                 label: "Not Tested",
-                className: "border-[#D4BCAA]/25 bg-[#D4BCAA]/10 text-[#D4BCAA]/70",
+                className: "border-[#D4BCAA]/20 bg-[#D4BCAA]/10 text-[#8C7A6B]/70",
             }
     }
 }
@@ -356,14 +356,14 @@ export default function AiSettingsPage() {
             {/* Header */}
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                    <h1 className="text-2xl font-bold text-[#F4EEE7]">AI Configuration</h1>
-                    <p className="text-[#D4BCAA]/50 text-sm mt-1">
+                    <h1 className="text-2xl font-bold text-[#0F0A09]">AI Configuration</h1>
+                    <p className="text-[#8C7A6B]/50 text-sm mt-1">
                         Kelola API keys Google Gemini (maks 5 keys, auto-rotary)
                     </p>
                 </div>
 
                 {refreshing && (
-                    <div className="inline-flex items-center gap-2 rounded-md border border-[#D4BCAA]/20 bg-[#1a1412] px-3 py-1.5 text-xs text-[#D4BCAA]/80">
+                    <div className="inline-flex items-center gap-2 rounded-md border border-[#D4BCAA]/20 bg-white px-3 py-1.5 text-xs text-[#8C7A6B]/80">
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         Sinkronisasi...
                     </div>
@@ -372,7 +372,7 @@ export default function AiSettingsPage() {
 
             {/* Info */}
             <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-5 py-4">
-                <p className="text-blue-300 text-sm">
+                <p className="text-blue-700 text-sm">
                     <strong>Auto-Rotary:</strong> Sistem akan otomatis merotasi penggunaan API key untuk menghindari rate limit. Key dengan usage count terendah akan digunakan lebih dulu.
                 </p>
             </div>
@@ -382,8 +382,8 @@ export default function AiSettingsPage() {
                     role="status"
                     aria-live="polite"
                     className={`px-4 py-3 rounded-lg border text-sm ${feedback.type === "error"
-                        ? "border-red-500/20 bg-red-500/10 text-red-300"
-                        : "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+                        ? "border-red-500/20 bg-red-500/10 text-red-700"
+                        : "border-emerald-500/20 bg-emerald-500/10 text-emerald-700"
                         }`}
                 >
                     {feedback.message}
@@ -391,17 +391,17 @@ export default function AiSettingsPage() {
             )}
 
             {/* Existing Keys */}
-            <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl overflow-hidden">
-                <div className="px-6 py-4 border-b border-[#D4BCAA]/5">
-                    <h2 className="font-semibold text-[#F4EEE7]">API Keys ({keys.length}/5)</h2>
+            <div className="bg-white border border-[#D4BCAA]/20 rounded-xl overflow-hidden">
+                <div className="px-6 py-4 border-b border-[#D4BCAA]/20">
+                    <h2 className="font-semibold text-[#0F0A09]">API Keys ({keys.length}/5)</h2>
                 </div>
 
                 {keys.length === 0 ? (
-                    <div className="px-6 py-8 text-center text-[#D4BCAA]/30 text-sm">
+                    <div className="px-6 py-8 text-center text-[#8C7A6B]/30 text-sm">
                         Belum ada API key. Tambahkan minimal 1 key untuk menggunakan fitur AI.
                     </div>
                 ) : (
-                    <div className="divide-y divide-[#D4BCAA]/5">
+                    <div className="divide-y divide-[#D4BCAA]/20">
                         {keys.map((key) => {
                             const statusMeta = getConnectionStatusMeta(key.connectionStatus)
                             const lastError = formatLastError(key.lastError, key.lastErrorCode)
@@ -414,7 +414,7 @@ export default function AiSettingsPage() {
                                     <div
                                         className={`w-10 h-10 rounded-lg flex items-center justify-center ${key.isActive
                                             ? "bg-[#466A68]/15 text-[#466A68]"
-                                            : "bg-[#D4BCAA]/5 text-[#D4BCAA]/30"
+                                            : "bg-[#D4BCAA]/5 text-[#8C7A6B]/30"
                                             }`}
                                     >
                                         <Key className="h-4 w-4" />
@@ -422,7 +422,7 @@ export default function AiSettingsPage() {
 
                                     <div className="flex-1 min-w-0">
                                         <div className="flex flex-wrap items-center gap-2">
-                                            <p className="text-sm font-medium text-[#F4EEE7]">
+                                            <p className="text-sm font-medium text-[#0F0A09]">
                                                 {key.label || `Key ${key.order + 1}`}
                                             </p>
                                             <Badge variant="outline" className={statusMeta.className}>
@@ -433,19 +433,19 @@ export default function AiSettingsPage() {
                                             )}
                                         </div>
 
-                                        <p className="text-xs text-[#D4BCAA]/40 font-mono mt-0.5">{key.apiKeyMasked}</p>
+                                        <p className="text-xs text-[#8C7A6B]/40 font-mono mt-0.5">{key.apiKeyMasked}</p>
 
-                                        <p className="text-[10px] text-[#D4BCAA]/30 mt-1">
+                                        <p className="text-[10px] text-[#8C7A6B]/30 mt-1">
                                             Digunakan {key.usageCount}x · {key.isActive ? "Aktif" : "Nonaktif"}
                                             {lastUsedLabel ? ` · Terakhir dicek ${lastUsedLabel}` : ""}
                                         </p>
 
                                         {key.connectionStatus === "failed" && lastError && (
-                                            <p className="text-xs text-red-300/90 mt-1">Gagal terakhir: {lastError}</p>
+                                            <p className="text-xs text-red-700/90 mt-1">Gagal terakhir: {lastError}</p>
                                         )}
 
                                         {key.connectionStatus === "not_tested" && (
-                                            <p className="text-[10px] text-[#D4BCAA]/35 mt-1">
+                                            <p className="text-[10px] text-[#8C7A6B]/35 mt-1">
                                                 Koneksi belum pernah diuji.
                                             </p>
                                         )}
@@ -456,8 +456,8 @@ export default function AiSettingsPage() {
                                             onClick={() => handleToggleKey(key.id, key.isActive)}
                                             disabled={disableActions}
                                             className={`p-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${key.isActive
-                                                ? "text-green-400 hover:text-green-300"
-                                                : "text-[#D4BCAA]/30 hover:text-[#D4BCAA]/70"
+                                                ? "text-green-600 hover:text-green-700"
+                                                : "text-[#8C7A6B]/30 hover:text-[#8C7A6B]/70"
                                                 }`}
                                             title={key.isActive ? "Nonaktifkan" : "Aktifkan"}
                                             aria-label={key.isActive ? "Nonaktifkan API key" : "Aktifkan API key"}
@@ -475,7 +475,7 @@ export default function AiSettingsPage() {
                                         <button
                                             onClick={() => handleDeleteKey(key.id)}
                                             disabled={disableActions}
-                                            className="p-2 text-[#D4BCAA]/30 hover:text-red-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                            className="p-2 text-[#8C7A6B]/30 hover:text-red-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                                             title="Hapus"
                                             aria-label="Hapus API key"
                                         >
@@ -491,13 +491,13 @@ export default function AiSettingsPage() {
 
             {/* Add New Key */}
             {keys.length < 5 && (
-                <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl overflow-hidden">
-                    <div className="px-6 py-4 border-b border-[#D4BCAA]/5">
-                        <h2 className="font-semibold text-[#F4EEE7]">Tambah API Key</h2>
+                <div className="bg-white border border-[#D4BCAA]/20 rounded-xl overflow-hidden">
+                    <div className="px-6 py-4 border-b border-[#D4BCAA]/20">
+                        <h2 className="font-semibold text-[#0F0A09]">Tambah API Key</h2>
                     </div>
                     <form className="px-6 py-4 space-y-4" onSubmit={handleAddKey}>
                         <div>
-                            <label className="block text-sm font-medium text-[#D4BCAA]/80 mb-1.5">
+                            <label className="block text-sm font-medium text-[#8C7A6B]/80 mb-1.5">
                                 Label (opsional)
                             </label>
                             <input
@@ -505,11 +505,11 @@ export default function AiSettingsPage() {
                                 value={newKey.label}
                                 onChange={(e) => setNewKey({ ...newKey, label: e.target.value })}
                                 placeholder="e.g., Production Key 1"
-                                className="w-full px-4 py-2.5 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-[#F4EEE7] text-sm placeholder-[#D4BCAA]/25 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all"
+                                className="w-full px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-[#D4BCAA]/80 mb-1.5">
+                            <label className="block text-sm font-medium text-[#8C7A6B]/80 mb-1.5">
                                 API Key
                             </label>
                             <input
@@ -524,12 +524,12 @@ export default function AiSettingsPage() {
                                     }
                                 }}
                                 placeholder="AIza..."
-                                className={`w-full px-4 py-2.5 bg-[#1a1412] border rounded-lg text-[#F4EEE7] text-sm placeholder-[#D4BCAA]/25 focus:outline-none focus:ring-2 transition-all font-mono ${formError
+                                className={`w-full px-4 py-2.5 bg-white border rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 focus:outline-none focus:ring-2 transition-all font-mono ${formError
                                     ? "border-red-500/40 focus:ring-red-500/30"
-                                    : "border-[#D4BCAA]/10 focus:ring-[#466A68]/30"
+                                    : "border-[#D4BCAA]/20 focus:ring-[#466A68]/30"
                                     }`}
                             />
-                            {formError && <p className="text-xs text-red-300 mt-1.5">{formError}</p>}
+                            {formError && <p className="text-xs text-red-700 mt-1.5">{formError}</p>}
                         </div>
                         <button
                             type="submit"

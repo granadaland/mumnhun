@@ -112,8 +112,8 @@ export default function MediaPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-[#F4EEE7]">Media</h1>
-                    <p className="text-[#D4BCAA]/50 text-sm mt-1">{pagination.total} file</p>
+                    <h1 className="text-2xl font-bold text-[#0F0A09]">Media</h1>
+                    <p className="text-[#8C7A6B]/50 text-sm mt-1">{pagination.total} file</p>
                 </div>
                 <button
                     onClick={() => setShowAdd(true)}
@@ -126,17 +126,17 @@ export default function MediaPage() {
 
             {/* Add Modal */}
             {showAdd && (
-                <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl p-5 space-y-3">
+                <div className="bg-white border border-[#D4BCAA]/20 rounded-xl p-5 space-y-3">
                     <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-[#F4EEE7]">Tambah Media</h3>
-                        <button onClick={() => setShowAdd(false)} className="text-[#D4BCAA]/30 hover:text-[#F4EEE7]">
+                        <h3 className="text-sm font-semibold text-[#0F0A09]">Tambah Media</h3>
+                        <button onClick={() => setShowAdd(false)} className="text-[#8C7A6B]/30 hover:text-[#0F0A09]">
                             <X className="h-4 w-4" />
                         </button>
                     </div>
-                    <input type="url" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} placeholder="URL gambar (Cloudinary)" className="w-full px-4 py-2.5 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-[#F4EEE7] text-sm placeholder-[#D4BCAA]/25 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
-                    <input type="text" value={newAlt} onChange={(e) => setNewAlt(e.target.value)} placeholder="Alt text (deskripsi gambar)" className="w-full px-4 py-2.5 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-[#F4EEE7] text-sm placeholder-[#D4BCAA]/25 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
+                    <input type="url" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} placeholder="URL gambar (Cloudinary)" className="w-full px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
+                    <input type="text" value={newAlt} onChange={(e) => setNewAlt(e.target.value)} placeholder="Alt text (deskripsi gambar)" className="w-full px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
                     {newUrl && (
-                        <div className="rounded-lg overflow-hidden border border-[#D4BCAA]/10 max-h-40">
+                        <div className="rounded-lg overflow-hidden border border-[#D4BCAA]/20 max-h-40">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={newUrl} alt="Preview" className="w-full h-full object-contain" />
                         </div>
@@ -149,30 +149,30 @@ export default function MediaPage() {
             )}
 
             {/* Search */}
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-[#2a2018] border border-[#D4BCAA]/10 rounded-lg">
-                <Search className="h-4 w-4 text-[#D4BCAA]/30" />
-                <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === "Enter" && fetchMedia()} placeholder="Cari media..." className="bg-transparent text-sm text-[#F4EEE7] placeholder-[#D4BCAA]/25 outline-none w-full" />
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg">
+                <Search className="h-4 w-4 text-[#8C7A6B]/30" />
+                <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === "Enter" && fetchMedia()} placeholder="Cari media..." className="bg-transparent text-sm text-[#0F0A09] placeholder-[#8C7A6B]/60 outline-none w-full" />
             </div>
 
             {/* Grid */}
             {loading ? (
                 <div className="flex items-center justify-center h-48"><Loader2 className="h-6 w-6 text-[#466A68] animate-spin" /></div>
             ) : media.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-48 text-[#D4BCAA]/30">
+                <div className="flex flex-col items-center justify-center h-48 text-[#8C7A6B]/30">
                     <ImageIcon className="h-8 w-8 mb-2" />
                     <p className="text-sm">Belum ada media</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                     {media.map((item) => (
-                        <div key={item.id} className="group relative bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl overflow-hidden aspect-square hover:border-[#466A68]/30 transition-all cursor-pointer" onClick={() => setPreview(item)}>
+                        <div key={item.id} className="group relative bg-white border border-[#D4BCAA]/20 rounded-xl overflow-hidden aspect-square hover:border-[#466A68]/30 transition-all cursor-pointer" onClick={() => setPreview(item)}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={item.url} alt={item.alt || ""} className="w-full h-full object-cover" loading="lazy" />
                             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                                 <button onClick={(e) => { e.stopPropagation(); copyUrl(item.url) }} className="p-2 bg-white/10 backdrop-blur rounded-lg text-white hover:bg-white/20 transition-colors" title="Copy URL">
                                     {copied === item.url ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                                 </button>
-                                <button onClick={(e) => { e.stopPropagation(); handleDelete(item.id) }} disabled={deleting === item.id} className="p-2 bg-red-500/20 backdrop-blur rounded-lg text-red-300 hover:bg-red-500/30 transition-colors" title="Delete">
+                                <button onClick={(e) => { e.stopPropagation(); handleDelete(item.id) }} disabled={deleting === item.id} className="p-2 bg-red-500/20 backdrop-blur rounded-lg text-red-700 hover:bg-red-500/30 transition-colors" title="Delete">
                                     {deleting === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                                 </button>
                             </div>
@@ -184,10 +184,10 @@ export default function MediaPage() {
             {/* Pagination */}
             {pagination.totalPages > 1 && (
                 <div className="flex items-center justify-between">
-                    <p className="text-xs text-[#D4BCAA]/40">Halaman {pagination.page} dari {pagination.totalPages}</p>
+                    <p className="text-xs text-[#8C7A6B]/40">Halaman {pagination.page} dari {pagination.totalPages}</p>
                     <div className="flex items-center gap-1">
-                        <button onClick={() => fetchMedia(pagination.page - 1)} disabled={pagination.page <= 1} className="p-1.5 text-[#D4BCAA]/30 hover:text-[#F4EEE7] disabled:opacity-30"><ChevronLeft className="h-4 w-4" /></button>
-                        <button onClick={() => fetchMedia(pagination.page + 1)} disabled={pagination.page >= pagination.totalPages} className="p-1.5 text-[#D4BCAA]/30 hover:text-[#F4EEE7] disabled:opacity-30"><ChevronRight className="h-4 w-4" /></button>
+                        <button onClick={() => fetchMedia(pagination.page - 1)} disabled={pagination.page <= 1} className="p-1.5 text-[#8C7A6B]/30 hover:text-[#0F0A09] disabled:opacity-30"><ChevronLeft className="h-4 w-4" /></button>
+                        <button onClick={() => fetchMedia(pagination.page + 1)} disabled={pagination.page >= pagination.totalPages} className="p-1.5 text-[#8C7A6B]/30 hover:text-[#0F0A09] disabled:opacity-30"><ChevronRight className="h-4 w-4" /></button>
                     </div>
                 </div>
             )}
@@ -195,15 +195,15 @@ export default function MediaPage() {
             {/* Preview Modal */}
             {preview && (
                 <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" onClick={() => setPreview(null)}>
-                    <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl p-4 max-w-2xl w-full max-h-[80vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+                    <div className="bg-white border border-[#D4BCAA]/20 rounded-xl p-4 max-w-2xl w-full max-h-[80vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between mb-3">
-                            <p className="text-sm text-[#D4BCAA]/70 truncate flex-1">{preview.alt || "No alt text"}</p>
-                            <button onClick={() => setPreview(null)} className="p-1 text-[#D4BCAA]/30 hover:text-[#F4EEE7]"><X className="h-4 w-4" /></button>
+                            <p className="text-sm text-[#8C7A6B]/70 truncate flex-1">{preview.alt || "No alt text"}</p>
+                            <button onClick={() => setPreview(null)} className="p-1 text-[#8C7A6B]/30 hover:text-[#0F0A09]"><X className="h-4 w-4" /></button>
                         </div>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={preview.url} alt={preview.alt || ""} className="w-full rounded-lg" />
                         <div className="mt-3 flex items-center gap-2">
-                            <input type="text" value={preview.url} readOnly className="flex-1 px-3 py-2 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-xs text-[#F4EEE7] font-mono" />
+                            <input type="text" value={preview.url} readOnly className="flex-1 px-3 py-2 bg-white border border-[#D4BCAA]/20 rounded-lg text-xs text-[#0F0A09] font-mono" />
                             <button onClick={() => copyUrl(preview.url)} className="px-3 py-2 bg-[#466A68]/15 text-[#466A68] text-xs font-medium rounded-lg hover:bg-[#466A68]/25 transition-colors">
                                 {copied === preview.url ? "Copied!" : "Copy"}
                             </button>

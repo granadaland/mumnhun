@@ -38,46 +38,62 @@ type GeminiResponse = {
     }>
 }
 
-async function callGeminiChat(apiKey: string, history: GeminiMessage[], userMessage: string): Promise<string> {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(apiKey)}`
+const GEMINI_MODEL_CANDIDATES = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-flash-001"]
 
+async function callGeminiChat(apiKey: string, history: GeminiMessage[], userMessage: string): Promise<string> {
     const contents: GeminiMessage[] = [
         ...history,
         { role: "user", parts: [{ text: userMessage }] },
     ]
 
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 30000)
+    const timeout = setTimeout(() => controller.abort(), 60000)
 
     try {
-        const response = await fetch(endpoint, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-                contents,
-                generationConfig: {
-                    temperature: 0.8,
-                    topP: 0.95,
-                    maxOutputTokens: 2048,
-                },
-            }),
-            signal: controller.signal,
-        })
+        let lastModelError: Error | null = null
 
-        if (!response.ok) {
-            const text = await response.text()
-            throw new Error(`Gemini HTTP ${response.status}: ${text.slice(0, 200)}`)
+        for (let index = 0; index < GEMINI_MODEL_CANDIDATES.length; index += 1) {
+            const model = GEMINI_MODEL_CANDIDATES[index]
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`
+
+            const response = await fetch(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+                    contents,
+                    generationConfig: {
+                        temperature: 0.8,
+                        topP: 0.95,
+                        maxOutputTokens: 2048,
+                    },
+                }),
+                signal: controller.signal,
+            })
+
+            if (!response.ok) {
+                const text = await response.text()
+                const isNotFound = response.status === 404
+                lastModelError = new Error(`Gemini HTTP ${response.status} (${model}): ${text.slice(0, 200)}`)
+
+                if (isNotFound && index < GEMINI_MODEL_CANDIDATES.length - 1) {
+                    continue
+                }
+
+                throw lastModelError
+            }
+
+            const payload = (await response.json()) as GeminiResponse
+            const text = payload.candidates?.[0]?.content?.parts
+                ?.map((p) => p.text || "")
+                .join("")
+                .trim()
+
+            if (!text) throw new Error("Gemini tidak mengembalikan respons")
+            return text
         }
 
-        const payload = (await response.json()) as GeminiResponse
-        const text = payload.candidates?.[0]?.content?.parts
-            ?.map((p) => p.text || "")
-            .join("")
-            .trim()
-
-        if (!text) throw new Error("Gemini tidak mengembalikan respons")
-        return text
+        throw lastModelError ?? new Error("Semua model Gemini gagal diakses")
     } finally {
         clearTimeout(timeout)
     }

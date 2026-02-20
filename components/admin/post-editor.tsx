@@ -4,10 +4,13 @@ import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { RichTextEditor } from "@/components/admin/rich-text-editor"
 import { SeoScanner } from "@/components/admin/seo-scanner"
+import { CloudinaryUploader } from "@/components/admin/cloudinary-uploader"
+import { AiAssistantPanel } from "@/components/admin/ai-assistant-panel"
 import { ADMIN_CSRF_HEADER, getAdminCsrfToken } from "@/lib/security/csrf-client"
 import {
     Save, Loader2, ArrowLeft, Eye, ChevronDown, ChevronUp,
     Calendar, Globe, FileText, Search as SearchIcon, BarChart3,
+    Sparkles,
 } from "lucide-react"
 
 type Category = { id: string; name: string; slug: string }
@@ -66,6 +69,7 @@ export function PostEditor({ postId }: { postId?: string }) {
     const [showSeo, setShowSeo] = useState(false)
     const [showSchedule, setShowSchedule] = useState(false)
     const [showScanner, setShowScanner] = useState(false)
+    const [showAiAssistant, setShowAiAssistant] = useState(false)
     const [autoSlug, setAutoSlug] = useState(!postId)
 
     // Fetch categories and tags
@@ -189,16 +193,23 @@ export function PostEditor({ postId }: { postId?: string }) {
             <div className="flex items-center justify-between">
                 <button
                     onClick={() => router.push("/admin/posts")}
-                    className="flex items-center gap-2 text-sm text-[#D4BCAA]/50 hover:text-[#F4EEE7] transition-colors"
+                    className="flex items-center gap-2 text-sm text-[#8C7A6B]/50 hover:text-[#0F0A09] transition-colors"
                 >
                     <ArrowLeft className="h-4 w-4" />
                     Kembali
                 </button>
                 <div className="flex items-center gap-2">
                     <button
+                        onClick={() => setShowAiAssistant(true)}
+                        className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-[#466A68]/10 to-[#466A68]/5 border border-[#466A68]/20 text-[#466A68] text-sm font-medium rounded-lg hover:bg-[#466A68]/15 transition-all"
+                    >
+                        <Sparkles className="h-4 w-4" />
+                        AI Assist
+                    </button>
+                    <button
                         onClick={() => handleSave("DRAFT")}
                         disabled={saving}
-                        className="px-4 py-2 border border-[#D4BCAA]/15 text-[#D4BCAA]/70 text-sm rounded-lg hover:bg-[#D4BCAA]/5 transition-all"
+                        className="px-4 py-2 border border-[#D4BCAA]/15 text-[#8C7A6B]/70 text-sm rounded-lg hover:bg-[#D4BCAA]/5 transition-all"
                     >
                         Simpan Draft
                     </button>
@@ -234,12 +245,12 @@ export function PostEditor({ postId }: { postId?: string }) {
                         value={post.title}
                         onChange={(e) => update("title", e.target.value)}
                         placeholder="Judul Artikel"
-                        className="w-full text-2xl font-bold bg-transparent text-[#F4EEE7] placeholder-[#D4BCAA]/20 outline-none border-b border-[#D4BCAA]/10 pb-3 focus:border-[#466A68]/50 transition-colors"
+                        className="w-full text-2xl font-bold bg-transparent text-[#0F0A09] placeholder-[#8C7A6B]/60 outline-none border-b border-[#D4BCAA]/20 pb-3 focus:border-[#466A68]/50 transition-colors"
                     />
 
                     {/* Slug */}
                     <div className="flex items-center gap-2">
-                        <span className="text-xs text-[#D4BCAA]/30">mumnhun.id/</span>
+                        <span className="text-xs text-[#8C7A6B]/30">mumnhun.id/</span>
                         <input
                             type="text"
                             value={post.slug}
@@ -248,7 +259,7 @@ export function PostEditor({ postId }: { postId?: string }) {
                                 update("slug", slugify(e.target.value))
                             }}
                             placeholder="slug-artikel"
-                            className="flex-1 text-xs bg-transparent text-[#466A68] placeholder-[#D4BCAA]/20 outline-none font-mono"
+                            className="flex-1 text-xs bg-transparent text-[#466A68] placeholder-[#8C7A6B]/60 outline-none font-mono"
                         />
                     </div>
 
@@ -259,8 +270,8 @@ export function PostEditor({ postId }: { postId?: string }) {
                     />
 
                     {/* Excerpt */}
-                    <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl p-5">
-                        <label className="block text-sm font-medium text-[#D4BCAA]/70 mb-2">
+                    <div className="bg-white border border-[#D4BCAA]/20 rounded-xl p-5">
+                        <label className="block text-sm font-medium text-[#8C7A6B]/70 mb-2">
                             Excerpt / Ringkasan
                         </label>
                         <textarea
@@ -268,15 +279,15 @@ export function PostEditor({ postId }: { postId?: string }) {
                             onChange={(e) => update("excerpt", e.target.value)}
                             rows={3}
                             placeholder="Ringkasan singkat artikel..."
-                            className="w-full bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg px-4 py-2.5 text-sm text-[#F4EEE7] placeholder-[#D4BCAA]/20 outline-none focus:ring-2 focus:ring-[#466A68]/30 resize-none transition-all"
+                            className="w-full bg-white border border-[#D4BCAA]/20 rounded-lg px-4 py-2.5 text-sm text-[#0F0A09] placeholder-[#8C7A6B]/60 outline-none focus:ring-2 focus:ring-[#466A68]/30 resize-none transition-all"
                         />
                     </div>
 
                     {/* SEO Section */}
-                    <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl overflow-hidden">
+                    <div className="bg-white border border-[#D4BCAA]/20 rounded-xl overflow-hidden">
                         <button
                             onClick={() => setShowSeo(!showSeo)}
-                            className="w-full flex items-center justify-between px-5 py-4 text-sm font-medium text-[#D4BCAA]/70 hover:text-[#F4EEE7] transition-colors"
+                            className="w-full flex items-center justify-between px-5 py-4 text-sm font-medium text-[#8C7A6B]/70 hover:text-[#0F0A09] transition-colors"
                         >
                             <div className="flex items-center gap-2">
                                 <Globe className="h-4 w-4" />
@@ -285,47 +296,53 @@ export function PostEditor({ postId }: { postId?: string }) {
                             {showSeo ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </button>
                         {showSeo && (
-                            <div className="px-5 pb-5 space-y-4 border-t border-[#D4BCAA]/5 pt-4">
+                            <div className="px-5 pb-5 space-y-4 border-t border-[#D4BCAA]/20 pt-4">
                                 <div>
-                                    <label className="block text-xs text-[#D4BCAA]/50 mb-1">Meta Title <span className="text-[#D4BCAA]/30">({post.metaTitle.length}/60)</span></label>
-                                    <input type="text" value={post.metaTitle} onChange={(e) => update("metaTitle", e.target.value)} placeholder={post.title || "Meta title..."} className="w-full bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg px-3 py-2 text-sm text-[#F4EEE7] placeholder-[#D4BCAA]/20 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
+                                    <label className="block text-xs text-[#8C7A6B]/50 mb-1">Meta Title <span className="text-[#8C7A6B]/30">({post.metaTitle.length}/60)</span></label>
+                                    <input type="text" value={post.metaTitle} onChange={(e) => update("metaTitle", e.target.value)} placeholder={post.title || "Meta title..."} className="w-full bg-white border border-[#D4BCAA]/20 rounded-lg px-3 py-2 text-sm text-[#0F0A09] placeholder-[#8C7A6B]/60 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs text-[#D4BCAA]/50 mb-1">Meta Description <span className="text-[#D4BCAA]/30">({post.metaDescription.length}/160)</span></label>
-                                    <textarea value={post.metaDescription} onChange={(e) => update("metaDescription", e.target.value)} rows={2} placeholder="Deskripsi singkat untuk mesin pencari..." className="w-full bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg px-3 py-2 text-sm text-[#F4EEE7] placeholder-[#D4BCAA]/20 outline-none focus:ring-2 focus:ring-[#466A68]/30 resize-none transition-all" />
+                                    <label className="block text-xs text-[#8C7A6B]/50 mb-1">Meta Description <span className="text-[#8C7A6B]/30">({post.metaDescription.length}/160)</span></label>
+                                    <textarea value={post.metaDescription} onChange={(e) => update("metaDescription", e.target.value)} rows={2} placeholder="Deskripsi singkat untuk mesin pencari..." className="w-full bg-white border border-[#D4BCAA]/20 rounded-lg px-3 py-2 text-sm text-[#0F0A09] placeholder-[#8C7A6B]/60 outline-none focus:ring-2 focus:ring-[#466A68]/30 resize-none transition-all" />
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-xs text-[#D4BCAA]/50 mb-1">Focus Keyword</label>
-                                        <input type="text" value={post.focusKeyword} onChange={(e) => update("focusKeyword", e.target.value)} placeholder="sewa freezer ASI" className="w-full bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg px-3 py-2 text-sm text-[#F4EEE7] placeholder-[#D4BCAA]/20 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
+                                        <label className="block text-xs text-[#8C7A6B]/50 mb-1">Focus Keyword</label>
+                                        <input type="text" value={post.focusKeyword} onChange={(e) => update("focusKeyword", e.target.value)} placeholder="sewa freezer ASI" className="w-full bg-white border border-[#D4BCAA]/20 rounded-lg px-3 py-2 text-sm text-[#0F0A09] placeholder-[#8C7A6B]/60 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
                                     </div>
                                     <div>
-                                        <label className="block text-xs text-[#D4BCAA]/50 mb-1">Canonical URL</label>
-                                        <input type="url" value={post.canonicalUrl} onChange={(e) => update("canonicalUrl", e.target.value)} placeholder="https://..." className="w-full bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg px-3 py-2 text-sm text-[#F4EEE7] placeholder-[#D4BCAA]/20 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
+                                        <label className="block text-xs text-[#8C7A6B]/50 mb-1">Canonical URL</label>
+                                        <input type="url" value={post.canonicalUrl} onChange={(e) => update("canonicalUrl", e.target.value)} placeholder="https://..." className="w-full bg-white border border-[#D4BCAA]/20 rounded-lg px-3 py-2 text-sm text-[#0F0A09] placeholder-[#8C7A6B]/60 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-xs text-[#D4BCAA]/50 mb-1">OG Title</label>
-                                        <input type="text" value={post.ogTitle} onChange={(e) => update("ogTitle", e.target.value)} placeholder={post.title} className="w-full bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg px-3 py-2 text-sm text-[#F4EEE7] placeholder-[#D4BCAA]/20 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
+                                        <label className="block text-xs text-[#8C7A6B]/50 mb-1">OG Title</label>
+                                        <input type="text" value={post.ogTitle} onChange={(e) => update("ogTitle", e.target.value)} placeholder={post.title} className="w-full bg-white border border-[#D4BCAA]/20 rounded-lg px-3 py-2 text-sm text-[#0F0A09] placeholder-[#8C7A6B]/60 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
                                     </div>
                                     <div>
-                                        <label className="block text-xs text-[#D4BCAA]/50 mb-1">OG Image URL</label>
-                                        <input type="url" value={post.ogImage} onChange={(e) => update("ogImage", e.target.value)} placeholder="https://res.cloudinary.com/..." className="w-full bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg px-3 py-2 text-sm text-[#F4EEE7] placeholder-[#D4BCAA]/20 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
+                                        <label className="block text-xs text-[#8C7A6B]/50 mb-2">OG Image</label>
+                                        <CloudinaryUploader
+                                            value={post.ogImage}
+                                            onChange={(url) => update("ogImage", url)}
+                                            folder="mumnhun/posts/og"
+                                            label=""
+                                            description=""
+                                        />
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-xs text-[#D4BCAA]/50 mb-1">OG Description</label>
-                                    <textarea value={post.ogDescription} onChange={(e) => update("ogDescription", e.target.value)} rows={2} placeholder="Deskripsi Open Graph..." className="w-full bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg px-3 py-2 text-sm text-[#F4EEE7] placeholder-[#D4BCAA]/20 outline-none focus:ring-2 focus:ring-[#466A68]/30 resize-none transition-all" />
+                                    <label className="block text-xs text-[#8C7A6B]/50 mb-1">OG Description</label>
+                                    <textarea value={post.ogDescription} onChange={(e) => update("ogDescription", e.target.value)} rows={2} placeholder="Deskripsi Open Graph..." className="w-full bg-white border border-[#D4BCAA]/20 rounded-lg px-3 py-2 text-sm text-[#0F0A09] placeholder-[#8C7A6B]/60 outline-none focus:ring-2 focus:ring-[#466A68]/30 resize-none transition-all" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs text-[#D4BCAA]/50 mb-1">Schema Type</label>
-                                    <select value={post.schemaType} onChange={(e) => update("schemaType", e.target.value)} className="w-full bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg px-3 py-2 text-sm text-[#F4EEE7] outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all">
-                                        <option value="" className="bg-[#1a1412]">Pilih Schema...</option>
-                                        <option value="Article" className="bg-[#1a1412]">Article</option>
-                                        <option value="BlogPosting" className="bg-[#1a1412]">BlogPosting</option>
-                                        <option value="HowTo" className="bg-[#1a1412]">HowTo</option>
-                                        <option value="FAQPage" className="bg-[#1a1412]">FAQPage</option>
+                                    <label className="block text-xs text-[#8C7A6B]/50 mb-1">Schema Type</label>
+                                    <select value={post.schemaType} onChange={(e) => update("schemaType", e.target.value)} className="w-full bg-white border border-[#D4BCAA]/20 rounded-lg px-3 py-2 text-sm text-[#0F0A09] outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all">
+                                        <option value="" className="bg-white">Pilih Schema...</option>
+                                        <option value="Article" className="bg-white">Article</option>
+                                        <option value="BlogPosting" className="bg-white">BlogPosting</option>
+                                        <option value="HowTo" className="bg-white">HowTo</option>
+                                        <option value="FAQPage" className="bg-white">FAQPage</option>
                                     </select>
                                 </div>
                             </div>
@@ -336,34 +353,34 @@ export function PostEditor({ postId }: { postId?: string }) {
                 {/* Sidebar (1/3) */}
                 <div className="space-y-5">
                     {/* Publish Settings */}
-                    <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl p-5 space-y-4">
-                        <h3 className="text-sm font-semibold text-[#F4EEE7] flex items-center gap-2">
+                    <div className="bg-white border border-[#D4BCAA]/20 rounded-xl p-5 space-y-4">
+                        <h3 className="text-sm font-semibold text-[#0F0A09] flex items-center gap-2">
                             <FileText className="h-4 w-4 text-[#466A68]" />
                             Publish
                         </h3>
 
                         {/* Status */}
                         <div>
-                            <label className="block text-xs text-[#D4BCAA]/50 mb-1">Status</label>
+                            <label className="block text-xs text-[#8C7A6B]/50 mb-1">Status</label>
                             <select
                                 value={post.status}
                                 onChange={(e) => {
                                     update("status", e.target.value)
                                     setShowSchedule(e.target.value === "SCHEDULED")
                                 }}
-                                className="w-full bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg px-3 py-2 text-sm text-[#F4EEE7] outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all"
+                                className="w-full bg-white border border-[#D4BCAA]/20 rounded-lg px-3 py-2 text-sm text-[#0F0A09] outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all"
                             >
-                                <option value="DRAFT" className="bg-[#1a1412]">Draft</option>
-                                <option value="PUBLISHED" className="bg-[#1a1412]">Published</option>
-                                <option value="SCHEDULED" className="bg-[#1a1412]">Scheduled</option>
-                                <option value="ARCHIVED" className="bg-[#1a1412]">Archived</option>
+                                <option value="DRAFT" className="bg-white">Draft</option>
+                                <option value="PUBLISHED" className="bg-white">Published</option>
+                                <option value="SCHEDULED" className="bg-white">Scheduled</option>
+                                <option value="ARCHIVED" className="bg-white">Archived</option>
                             </select>
                         </div>
 
                         {/* Schedule Date */}
                         {(showSchedule || post.status === "SCHEDULED") && (
                             <div>
-                                <label className="block text-xs text-[#D4BCAA]/50 mb-1 flex items-center gap-1">
+                                <label className="block text-xs text-[#8C7A6B]/50 mb-1 flex items-center gap-1">
                                     <Calendar className="h-3 w-3" />
                                     Jadwal Publish
                                 </label>
@@ -371,7 +388,7 @@ export function PostEditor({ postId }: { postId?: string }) {
                                     type="datetime-local"
                                     value={post.scheduledAt}
                                     onChange={(e) => update("scheduledAt", e.target.value)}
-                                    className="w-full bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg px-3 py-2 text-sm text-[#F4EEE7] outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all"
+                                    className="w-full bg-white border border-[#D4BCAA]/20 rounded-lg px-3 py-2 text-sm text-[#0F0A09] outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all"
                                 />
                             </div>
                         )}
@@ -390,33 +407,23 @@ export function PostEditor({ postId }: { postId?: string }) {
                     </div>
 
                     {/* Featured Image */}
-                    <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl p-5 space-y-3">
-                        <h3 className="text-sm font-semibold text-[#F4EEE7]">Featured Image</h3>
-                        <input
-                            type="url"
+                    <div className="bg-white border border-[#D4BCAA]/20 rounded-xl p-5 space-y-3">
+                        <h3 className="text-sm font-semibold text-[#0F0A09]">Featured Image</h3>
+                        <CloudinaryUploader
                             value={post.featuredImage}
-                            onChange={(e) => update("featuredImage", e.target.value)}
-                            placeholder="https://res.cloudinary.com/..."
-                            className="w-full bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg px-3 py-2 text-sm text-[#F4EEE7] placeholder-[#D4BCAA]/20 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all"
+                            onChange={(url) => update("featuredImage", url)}
+                            folder="mumnhun/posts/featured"
+                            label=""
+                            description=""
                         />
-                        {post.featuredImage && (
-                            <div className="rounded-lg overflow-hidden border border-[#D4BCAA]/10">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                    src={post.featuredImage}
-                                    alt="Preview"
-                                    className="w-full h-32 object-cover"
-                                />
-                            </div>
-                        )}
                     </div>
 
                     {/* Categories */}
-                    <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl p-5 space-y-3">
-                        <h3 className="text-sm font-semibold text-[#F4EEE7]">Kategori</h3>
+                    <div className="bg-white border border-[#D4BCAA]/20 rounded-xl p-5 space-y-3">
+                        <h3 className="text-sm font-semibold text-[#0F0A09]">Kategori</h3>
                         <div className="space-y-1.5 max-h-40 overflow-y-auto">
                             {categories.map((cat) => (
-                                <label key={cat.id} className="flex items-center gap-2 text-sm text-[#D4BCAA]/70 cursor-pointer hover:text-[#F4EEE7] transition-colors">
+                                <label key={cat.id} className="flex items-center gap-2 text-sm text-[#8C7A6B]/70 cursor-pointer hover:text-[#0F0A09] transition-colors">
                                     <input
                                         type="checkbox"
                                         checked={post.categoryIds.includes(cat.id)}
@@ -427,7 +434,7 @@ export function PostEditor({ postId }: { postId?: string }) {
                                                 update("categoryIds", post.categoryIds.filter((id) => id !== cat.id))
                                             }
                                         }}
-                                        className="rounded border-[#D4BCAA]/20 bg-[#1a1412] text-[#466A68] focus:ring-[#466A68]/30"
+                                        className="rounded border-[#D4BCAA]/20 bg-white text-[#466A68] focus:ring-[#466A68]/30"
                                     />
                                     {cat.name}
                                 </label>
@@ -436,8 +443,8 @@ export function PostEditor({ postId }: { postId?: string }) {
                     </div>
 
                     {/* Tags */}
-                    <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl p-5 space-y-3">
-                        <h3 className="text-sm font-semibold text-[#F4EEE7]">Tag</h3>
+                    <div className="bg-white border border-[#D4BCAA]/20 rounded-xl p-5 space-y-3">
+                        <h3 className="text-sm font-semibold text-[#0F0A09]">Tag</h3>
 
                         {/* Selected tags */}
                         {post.tagIds.length > 0 && (
@@ -447,7 +454,7 @@ export function PostEditor({ postId }: { postId?: string }) {
                                     return tag ? (
                                         <span
                                             key={tag.id}
-                                            className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] bg-[#466A68]/15 text-[#466A68] rounded-full cursor-pointer hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                                            className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] bg-[#466A68]/15 text-[#466A68] rounded-full cursor-pointer hover:bg-red-500/10 hover:text-red-600 transition-colors"
                                             onClick={() => update("tagIds", post.tagIds.filter((id) => id !== tagId))}
                                         >
                                             {tag.name} ×
@@ -458,14 +465,14 @@ export function PostEditor({ postId }: { postId?: string }) {
                         )}
 
                         {/* Tag search */}
-                        <div className="flex items-center gap-2 px-3 py-2 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg">
-                            <SearchIcon className="h-3 w-3 text-[#D4BCAA]/30" />
+                        <div className="flex items-center gap-2 px-3 py-2 bg-white border border-[#D4BCAA]/20 rounded-lg">
+                            <SearchIcon className="h-3 w-3 text-[#8C7A6B]/30" />
                             <input
                                 type="text"
                                 value={tagSearch}
                                 onChange={(e) => setTagSearch(e.target.value)}
                                 placeholder="Cari tag..."
-                                className="bg-transparent text-xs text-[#F4EEE7] placeholder-[#D4BCAA]/20 outline-none w-full"
+                                className="bg-transparent text-xs text-[#0F0A09] placeholder-[#8C7A6B]/60 outline-none w-full"
                             />
                         </div>
 
@@ -477,7 +484,7 @@ export function PostEditor({ postId }: { postId?: string }) {
                                     <button
                                         key={tag.id}
                                         onClick={() => update("tagIds", [...post.tagIds, tag.id])}
-                                        className="block w-full text-left text-xs text-[#D4BCAA]/50 hover:text-[#F4EEE7] hover:bg-[#D4BCAA]/5 px-2 py-1 rounded transition-colors"
+                                        className="block w-full text-left text-xs text-[#8C7A6B]/50 hover:text-[#0F0A09] hover:bg-[#D4BCAA]/5 px-2 py-1 rounded transition-colors"
                                     >
                                         {tag.name}
                                     </button>
@@ -486,10 +493,10 @@ export function PostEditor({ postId }: { postId?: string }) {
                     </div>
 
                     {/* SEO Scanner */}
-                    <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl overflow-hidden">
+                    <div className="bg-white border border-[#D4BCAA]/20 rounded-xl overflow-hidden">
                         <button
                             onClick={() => setShowScanner(!showScanner)}
-                            className="w-full flex items-center justify-between px-5 py-4 text-sm font-medium text-[#D4BCAA]/70 hover:text-[#F4EEE7] transition-colors"
+                            className="w-full flex items-center justify-between px-5 py-4 text-sm font-medium text-[#8C7A6B]/70 hover:text-[#0F0A09] transition-colors"
                         >
                             <div className="flex items-center gap-2">
                                 <BarChart3 className="h-4 w-4 text-[#466A68]" />
@@ -498,7 +505,7 @@ export function PostEditor({ postId }: { postId?: string }) {
                             {showScanner ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </button>
                         {showScanner && (
-                            <div className="px-4 pb-4 border-t border-[#D4BCAA]/5 pt-3">
+                            <div className="px-4 pb-4 border-t border-[#D4BCAA]/20 pt-3">
                                 <SeoScanner
                                     title={post.title}
                                     content={post.content}
@@ -519,6 +526,18 @@ export function PostEditor({ postId }: { postId?: string }) {
                     </div>
                 </div>
             </div>
+
+            <AiAssistantPanel
+                isOpen={showAiAssistant}
+                onClose={() => setShowAiAssistant(false)}
+                postTitle={post.title}
+                postContent={post.content}
+                postKeyword={post.focusKeyword}
+                onUpdateTitle={(title) => update("title", title)}
+                onUpdateExcerpt={(excerpt) => update("excerpt", excerpt)}
+                onUpdateContent={(content) => update("content", content)}
+                onUpdateSeo={(seo) => setPost(prev => ({ ...prev, ...seo }))}
+            />
         </div>
     )
 }

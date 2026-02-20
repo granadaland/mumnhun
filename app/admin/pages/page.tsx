@@ -55,8 +55,8 @@ export default function PagesListPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-[#F4EEE7]">Halaman</h1>
-                    <p className="text-[#D4BCAA]/50 text-sm mt-1">{pages.length} halaman</p>
+                    <h1 className="text-2xl font-bold text-[#0F0A09]">Halaman</h1>
+                    <p className="text-[#8C7A6B]/50 text-sm mt-1">{pages.length} halaman</p>
                 </div>
                 <Link
                     href="/admin/pages/new"
@@ -67,38 +67,38 @@ export default function PagesListPage() {
                 </Link>
             </div>
 
-            <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl overflow-hidden">
+            <div className="bg-white border border-[#D4BCAA]/20 rounded-xl overflow-hidden">
                 {loading ? (
                     <div className="flex items-center justify-center h-32">
                         <Loader2 className="h-6 w-6 text-[#466A68] animate-spin" />
                     </div>
                 ) : pages.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-32 text-[#D4BCAA]/30">
+                    <div className="flex flex-col items-center justify-center h-32 text-[#8C7A6B]/30">
                         <FileText className="h-6 w-6 mb-2" />
                         <p className="text-sm">Belum ada halaman</p>
                     </div>
                 ) : (
-                    <div className="divide-y divide-[#D4BCAA]/5">
+                    <div className="divide-y divide-[#D4BCAA]/20">
                         {pages.map((page) => (
                             <div key={page.id} className="flex items-center gap-4 px-6 py-3.5 hover:bg-[#D4BCAA]/5 transition-colors">
                                 <Link href={`/admin/pages/${page.id}/edit`} className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-[#F4EEE7] truncate">{page.title}</p>
-                                    <p className="text-xs text-[#D4BCAA]/30 mt-0.5">
+                                    <p className="text-sm font-medium text-[#0F0A09] truncate">{page.title}</p>
+                                    <p className="text-xs text-[#8C7A6B]/30 mt-0.5">
                                         /{page.slug} · {new Date(page.updatedAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
                                     </p>
                                 </Link>
-                                <span className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${page.status === "PUBLISHED" ? "bg-green-500/10 text-green-400" : "bg-amber-500/10 text-amber-400"}`}>
+                                <span className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${page.status === "PUBLISHED" ? "bg-green-500/10 text-green-600" : "bg-amber-500/10 text-amber-600"}`}>
                                     {page.status === "PUBLISHED" ? "Published" : "Draft"}
                                 </span>
                                 {page.status === "PUBLISHED" && (
-                                    <a href={`/${page.slug}`} target="_blank" rel="noreferrer" className="p-1.5 text-[#D4BCAA]/30 hover:text-[#466A68] transition-colors">
+                                    <a href={`/${page.slug}`} target="_blank" rel="noreferrer" className="p-1.5 text-[#8C7A6B]/30 hover:text-[#466A68] transition-colors">
                                         <Eye className="h-4 w-4" />
                                     </a>
                                 )}
                                 <button
                                     onClick={() => handleDelete(page.id, page.title)}
                                     disabled={deleting === page.id}
-                                    className="p-1.5 text-[#D4BCAA]/30 hover:text-red-400 transition-colors disabled:opacity-50"
+                                    className="p-1.5 text-[#8C7A6B]/30 hover:text-red-600 transition-colors disabled:opacity-50"
                                 >
                                     {deleting === page.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                                 </button>

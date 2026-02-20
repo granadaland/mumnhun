@@ -144,8 +144,6 @@ export default async function AdminDashboard() {
         <div className="space-y-8">
             {/* Welcome Banner */}
             <div className="relative overflow-hidden rounded-2xl bg-white border border-[#D4BCAA]/20 p-8 shadow-sm">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[#466A68]/10 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-                <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-gradient-to-tr from-[#D4BCAA]/20 to-transparent rounded-full blur-3xl translate-y-1/2" />
                 <div className="relative z-10">
                     <p className="text-[#466A68] text-sm font-bold tracking-widest uppercase mb-1 drop-shadow-sm">{greeting} 👋</p>
                     <h1 className="text-3xl lg:text-4xl font-extrabold text-[#0F0A09] mb-3 tracking-tight">
@@ -165,7 +163,6 @@ export default async function AdminDashboard() {
                         href={card.href}
                         className="group relative bg-white border border-[#D4BCAA]/20 hover:border-[#466A68]/40 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden"
                     >
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-[#466A68]/[0.02] to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                         <div className={`w-11 h-11 ${card.bg} rounded-xl flex items-center justify-center ${card.text} mb-4 group-hover:scale-[1.15] group-hover:rotate-6 shadow-sm transition-transform duration-300`}>
                             {card.icon}
                         </div>
@@ -192,7 +189,7 @@ export default async function AdminDashboard() {
                                 className="flex items-center justify-between px-6 py-4 hover:bg-[#F9F6F0] transition-colors group"
                             >
                                 <div className="min-w-0 flex-1 mr-4">
-                                    <p className="text-sm font-bold text-[#0F0A09] truncate group-hover:text-[#466A68] transition-colors">{post.title}</p>
+                                    <p className="text-sm font-medium text-[#0F0A09] truncate group-hover:text-[#466A68] transition-colors">{post.title}</p>
                                     <p className="text-xs font-medium text-[#8C7A6B] mt-1">{formatRelativeTime(post.updatedAt)}</p>
                                 </div>
                                 {statusBadge(post.status)}
@@ -219,7 +216,7 @@ export default async function AdminDashboard() {
                             <div className={`w-11 h-11 ${action.color} rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300`}>
                                 {action.icon}
                             </div>
-                            <span className="text-sm text-[#0F0A09] font-bold group-hover:text-[#466A68] transition-colors">{action.label}</span>
+                            <span className="text-sm text-[#0F0A09] font-medium group-hover:text-[#466A68] transition-colors">{action.label}</span>
                             <ArrowRight className="h-4 w-4 text-[#D4BCAA] ml-auto group-hover:text-[#466A68] group-hover:translate-x-1 transition-all" />
                         </Link>
                     ))}

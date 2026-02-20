@@ -83,7 +83,7 @@ export default function PageEditorPage() {
     return (
         <div className="space-y-6 max-w-4xl">
             <div className="flex items-center justify-between">
-                <button onClick={() => router.push("/admin/pages")} className="flex items-center gap-2 text-sm text-[#D4BCAA]/50 hover:text-[#F4EEE7] transition-colors">
+                <button onClick={() => router.push("/admin/pages")} className="flex items-center gap-2 text-sm text-[#8C7A6B]/50 hover:text-[#0F0A09] transition-colors">
                     <ArrowLeft className="h-4 w-4" />
                     Kembali
                 </button>
@@ -91,7 +91,7 @@ export default function PageEditorPage() {
                     <select
                         value={form.status}
                         onChange={(e) => update("status", e.target.value)}
-                        className="px-3 py-1.5 text-xs bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-[#F4EEE7] outline-none"
+                        className="px-3 py-1.5 text-xs bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] outline-none"
                     >
                         <option value="DRAFT">Draft</option>
                         <option value="PUBLISHED">Published</option>
@@ -103,39 +103,39 @@ export default function PageEditorPage() {
                 </div>
             </div>
 
-            <input type="text" value={form.title} onChange={(e) => update("title", e.target.value)} placeholder="Judul Halaman" className="w-full text-2xl font-bold bg-transparent text-[#F4EEE7] placeholder-[#D4BCAA]/20 outline-none border-b border-[#D4BCAA]/10 pb-3 focus:border-[#466A68]/50 transition-colors" />
+            <input type="text" value={form.title} onChange={(e) => update("title", e.target.value)} placeholder="Judul Halaman" className="w-full text-2xl font-bold bg-transparent text-[#0F0A09] placeholder-[#D4BCAA]/20 outline-none border-b border-[#D4BCAA]/20 pb-3 focus:border-[#466A68]/50 transition-colors" />
 
             <div className="flex items-center gap-2">
-                <span className="text-xs text-[#D4BCAA]/30">mumnhun.id/</span>
+                <span className="text-xs text-[#8C7A6B]/30">mumnhun.id/</span>
                 <input type="text" value={form.slug} onChange={(e) => { setAutoSlug(false); update("slug", slugify(e.target.value)) }} placeholder="slug-halaman" className="flex-1 text-xs bg-transparent text-[#466A68] placeholder-[#D4BCAA]/20 outline-none font-mono" />
             </div>
 
             <RichTextEditor content={form.content} onChange={(html) => update("content", html)} placeholder="Tulis konten halaman..." />
 
             {/* SEO */}
-            <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl overflow-hidden">
-                <button onClick={() => setShowSeo(!showSeo)} className="w-full flex items-center justify-between px-5 py-4 text-sm font-medium text-[#D4BCAA]/70 hover:text-[#F4EEE7] transition-colors">
+            <div className="bg-white border border-[#D4BCAA]/20 rounded-xl overflow-hidden">
+                <button onClick={() => setShowSeo(!showSeo)} className="w-full flex items-center justify-between px-5 py-4 text-sm font-medium text-[#8C7A6B]/70 hover:text-[#0F0A09] transition-colors">
                     <div className="flex items-center gap-2"><Globe className="h-4 w-4" />SEO Settings</div>
                     {showSeo ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 </button>
                 {showSeo && (
-                    <div className="px-5 pb-5 space-y-4 border-t border-[#D4BCAA]/5 pt-4">
+                    <div className="px-5 pb-5 space-y-4 border-t border-[#D4BCAA]/20 pt-4">
                         <div>
-                            <label className="block text-xs text-[#D4BCAA]/50 mb-1">Meta Title</label>
-                            <input type="text" value={form.metaTitle} onChange={(e) => update("metaTitle", e.target.value)} placeholder={form.title} className="w-full bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg px-3 py-2 text-sm text-[#F4EEE7] placeholder-[#D4BCAA]/20 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
+                            <label className="block text-xs text-[#8C7A6B]/50 mb-1">Meta Title</label>
+                            <input type="text" value={form.metaTitle} onChange={(e) => update("metaTitle", e.target.value)} placeholder={form.title} className="w-full bg-white border border-[#D4BCAA]/20 rounded-lg px-3 py-2 text-sm text-[#0F0A09] placeholder-[#D4BCAA]/20 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
                         </div>
                         <div>
-                            <label className="block text-xs text-[#D4BCAA]/50 mb-1">Meta Description</label>
-                            <textarea value={form.metaDescription} onChange={(e) => update("metaDescription", e.target.value)} rows={2} className="w-full bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg px-3 py-2 text-sm text-[#F4EEE7] placeholder-[#D4BCAA]/20 outline-none focus:ring-2 focus:ring-[#466A68]/30 resize-none transition-all" />
+                            <label className="block text-xs text-[#8C7A6B]/50 mb-1">Meta Description</label>
+                            <textarea value={form.metaDescription} onChange={(e) => update("metaDescription", e.target.value)} rows={2} className="w-full bg-white border border-[#D4BCAA]/20 rounded-lg px-3 py-2 text-sm text-[#0F0A09] placeholder-[#D4BCAA]/20 outline-none focus:ring-2 focus:ring-[#466A68]/30 resize-none transition-all" />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-xs text-[#D4BCAA]/50 mb-1">Focus Keyword</label>
-                                <input type="text" value={form.focusKeyword} onChange={(e) => update("focusKeyword", e.target.value)} className="w-full bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg px-3 py-2 text-sm text-[#F4EEE7] outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
+                                <label className="block text-xs text-[#8C7A6B]/50 mb-1">Focus Keyword</label>
+                                <input type="text" value={form.focusKeyword} onChange={(e) => update("focusKeyword", e.target.value)} className="w-full bg-white border border-[#D4BCAA]/20 rounded-lg px-3 py-2 text-sm text-[#0F0A09] outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
                             </div>
                             <div>
-                                <label className="block text-xs text-[#D4BCAA]/50 mb-1">Canonical URL</label>
-                                <input type="url" value={form.canonicalUrl} onChange={(e) => update("canonicalUrl", e.target.value)} className="w-full bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg px-3 py-2 text-sm text-[#F4EEE7] outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
+                                <label className="block text-xs text-[#8C7A6B]/50 mb-1">Canonical URL</label>
+                                <input type="url" value={form.canonicalUrl} onChange={(e) => update("canonicalUrl", e.target.value)} className="w-full bg-white border border-[#D4BCAA]/20 rounded-lg px-3 py-2 text-sm text-[#0F0A09] outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
                             </div>
                         </div>
                     </div>

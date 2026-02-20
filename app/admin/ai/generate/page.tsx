@@ -200,58 +200,58 @@ export default function AiGeneratePage() {
         <div className="space-y-6">
             <Link
                 href="/admin/ai"
-                className="inline-flex items-center gap-2 text-sm text-[#D4BCAA]/50 hover:text-[#F4EEE7] transition-colors"
+                className="inline-flex items-center gap-2 text-sm text-[#8C7A6B]/50 hover:text-[#0F0A09] transition-colors"
             >
                 <ArrowLeft className="h-4 w-4" />
                 Kembali ke AI Tools
             </Link>
 
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-900/30 via-[#2a2018] to-[#2a2018] border border-violet-500/15 p-8">
+            <div className="relative overflow-hidden rounded-2xl bg-white border border-violet-500/20 p-8">
                 <div className="absolute inset-0 bg-black/10" />
                 <div className="relative space-y-6">
                     <div className="text-center">
                         <div className="w-16 h-16 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-2xl shadow-violet-500/20">
                             <Sparkles className="h-8 w-8 text-white" />
                         </div>
-                        <h1 className="text-3xl font-bold text-[#F4EEE7] mb-2">Generate Artikel dengan AI</h1>
-                        <p className="text-[#D4BCAA]/50 text-sm max-w-xl mx-auto">
+                        <h1 className="text-3xl font-bold text-[#0F0A09] mb-2">Generate Artikel dengan AI</h1>
+                        <p className="text-[#8C7A6B]/50 text-sm max-w-xl mx-auto">
                             Masukkan topik/keyword, tone, dan target panjang artikel. Sistem akan membuat draft post otomatis beserta metadata SEO dasar.
                         </p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="md:col-span-3 bg-[#1a1412]/70 border border-[#D4BCAA]/10 rounded-xl p-5 space-y-4">
+                        <div className="md:col-span-3 bg-white/70 border border-[#D4BCAA]/20 rounded-xl p-5 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-[#D4BCAA]/80 mb-1.5">Topik / Keyword *</label>
+                                <label className="block text-sm font-medium text-[#8C7A6B]/80 mb-1.5">Topik / Keyword *</label>
                                 <input
                                     type="text"
                                     value={topic}
                                     onChange={(e) => setTopic(e.target.value)}
                                     placeholder="Contoh: tips sewa bus pariwisata untuk rombongan"
-                                    className="w-full px-4 py-2.5 bg-[#1a1412] border border-[#D4BCAA]/15 rounded-lg text-[#F4EEE7] text-sm placeholder-[#D4BCAA]/30 focus:outline-none focus:ring-2 focus:ring-violet-500/30"
+                                    className="w-full px-4 py-2.5 bg-white border border-[#D4BCAA]/15 rounded-lg text-[#0F0A09] text-sm placeholder-[#D4BCAA]/30 focus:outline-none focus:ring-2 focus:ring-violet-500/30"
                                 />
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-sm font-medium text-[#D4BCAA]/80 mb-1.5">Tone (opsional)</label>
+                                    <label className="block text-sm font-medium text-[#8C7A6B]/80 mb-1.5">Tone (opsional)</label>
                                     <input
                                         type="text"
                                         value={tone}
                                         onChange={(e) => setTone(e.target.value)}
                                         placeholder="informatif"
-                                        className="w-full px-4 py-2.5 bg-[#1a1412] border border-[#D4BCAA]/15 rounded-lg text-[#F4EEE7] text-sm placeholder-[#D4BCAA]/30 focus:outline-none focus:ring-2 focus:ring-violet-500/30"
+                                        className="w-full px-4 py-2.5 bg-white border border-[#D4BCAA]/15 rounded-lg text-[#0F0A09] text-sm placeholder-[#D4BCAA]/30 focus:outline-none focus:ring-2 focus:ring-violet-500/30"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-[#D4BCAA]/80 mb-1.5">Target jumlah kata (opsional)</label>
+                                    <label className="block text-sm font-medium text-[#8C7A6B]/80 mb-1.5">Target jumlah kata (opsional)</label>
                                     <input
                                         type="number"
                                         min={300}
                                         max={3000}
                                         value={targetWordCount}
                                         onChange={(e) => setTargetWordCount(e.target.value)}
-                                        className="w-full px-4 py-2.5 bg-[#1a1412] border border-[#D4BCAA]/15 rounded-lg text-[#F4EEE7] text-sm placeholder-[#D4BCAA]/30 focus:outline-none focus:ring-2 focus:ring-violet-500/30"
+                                        className="w-full px-4 py-2.5 bg-white border border-[#D4BCAA]/15 rounded-lg text-[#0F0A09] text-sm placeholder-[#D4BCAA]/30 focus:outline-none focus:ring-2 focus:ring-violet-500/30"
                                     />
                                 </div>
                             </div>
@@ -268,42 +268,42 @@ export default function AiGeneratePage() {
                     </div>
 
                     {errorMessage && (
-                        <div className="flex items-start gap-2 px-4 py-3 rounded-lg border border-red-500/25 bg-red-500/10 text-red-300 text-sm">
+                        <div className="flex items-start gap-2 px-4 py-3 rounded-lg border border-red-500/25 bg-red-500/10 text-red-700 text-sm">
                             <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
                             <span>{errorMessage}</span>
                         </div>
                     )}
 
                     {taskId && (
-                        <div className="bg-[#1a1412]/70 border border-[#D4BCAA]/10 rounded-xl p-5 space-y-3">
+                        <div className="bg-white/70 border border-[#D4BCAA]/20 rounded-xl p-5 space-y-3">
                             <div className="flex items-center justify-between gap-3">
                                 <div>
-                                    <p className="text-xs uppercase tracking-wide text-[#D4BCAA]/40">Task ID</p>
-                                    <p className="text-sm text-[#F4EEE7] font-mono break-all">{taskId}</p>
+                                    <p className="text-xs uppercase tracking-wide text-[#8C7A6B]/40">Task ID</p>
+                                    <p className="text-sm text-[#0F0A09] font-mono break-all">{taskId}</p>
                                 </div>
                                 <button
                                     onClick={() => taskId && fetchTaskDetail(taskId)}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs border border-[#D4BCAA]/20 rounded-md text-[#D4BCAA]/70 hover:text-[#F4EEE7] transition-colors"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs border border-[#D4BCAA]/20 rounded-md text-[#8C7A6B]/70 hover:text-[#0F0A09] transition-colors"
                                 >
                                     <RefreshCw className="h-3.5 w-3.5" />
                                     Refresh
                                 </button>
                             </div>
 
-                            <div className="flex items-center gap-2 text-sm text-[#F4EEE7]">
-                                {taskStatus === "completed" && <CheckCircle2 className="h-4 w-4 text-green-400" />}
-                                {taskStatus === "failed" && <AlertCircle className="h-4 w-4 text-red-400" />}
+                            <div className="flex items-center gap-2 text-sm text-[#0F0A09]">
+                                {taskStatus === "completed" && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                                {taskStatus === "failed" && <AlertCircle className="h-4 w-4 text-red-600" />}
                                 {taskStatus !== "completed" && taskStatus !== "failed" && (
-                                    <Clock3 className="h-4 w-4 text-amber-400" />
+                                    <Clock3 className="h-4 w-4 text-amber-600" />
                                 )}
                                 <span>
                                     Status: <span className="font-semibold">{taskStatus || "pending"}</span>
                                 </span>
-                                <span className="text-[#D4BCAA]/45">•</span>
+                                <span className="text-[#8C7A6B]/45">•</span>
                                 <span>{taskProgress}%</span>
                             </div>
 
-                            <div className="h-2 w-full bg-[#2a2018] rounded-full overflow-hidden">
+                            <div className="h-2 w-full bg-white rounded-full overflow-hidden">
                                 <div
                                     className="h-full bg-gradient-to-r from-violet-500 to-purple-600 transition-all"
                                     style={{ width: `${Math.max(0, Math.min(100, taskProgress))}%` }}
@@ -311,16 +311,16 @@ export default function AiGeneratePage() {
                             </div>
 
                             {taskError && (
-                                <div className="text-sm text-red-300 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                                <div className="text-sm text-red-700 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
                                     {taskError}
                                 </div>
                             )}
 
                             {postResult && (
                                 <div className="text-sm bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-3 space-y-1">
-                                    <p className="text-green-300 font-medium">Draft berhasil dibuat</p>
-                                    <p className="text-[#D4BCAA]/70 text-xs">Post ID: {postResult.id}</p>
-                                    {postResult.title && <p className="text-[#F4EEE7]">{postResult.title}</p>}
+                                    <p className="text-green-700 font-medium">Draft berhasil dibuat</p>
+                                    <p className="text-[#8C7A6B]/70 text-xs">Post ID: {postResult.id}</p>
+                                    {postResult.title && <p className="text-[#0F0A09]">{postResult.title}</p>}
                                     <Link
                                         href={postResult.editUrl || `/admin/posts/${postResult.id}/edit`}
                                         className="inline-flex text-[#9AE6B4] hover:text-[#C6F6D5] text-xs underline"
@@ -341,12 +341,12 @@ export default function AiGeneratePage() {
                     { icon: <FileText className="h-5 w-5" />, title: "Template Based", desc: "Pilih template: listicle, how-to, review, guide" },
                     { icon: <ListChecks className="h-5 w-5" />, title: "Auto SEO", desc: "Meta title, description, dan schema otomatis terisi" },
                 ].map((f) => (
-                    <div key={f.title} className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl p-5">
+                    <div key={f.title} className="bg-white border border-[#D4BCAA]/20 rounded-xl p-5">
                         <div className="w-10 h-10 bg-[#466A68]/10 rounded-lg flex items-center justify-center text-[#466A68] mb-3">
                             {f.icon}
                         </div>
-                        <h3 className="text-sm font-semibold text-[#F4EEE7] mb-1">{f.title}</h3>
-                        <p className="text-xs text-[#D4BCAA]/40">{f.desc}</p>
+                        <h3 className="text-sm font-semibold text-[#0F0A09] mb-1">{f.title}</h3>
+                        <p className="text-xs text-[#8C7A6B]/40">{f.desc}</p>
                     </div>
                 ))}
             </div>

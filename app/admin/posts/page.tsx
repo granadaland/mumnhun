@@ -94,9 +94,9 @@ export default function PostsListPage() {
 
     const statusBadge = (status: string) => {
         const styles: Record<string, string> = {
-            PUBLISHED: "bg-green-500/10 text-green-400",
-            DRAFT: "bg-amber-500/10 text-amber-400",
-            SCHEDULED: "bg-blue-500/10 text-blue-400",
+            PUBLISHED: "bg-green-500/10 text-green-600",
+            DRAFT: "bg-amber-500/10 text-amber-600",
+            SCHEDULED: "bg-blue-500/10 text-blue-600",
             ARCHIVED: "bg-gray-500/10 text-gray-400",
         }
         return styles[status] || styles.DRAFT
@@ -107,8 +107,8 @@ export default function PostsListPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-[#F4EEE7]">Artikel</h1>
-                    <p className="text-[#D4BCAA]/50 text-sm mt-1">
+                    <h1 className="text-2xl font-bold text-[#0F0A09]">Artikel</h1>
+                    <p className="text-[#8C7A6B]/50 text-sm mt-1">
                         {pagination.total} artikel
                     </p>
                 </div>
@@ -123,47 +123,47 @@ export default function PostsListPage() {
 
             {/* Filters */}
             <div className="flex flex-col sm:flex-row gap-3">
-                <div className="flex-1 flex items-center gap-2 px-4 py-2.5 bg-[#2a2018] border border-[#D4BCAA]/10 rounded-lg">
-                    <Search className="h-4 w-4 text-[#D4BCAA]/30" />
+                <div className="flex-1 flex items-center gap-2 px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg">
+                    <Search className="h-4 w-4 text-[#8C7A6B]/30" />
                     <input
                         type="text"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && fetchPosts()}
                         placeholder="Cari artikel..."
-                        className="bg-transparent text-sm text-[#F4EEE7] placeholder-[#D4BCAA]/25 outline-none w-full"
+                        className="bg-transparent text-sm text-[#0F0A09] placeholder-[#8C7A6B]/60 outline-none w-full"
                     />
                 </div>
-                <div className="flex items-center gap-2 px-4 py-2.5 bg-[#2a2018] border border-[#D4BCAA]/10 rounded-lg">
-                    <Filter className="h-4 w-4 text-[#D4BCAA]/30" />
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg">
+                    <Filter className="h-4 w-4 text-[#8C7A6B]/30" />
                     <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        className="bg-transparent text-sm text-[#F4EEE7] outline-none"
+                        className="bg-transparent text-sm text-[#0F0A09] outline-none"
                     >
-                        <option value="" className="bg-[#2a2018]">Semua Status</option>
-                        <option value="PUBLISHED" className="bg-[#2a2018]">Published</option>
-                        <option value="DRAFT" className="bg-[#2a2018]">Draft</option>
-                        <option value="SCHEDULED" className="bg-[#2a2018]">Scheduled</option>
-                        <option value="ARCHIVED" className="bg-[#2a2018]">Archived</option>
+                        <option value="" className="bg-white">Semua Status</option>
+                        <option value="PUBLISHED" className="bg-white">Published</option>
+                        <option value="DRAFT" className="bg-white">Draft</option>
+                        <option value="SCHEDULED" className="bg-white">Scheduled</option>
+                        <option value="ARCHIVED" className="bg-white">Archived</option>
                     </select>
                 </div>
             </div>
 
             {errorMessage && (
-                <div className="px-4 py-3 rounded-lg border border-red-500/20 bg-red-500/10 text-red-300 text-sm">
+                <div className="px-4 py-3 rounded-lg border border-red-500/20 bg-red-500/10 text-red-700 text-sm">
                     {errorMessage}
                 </div>
             )}
 
             {/* Posts Table */}
-            <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl overflow-hidden">
+            <div className="bg-white border border-[#D4BCAA]/20 rounded-xl overflow-hidden">
                 {loading ? (
                     <div className="flex items-center justify-center h-48">
                         <Loader2 className="h-6 w-6 text-[#466A68] animate-spin" />
                     </div>
                 ) : posts.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-48 text-[#D4BCAA]/30">
+                    <div className="flex flex-col items-center justify-center h-48 text-[#8C7A6B]/30">
                         <FileText className="h-8 w-8 mb-2" />
                         <p className="text-sm">Belum ada artikel</p>
                     </div>
@@ -171,23 +171,23 @@ export default function PostsListPage() {
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
-                                <tr className="border-b border-[#D4BCAA]/5">
-                                    <th className="text-left text-xs font-medium text-[#D4BCAA]/40 uppercase tracking-wider px-6 py-3">Judul</th>
-                                    <th className="text-left text-xs font-medium text-[#D4BCAA]/40 uppercase tracking-wider px-4 py-3 hidden md:table-cell">Kategori</th>
-                                    <th className="text-left text-xs font-medium text-[#D4BCAA]/40 uppercase tracking-wider px-4 py-3">Status</th>
-                                    <th className="text-left text-xs font-medium text-[#D4BCAA]/40 uppercase tracking-wider px-4 py-3 hidden lg:table-cell">Diperbarui</th>
-                                    <th className="text-right text-xs font-medium text-[#D4BCAA]/40 uppercase tracking-wider px-6 py-3">Aksi</th>
+                                <tr className="border-b border-[#D4BCAA]/20">
+                                    <th className="text-left text-xs font-medium text-[#8C7A6B]/40 uppercase tracking-wider px-6 py-3">Judul</th>
+                                    <th className="text-left text-xs font-medium text-[#8C7A6B]/40 uppercase tracking-wider px-4 py-3 hidden md:table-cell">Kategori</th>
+                                    <th className="text-left text-xs font-medium text-[#8C7A6B]/40 uppercase tracking-wider px-4 py-3">Status</th>
+                                    <th className="text-left text-xs font-medium text-[#8C7A6B]/40 uppercase tracking-wider px-4 py-3 hidden lg:table-cell">Diperbarui</th>
+                                    <th className="text-right text-xs font-medium text-[#8C7A6B]/40 uppercase tracking-wider px-6 py-3">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-[#D4BCAA]/5">
+                            <tbody className="divide-y divide-[#D4BCAA]/20">
                                 {posts.map((post) => (
                                     <tr key={post.id} className="hover:bg-[#D4BCAA]/5 transition-colors">
                                         <td className="px-6 py-3.5">
                                             <Link href={`/admin/posts/${post.id}/edit`} className="block">
-                                                <p className="text-sm text-[#F4EEE7] font-medium truncate max-w-xs lg:max-w-md">
+                                                <p className="text-sm text-[#0F0A09] font-medium truncate max-w-xs lg:max-w-md">
                                                     {post.title}
                                                 </p>
-                                                <p className="text-xs text-[#D4BCAA]/30 mt-0.5 truncate max-w-xs">
+                                                <p className="text-xs text-[#8C7A6B]/30 mt-0.5 truncate max-w-xs">
                                                     /{post.slug}
                                                 </p>
                                             </Link>
@@ -206,7 +206,7 @@ export default function PostsListPage() {
                                                 {post.status}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3.5 hidden lg:table-cell text-xs text-[#D4BCAA]/40">
+                                        <td className="px-4 py-3.5 hidden lg:table-cell text-xs text-[#8C7A6B]/40">
                                             {new Date(post.updatedAt).toLocaleDateString("id-ID", {
                                                 day: "numeric", month: "short", year: "numeric",
                                             })}
@@ -218,7 +218,7 @@ export default function PostsListPage() {
                                                         href={`/${post.slug}`}
                                                         target="_blank"
                                                         rel="noreferrer"
-                                                        className="p-1.5 text-[#D4BCAA]/30 hover:text-[#466A68] transition-colors"
+                                                        className="p-1.5 text-[#8C7A6B]/30 hover:text-[#466A68] transition-colors"
                                                         title="Lihat"
                                                     >
                                                         <Eye className="h-4 w-4" />
@@ -227,7 +227,7 @@ export default function PostsListPage() {
                                                 <button
                                                     onClick={() => handleDelete(post.id, post.title)}
                                                     disabled={deleting === post.id}
-                                                    className="p-1.5 text-[#D4BCAA]/30 hover:text-red-400 transition-colors disabled:opacity-50"
+                                                    className="p-1.5 text-[#8C7A6B]/30 hover:text-red-600 transition-colors disabled:opacity-50"
                                                     title="Hapus"
                                                 >
                                                     {deleting === post.id ? (
@@ -247,22 +247,22 @@ export default function PostsListPage() {
 
                 {/* Pagination */}
                 {pagination.totalPages > 1 && (
-                    <div className="flex items-center justify-between px-6 py-3 border-t border-[#D4BCAA]/5">
-                        <p className="text-xs text-[#D4BCAA]/40">
+                    <div className="flex items-center justify-between px-6 py-3 border-t border-[#D4BCAA]/20">
+                        <p className="text-xs text-[#8C7A6B]/40">
                             Halaman {pagination.page} dari {pagination.totalPages}
                         </p>
                         <div className="flex items-center gap-1">
                             <button
                                 onClick={() => fetchPosts(pagination.page - 1)}
                                 disabled={pagination.page <= 1}
-                                className="p-1.5 text-[#D4BCAA]/30 hover:text-[#F4EEE7] disabled:opacity-30 transition-colors"
+                                className="p-1.5 text-[#8C7A6B]/30 hover:text-[#0F0A09] disabled:opacity-30 transition-colors"
                             >
                                 <ChevronLeft className="h-4 w-4" />
                             </button>
                             <button
                                 onClick={() => fetchPosts(pagination.page + 1)}
                                 disabled={pagination.page >= pagination.totalPages}
-                                className="p-1.5 text-[#D4BCAA]/30 hover:text-[#F4EEE7] disabled:opacity-30 transition-colors"
+                                className="p-1.5 text-[#8C7A6B]/30 hover:text-[#0F0A09] disabled:opacity-30 transition-colors"
                             >
                                 <ChevronRight className="h-4 w-4" />
                             </button>

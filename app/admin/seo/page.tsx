@@ -61,17 +61,17 @@ export default function SeoDashboardPage() {
         return true
     })
 
-    const scoreColor = (s: number) => s >= 71 ? "text-green-400" : s >= 41 ? "text-amber-400" : "text-red-400"
+    const scoreColor = (s: number) => s >= 71 ? "text-green-600" : s >= 41 ? "text-amber-600" : "text-red-600"
     const scoreBg = (s: number) => s >= 71 ? "bg-green-500/10" : s >= 41 ? "bg-amber-500/10" : "bg-red-500/10"
 
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-[#F4EEE7]">SEO Dashboard</h1>
-                    <p className="text-[#D4BCAA]/50 text-sm mt-1">Analisis kesehatan SEO semua artikel</p>
+                    <h1 className="text-2xl font-bold text-[#0F0A09]">SEO Dashboard</h1>
+                    <p className="text-[#8C7A6B]/50 text-sm mt-1">Analisis kesehatan SEO semua artikel</p>
                 </div>
-                <button onClick={fetchScan} disabled={loading} className="flex items-center gap-2 px-4 py-2 bg-[#2a2018] border border-[#D4BCAA]/10 text-[#D4BCAA]/70 text-sm rounded-lg hover:text-[#F4EEE7] transition-colors">
+                <button onClick={fetchScan} disabled={loading} className="flex items-center gap-2 px-4 py-2 bg-white border border-[#D4BCAA]/20 text-[#8C7A6B]/70 text-sm rounded-lg hover:text-[#0F0A09] transition-colors">
                     <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                     Scan Ulang
                 </button>
@@ -80,54 +80,54 @@ export default function SeoDashboardPage() {
             {/* Stats Cards */}
             {stats && (
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                    <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl p-4">
-                        <div className="flex items-center gap-2 text-[#D4BCAA]/40 mb-1">
+                    <div className="bg-white border border-[#D4BCAA]/20 rounded-xl p-4">
+                        <div className="flex items-center gap-2 text-[#8C7A6B]/40 mb-1">
                             <BarChart3 className="h-3.5 w-3.5" />
                             <span className="text-[10px] uppercase tracking-wider">Total</span>
                         </div>
-                        <p className="text-xl font-bold text-[#F4EEE7]">{stats.total}</p>
+                        <p className="text-xl font-bold text-[#0F0A09]">{stats.total}</p>
                     </div>
-                    <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl p-4">
-                        <div className="flex items-center gap-2 text-[#D4BCAA]/40 mb-1">
+                    <div className="bg-white border border-[#D4BCAA]/20 rounded-xl p-4">
+                        <div className="flex items-center gap-2 text-[#8C7A6B]/40 mb-1">
                             <TrendingUp className="h-3.5 w-3.5" />
                             <span className="text-[10px] uppercase tracking-wider">Rata-rata</span>
                         </div>
                         <p className={`text-xl font-bold ${scoreColor(stats.avgScore)}`}>{stats.avgScore}</p>
                     </div>
-                    <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl p-4 cursor-pointer hover:border-green-500/20 transition-colors" onClick={() => setFilter(filter === "good" ? "all" : "good")}>
-                        <div className="flex items-center gap-2 text-green-400/60 mb-1">
+                    <div className="bg-white border border-[#D4BCAA]/20 rounded-xl p-4 cursor-pointer hover:border-green-500/20 transition-colors" onClick={() => setFilter(filter === "good" ? "all" : "good")}>
+                        <div className="flex items-center gap-2 text-green-600/60 mb-1">
                             <CheckCircle className="h-3.5 w-3.5" />
                             <span className="text-[10px] uppercase tracking-wider">Bagus</span>
                         </div>
-                        <p className="text-xl font-bold text-green-400">{stats.good}</p>
+                        <p className="text-xl font-bold text-green-600">{stats.good}</p>
                     </div>
-                    <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl p-4 cursor-pointer hover:border-amber-500/20 transition-colors" onClick={() => setFilter(filter === "warn" ? "all" : "warn")}>
-                        <div className="flex items-center gap-2 text-amber-400/60 mb-1">
+                    <div className="bg-white border border-[#D4BCAA]/20 rounded-xl p-4 cursor-pointer hover:border-amber-500/20 transition-colors" onClick={() => setFilter(filter === "warn" ? "all" : "warn")}>
+                        <div className="flex items-center gap-2 text-amber-600/60 mb-1">
                             <AlertTriangle className="h-3.5 w-3.5" />
                             <span className="text-[10px] uppercase tracking-wider">Perlu Perbaikan</span>
                         </div>
-                        <p className="text-xl font-bold text-amber-400">{stats.needsWork}</p>
+                        <p className="text-xl font-bold text-amber-600">{stats.needsWork}</p>
                     </div>
-                    <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl p-4 cursor-pointer hover:border-red-500/20 transition-colors" onClick={() => setFilter(filter === "poor" ? "all" : "poor")}>
-                        <div className="flex items-center gap-2 text-red-400/60 mb-1">
+                    <div className="bg-white border border-[#D4BCAA]/20 rounded-xl p-4 cursor-pointer hover:border-red-500/20 transition-colors" onClick={() => setFilter(filter === "poor" ? "all" : "poor")}>
+                        <div className="flex items-center gap-2 text-red-600/60 mb-1">
                             <TrendingDown className="h-3.5 w-3.5" />
                             <span className="text-[10px] uppercase tracking-wider">Rendah</span>
                         </div>
-                        <p className="text-xl font-bold text-red-400">{stats.poor}</p>
+                        <p className="text-xl font-bold text-red-600">{stats.poor}</p>
                     </div>
                 </div>
             )}
 
             {/* Search & Filter */}
             <div className="flex items-center gap-3">
-                <div className="flex-1 flex items-center gap-2 px-4 py-2.5 bg-[#2a2018] border border-[#D4BCAA]/10 rounded-lg">
-                    <Search className="h-4 w-4 text-[#D4BCAA]/30" />
-                    <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari artikel..." className="bg-transparent text-sm text-[#F4EEE7] placeholder-[#D4BCAA]/25 outline-none w-full" />
+                <div className="flex-1 flex items-center gap-2 px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg">
+                    <Search className="h-4 w-4 text-[#8C7A6B]/30" />
+                    <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari artikel..." className="bg-transparent text-sm text-[#0F0A09] placeholder-[#8C7A6B]/60 outline-none w-full" />
                 </div>
-                <div className="flex items-center gap-1 px-2 py-1 bg-[#2a2018] border border-[#D4BCAA]/10 rounded-lg">
-                    <Filter className="h-3.5 w-3.5 text-[#D4BCAA]/30" />
+                <div className="flex items-center gap-1 px-2 py-1 bg-white border border-[#D4BCAA]/20 rounded-lg">
+                    <Filter className="h-3.5 w-3.5 text-[#8C7A6B]/30" />
                     {(["all", "good", "warn", "poor"] as const).map((f) => (
-                        <button key={f} onClick={() => setFilter(f)} className={`px-2 py-1 text-[10px] font-medium rounded transition-colors ${filter === f ? "bg-[#466A68]/20 text-[#466A68]" : "text-[#D4BCAA]/30 hover:text-[#D4BCAA]/60"}`}>
+                        <button key={f} onClick={() => setFilter(f)} className={`px-2 py-1 text-[10px] font-medium rounded transition-colors ${filter === f ? "bg-[#466A68]/20 text-[#466A68]" : "text-[#8C7A6B]/30 hover:text-[#8C7A6B]/60"}`}>
                             {f === "all" ? "Semua" : f === "good" ? "Bagus" : f === "warn" ? "Perlu" : "Rendah"}
                         </button>
                     ))}
@@ -135,13 +135,13 @@ export default function SeoDashboardPage() {
             </div>
 
             {/* Posts List */}
-            <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl overflow-hidden">
+            <div className="bg-white border border-[#D4BCAA]/20 rounded-xl overflow-hidden">
                 {loading ? (
                     <div className="flex items-center justify-center h-32"><Loader2 className="h-6 w-6 text-[#466A68] animate-spin" /></div>
                 ) : filtered.length === 0 ? (
-                    <div className="flex items-center justify-center h-32 text-[#D4BCAA]/30 text-sm">Tidak ada artikel ditemukan</div>
+                    <div className="flex items-center justify-center h-32 text-[#8C7A6B]/30 text-sm">Tidak ada artikel ditemukan</div>
                 ) : (
-                    <div className="divide-y divide-[#D4BCAA]/5">
+                    <div className="divide-y divide-[#D4BCAA]/20">
                         {filtered.map((post) => (
                             <div key={post.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-[#D4BCAA]/3 transition-colors">
                                 {/* Score badge */}
@@ -151,18 +151,18 @@ export default function SeoDashboardPage() {
 
                                 {/* Title & issues */}
                                 <div className="flex-1 min-w-0">
-                                    <Link href={`/admin/posts/${post.id}/edit`} className="text-sm font-medium text-[#F4EEE7] hover:text-[#466A68] transition-colors truncate block">
+                                    <Link href={`/admin/posts/${post.id}/edit`} className="text-sm font-medium text-[#0F0A09] hover:text-[#466A68] transition-colors truncate block">
                                         {post.title}
                                     </Link>
                                     {post.issues.length > 0 && (
-                                        <p className="text-[10px] text-[#D4BCAA]/30 mt-0.5 truncate">
+                                        <p className="text-[10px] text-[#8C7A6B]/30 mt-0.5 truncate">
                                             {post.issues.join(" · ")}
                                         </p>
                                     )}
                                 </div>
 
                                 {/* Check count */}
-                                <span className="text-[10px] text-[#D4BCAA]/25 flex-shrink-0 tabular-nums">
+                                <span className="text-[10px] text-[#8C7A6B]/25 flex-shrink-0 tabular-nums">
                                     {post.passCount}/{post.totalChecks}
                                 </span>
 

@@ -118,39 +118,39 @@ export default function NavigationSettingsPage() {
         title: string
         description: string
     }) => (
-        <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-[#D4BCAA]/5">
-                <h2 className="font-semibold text-[#F4EEE7]">{title}</h2>
-                <p className="text-xs text-[#D4BCAA]/40 mt-0.5">{description}</p>
+        <div className="bg-white border border-[#D4BCAA]/20 rounded-xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-[#D4BCAA]/20">
+                <h2 className="font-semibold text-[#0F0A09]">{title}</h2>
+                <p className="text-xs text-[#8C7A6B]/40 mt-0.5">{description}</p>
             </div>
-            <div className="divide-y divide-[#D4BCAA]/5">
+            <div className="divide-y divide-[#D4BCAA]/20">
                 {links.map((link, i) => (
                     <div key={i} className="flex items-center gap-3 px-6 py-3">
-                        <GripVertical className="h-4 w-4 text-[#D4BCAA]/20 flex-shrink-0 cursor-grab" />
+                        <GripVertical className="h-4 w-4 text-[#8C7A6B]/20 flex-shrink-0 cursor-grab" />
                         <input
                             type="text"
                             value={link.label}
                             onChange={(e) => onUpdate(i, "label", e.target.value)}
                             placeholder="Label"
-                            className="flex-1 px-3 py-2 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-[#F4EEE7] text-sm placeholder-[#D4BCAA]/25 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all"
+                            className="flex-1 px-3 py-2 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all"
                         />
                         <input
                             type="text"
                             value={link.href}
                             onChange={(e) => onUpdate(i, "href", e.target.value)}
                             placeholder="/path"
-                            className="flex-1 px-3 py-2 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-[#F4EEE7] text-sm placeholder-[#D4BCAA]/25 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all"
+                            className="flex-1 px-3 py-2 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all"
                         />
                         <button
                             onClick={() => onRemove(i)}
-                            className="p-2 text-[#D4BCAA]/30 hover:text-red-400 transition-colors"
+                            className="p-2 text-[#8C7A6B]/30 hover:text-red-600 transition-colors"
                         >
                             <Trash2 className="h-4 w-4" />
                         </button>
                     </div>
                 ))}
             </div>
-            <div className="px-6 py-3 border-t border-[#D4BCAA]/5">
+            <div className="px-6 py-3 border-t border-[#D4BCAA]/20">
                 <button
                     onClick={onAdd}
                     className="flex items-center gap-2 text-sm text-[#466A68] hover:text-[#466A68]/80 transition-colors"
@@ -167,8 +167,8 @@ export default function NavigationSettingsPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-[#F4EEE7]">Pengaturan Navigasi</h1>
-                    <p className="text-[#D4BCAA]/50 text-sm mt-1">
+                    <h1 className="text-2xl font-bold text-[#0F0A09]">Pengaturan Navigasi</h1>
+                    <p className="text-[#8C7A6B]/50 text-sm mt-1">
                         Kelola link di header dan footer
                     </p>
                 </div>
@@ -209,10 +209,10 @@ export default function NavigationSettingsPage() {
             />
 
             {/* Footer Description */}
-            <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl overflow-hidden">
-                <div className="px-6 py-4 border-b border-[#D4BCAA]/5">
-                    <h2 className="font-semibold text-[#F4EEE7]">Footer Description</h2>
-                    <p className="text-xs text-[#D4BCAA]/40 mt-0.5">
+            <div className="bg-white border border-[#D4BCAA]/20 rounded-xl overflow-hidden">
+                <div className="px-6 py-4 border-b border-[#D4BCAA]/20">
+                    <h2 className="font-semibold text-[#0F0A09]">Footer Description</h2>
+                    <p className="text-xs text-[#8C7A6B]/40 mt-0.5">
                         Deskripsi yang muncul di footer bawah logo
                     </p>
                 </div>
@@ -221,7 +221,7 @@ export default function NavigationSettingsPage() {
                         value={footerDescription}
                         onChange={(e) => setFooterDescription(e.target.value)}
                         rows={3}
-                        className="w-full px-4 py-2.5 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-[#F4EEE7] text-sm placeholder-[#D4BCAA]/25 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all resize-none"
+                        className="w-full px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all resize-none"
                     />
                 </div>
             </div>

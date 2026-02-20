@@ -104,15 +104,15 @@ export default function CategoriesPage() {
     return (
         <div className="space-y-6 max-w-3xl">
             <div>
-                <h1 className="text-2xl font-bold text-[#F4EEE7]">Kategori</h1>
-                <p className="text-[#D4BCAA]/50 text-sm mt-1">
+                <h1 className="text-2xl font-bold text-[#0F0A09]">Kategori</h1>
+                <p className="text-[#8C7A6B]/50 text-sm mt-1">
                     {categories.length} kategori
                 </p>
             </div>
 
             {/* Add New */}
-            <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl p-5 space-y-3">
-                <h3 className="text-sm font-semibold text-[#F4EEE7]">Tambah Kategori</h3>
+            <div className="bg-white border border-[#D4BCAA]/20 rounded-xl p-5 space-y-3">
+                <h3 className="text-sm font-semibold text-[#0F0A09]">Tambah Kategori</h3>
                 <div className="flex flex-col sm:flex-row gap-3">
                     <input
                         type="text"
@@ -120,14 +120,14 @@ export default function CategoriesPage() {
                         onChange={(e) => setNewName(e.target.value)}
                         placeholder="Nama kategori"
                         onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-                        className="flex-1 px-4 py-2.5 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-[#F4EEE7] text-sm placeholder-[#D4BCAA]/25 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all"
+                        className="flex-1 px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all"
                     />
                     <input
                         type="text"
                         value={newDesc}
                         onChange={(e) => setNewDesc(e.target.value)}
                         placeholder="Deskripsi (opsional)"
-                        className="flex-1 px-4 py-2.5 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-[#F4EEE7] text-sm placeholder-[#D4BCAA]/25 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all"
+                        className="flex-1 px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all"
                     />
                     <button
                         onClick={handleAdd}
@@ -141,18 +141,18 @@ export default function CategoriesPage() {
             </div>
 
             {/* List */}
-            <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl overflow-hidden">
+            <div className="bg-white border border-[#D4BCAA]/20 rounded-xl overflow-hidden">
                 {loading ? (
                     <div className="flex items-center justify-center h-32">
                         <Loader2 className="h-6 w-6 text-[#466A68] animate-spin" />
                     </div>
                 ) : categories.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-32 text-[#D4BCAA]/30">
+                    <div className="flex flex-col items-center justify-center h-32 text-[#8C7A6B]/30">
                         <FolderOpen className="h-6 w-6 mb-2" />
                         <p className="text-sm">Belum ada kategori</p>
                     </div>
                 ) : (
-                    <div className="divide-y divide-[#D4BCAA]/5">
+                    <div className="divide-y divide-[#D4BCAA]/20">
                         {categories.map((cat) => (
                             <div key={cat.id} className="flex items-center gap-4 px-6 py-3.5 hover:bg-[#D4BCAA]/5 transition-colors">
                                 {editingId === cat.id ? (
@@ -162,7 +162,7 @@ export default function CategoriesPage() {
                                             value={editName}
                                             onChange={(e) => setEditName(e.target.value)}
                                             onKeyDown={(e) => e.key === "Enter" && handleEdit(cat.id)}
-                                            className="flex-1 px-3 py-1.5 bg-[#1a1412] border border-[#466A68]/30 rounded-lg text-[#F4EEE7] text-sm outline-none"
+                                            className="flex-1 px-3 py-1.5 bg-white border border-[#466A68]/30 rounded-lg text-[#0F0A09] text-sm outline-none"
                                             autoFocus
                                         />
                                         <input
@@ -170,34 +170,34 @@ export default function CategoriesPage() {
                                             value={editDesc}
                                             onChange={(e) => setEditDesc(e.target.value)}
                                             placeholder="Deskripsi"
-                                            className="flex-1 px-3 py-1.5 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-[#F4EEE7] text-sm placeholder-[#D4BCAA]/20 outline-none"
+                                            className="flex-1 px-3 py-1.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#D4BCAA]/20 outline-none"
                                         />
-                                        <button onClick={() => handleEdit(cat.id)} className="p-1.5 text-green-400 hover:text-green-300">
+                                        <button onClick={() => handleEdit(cat.id)} className="p-1.5 text-green-600 hover:text-green-700">
                                             <Check className="h-4 w-4" />
                                         </button>
-                                        <button onClick={() => setEditingId(null)} className="p-1.5 text-[#D4BCAA]/30 hover:text-[#F4EEE7]">
+                                        <button onClick={() => setEditingId(null)} className="p-1.5 text-[#8C7A6B]/30 hover:text-[#0F0A09]">
                                             <X className="h-4 w-4" />
                                         </button>
                                     </>
                                 ) : (
                                     <>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm text-[#F4EEE7] font-medium">{cat.name}</p>
+                                            <p className="text-sm text-[#0F0A09] font-medium">{cat.name}</p>
                                             {cat.description && (
-                                                <p className="text-xs text-[#D4BCAA]/30 mt-0.5 truncate">{cat.description}</p>
+                                                <p className="text-xs text-[#8C7A6B]/30 mt-0.5 truncate">{cat.description}</p>
                                             )}
-                                            <p className="text-[10px] text-[#D4BCAA]/20 mt-0.5">/{cat.slug} · {cat._count.posts} artikel</p>
+                                            <p className="text-[10px] text-[#8C7A6B]/20 mt-0.5">/{cat.slug} · {cat._count.posts} artikel</p>
                                         </div>
                                         <button
                                             onClick={() => { setEditingId(cat.id); setEditName(cat.name); setEditDesc(cat.description || "") }}
-                                            className="p-1.5 text-[#D4BCAA]/30 hover:text-[#466A68] transition-colors"
+                                            className="p-1.5 text-[#8C7A6B]/30 hover:text-[#466A68] transition-colors"
                                         >
                                             <Pencil className="h-4 w-4" />
                                         </button>
                                         <button
                                             onClick={() => handleDelete(cat.id, cat.name)}
                                             disabled={deleting === cat.id}
-                                            className="p-1.5 text-[#D4BCAA]/30 hover:text-red-400 transition-colors disabled:opacity-50"
+                                            className="p-1.5 text-[#8C7A6B]/30 hover:text-red-600 transition-colors disabled:opacity-50"
                                         >
                                             {deleting === cat.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                                         </button>

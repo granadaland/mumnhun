@@ -92,8 +92,8 @@ export default function GeneralSettingsPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-[#F4EEE7]">Pengaturan Umum</h1>
-                    <p className="text-[#D4BCAA]/50 text-sm mt-1">
+                    <h1 className="text-2xl font-bold text-[#0F0A09]">Pengaturan Umum</h1>
+                    <p className="text-[#8C7A6B]/50 text-sm mt-1">
                         Konfigurasi dasar website
                     </p>
                 </div>
@@ -114,10 +114,10 @@ export default function GeneralSettingsPage() {
             </div>
 
             {/* Settings Form */}
-            <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl divide-y divide-[#D4BCAA]/5">
+            <div className="bg-white border border-[#D4BCAA]/20 rounded-xl divide-y divide-[#D4BCAA]/20">
                 {settingsConfig.map((config) => (
                     <div key={config.key} className="px-6 py-5">
-                        <label className="block text-sm font-medium text-[#D4BCAA]/80 mb-1.5">
+                        <label className="block text-sm font-medium text-[#8C7A6B]/80 mb-1.5">
                             {config.label}
                         </label>
                         {config.type === "textarea" ? (
@@ -128,7 +128,7 @@ export default function GeneralSettingsPage() {
                                 }
                                 placeholder={config.placeholder}
                                 rows={3}
-                                className="w-full px-4 py-2.5 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-[#F4EEE7] text-sm placeholder-[#D4BCAA]/25 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 focus:border-[#466A68]/50 transition-all resize-none"
+                                className="w-full px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 focus:border-[#466A68]/50 transition-all resize-none"
                             />
                         ) : (
                             <input
@@ -138,7 +138,7 @@ export default function GeneralSettingsPage() {
                                     setFormValues({ ...formValues, [config.key]: e.target.value })
                                 }
                                 placeholder={config.placeholder}
-                                className="w-full px-4 py-2.5 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-[#F4EEE7] text-sm placeholder-[#D4BCAA]/25 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 focus:border-[#466A68]/50 transition-all"
+                                className="w-full px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 focus:border-[#466A68]/50 transition-all"
                             />
                         )}
                     </div>

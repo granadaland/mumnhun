@@ -270,10 +270,10 @@ const categoryLabels: Record<string, string> = {
 }
 
 const statusIcons = {
-    pass: <CheckCircle className="h-3.5 w-3.5 text-green-400" />,
-    fail: <XCircle className="h-3.5 w-3.5 text-red-400" />,
-    warn: <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />,
-    info: <Info className="h-3.5 w-3.5 text-blue-400/60" />,
+    pass: <CheckCircle className="h-3.5 w-3.5 text-green-600" />,
+    fail: <XCircle className="h-3.5 w-3.5 text-red-600" />,
+    warn: <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />,
+    info: <Info className="h-3.5 w-3.5 text-blue-600/60" />,
 }
 
 export function SeoScanner(props: SeoScannerProps) {
@@ -289,7 +289,7 @@ export function SeoScanner(props: SeoScannerProps) {
         return g
     }, [checks])
 
-    const scoreColor = score >= 71 ? "text-green-400" : score >= 41 ? "text-amber-400" : "text-red-400"
+    const scoreColor = score >= 71 ? "text-green-600" : score >= 41 ? "text-amber-600" : "text-red-600"
     const scoreBg = score >= 71 ? "from-green-500/10 to-green-500/5" : score >= 41 ? "from-amber-500/10 to-amber-500/5" : "from-red-500/10 to-red-500/5"
     const scoreLabel = score >= 71 ? "Bagus" : score >= 41 ? "Perlu Perbaikan" : "Rendah"
     const passCount = checks.filter((c) => c.status === "pass").length
@@ -297,15 +297,15 @@ export function SeoScanner(props: SeoScannerProps) {
     return (
         <div className="space-y-4">
             {/* Score Badge */}
-            <div className={`bg-gradient-to-br ${scoreBg} border border-[#D4BCAA]/5 rounded-xl p-4 flex items-center gap-4`}>
+            <div className={`bg-gradient-to-br ${scoreBg} border border-[#D4BCAA]/20 rounded-xl p-4 flex items-center gap-4`}>
                 <div className={`text-3xl font-bold ${scoreColor} tabular-nums`}>{score}</div>
                 <div className="flex-1">
                     <p className={`text-sm font-medium ${scoreColor}`}>{scoreLabel}</p>
-                    <p className="text-[10px] text-[#D4BCAA]/40">{passCount}/{checks.length} checks passed</p>
+                    <p className="text-[10px] text-[#8C7A6B]/40">{passCount}/{checks.length} checks passed</p>
                 </div>
                 <div className="w-16 h-16 relative">
                     <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                        <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#D4BCAA]/5" />
+                        <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#8C7A6B]/5" />
                         <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray={`${score} ${100 - score}`} strokeLinecap="round" className={scoreColor} />
                     </svg>
                 </div>
@@ -314,14 +314,14 @@ export function SeoScanner(props: SeoScannerProps) {
             {/* Checks by Category */}
             {Object.entries(grouped).map(([cat, items]) => (
                 <div key={cat}>
-                    <p className="text-[10px] font-semibold text-[#D4BCAA]/40 uppercase tracking-wider mb-1.5">{categoryLabels[cat] || cat}</p>
+                    <p className="text-[10px] font-semibold text-[#8C7A6B]/40 uppercase tracking-wider mb-1.5">{categoryLabels[cat] || cat}</p>
                     <div className="space-y-0.5">
                         {items.map((check) => (
                             <div key={check.id} className="flex items-start gap-2 py-1.5 px-2 rounded-lg hover:bg-[#D4BCAA]/3 transition-colors">
                                 <div className="mt-0.5 flex-shrink-0">{statusIcons[check.status]}</div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-xs text-[#F4EEE7]/80">{check.label}</p>
-                                    <p className="text-[10px] text-[#D4BCAA]/30 truncate">{check.message}</p>
+                                    <p className="text-xs text-[#0F0A09]/80">{check.label}</p>
+                                    <p className="text-[10px] text-[#8C7A6B]/30 truncate">{check.message}</p>
                                 </div>
                             </div>
                         ))}

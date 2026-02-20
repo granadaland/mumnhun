@@ -154,8 +154,8 @@ export default function SchemasPage() {
         <div className="space-y-6 max-w-4xl">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-[#F4EEE7]">Schema / JSON-LD</h1>
-                    <p className="text-[#D4BCAA]/50 text-sm mt-1">Kelola structured data untuk SEO</p>
+                    <h1 className="text-2xl font-bold text-[#0F0A09]">Schema / JSON-LD</h1>
+                    <p className="text-[#8C7A6B]/50 text-sm mt-1">Kelola structured data untuk SEO</p>
                 </div>
                 <button onClick={() => { setAdding(true); setEditingId(null); setForm({ entityType: "global", entityId: "", schemaType: "Article", schemaData: "" }) }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#466A68] to-[#3a5856] text-white text-sm font-medium rounded-lg transition-all shadow-lg">
                     <Plus className="h-4 w-4" />
@@ -165,18 +165,18 @@ export default function SchemasPage() {
 
             {/* Editor Form */}
             {adding && (
-                <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl p-5 space-y-4">
+                <div className="bg-white border border-[#D4BCAA]/20 rounded-xl p-5 space-y-4">
                     <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-[#F4EEE7]">{editingId ? "Edit Schema" : "Schema Baru"}</h3>
-                        <button onClick={() => { setAdding(false); setEditingId(null) }} className="text-[#D4BCAA]/30 hover:text-[#F4EEE7]"><X className="h-4 w-4" /></button>
+                        <h3 className="text-sm font-semibold text-[#0F0A09]">{editingId ? "Edit Schema" : "Schema Baru"}</h3>
+                        <button onClick={() => { setAdding(false); setEditingId(null) }} className="text-[#8C7A6B]/30 hover:text-[#0F0A09]"><X className="h-4 w-4" /></button>
                     </div>
 
                     {/* Template Picker */}
                     <div>
-                        <label className="block text-xs text-[#D4BCAA]/50 mb-1.5">Template</label>
+                        <label className="block text-xs text-[#8C7A6B]/50 mb-1.5">Template</label>
                         <div className="flex flex-wrap gap-1.5">
                             {Object.entries(SCHEMA_TEMPLATES).map(([key, tpl]) => (
-                                <button key={key} onClick={() => applyTemplate(key)} className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${form.schemaType === key ? "bg-[#466A68]/15 border-[#466A68]/30 text-[#466A68]" : "border-[#D4BCAA]/10 text-[#D4BCAA]/40 hover:text-[#D4BCAA]/70"}`}>
+                                <button key={key} onClick={() => applyTemplate(key)} className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${form.schemaType === key ? "bg-[#466A68]/15 border-[#466A68]/30 text-[#466A68]" : "border-[#D4BCAA]/20 text-[#8C7A6B]/40 hover:text-[#8C7A6B]/70"}`}>
                                     {tpl.label}
                                 </button>
                             ))}
@@ -185,8 +185,8 @@ export default function SchemasPage() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
-                            <label className="block text-xs text-[#D4BCAA]/50 mb-1">Tipe Entity</label>
-                            <select value={form.entityType} onChange={(e) => setForm({ ...form, entityType: e.target.value })} className="w-full px-3 py-2 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-sm text-[#F4EEE7] outline-none">
+                            <label className="block text-xs text-[#8C7A6B]/50 mb-1">Tipe Entity</label>
+                            <select value={form.entityType} onChange={(e) => setForm({ ...form, entityType: e.target.value })} className="w-full px-3 py-2 bg-white border border-[#D4BCAA]/20 rounded-lg text-sm text-[#0F0A09] outline-none">
                                 <option value="global">Global</option>
                                 <option value="homepage">Homepage</option>
                                 <option value="post">Post</option>
@@ -194,25 +194,25 @@ export default function SchemasPage() {
                             </select>
                         </div>
                         <div>
-                            <label className="block text-xs text-[#D4BCAA]/50 mb-1">Schema Type</label>
-                            <input type="text" value={form.schemaType} onChange={(e) => setForm({ ...form, schemaType: e.target.value })} className="w-full px-3 py-2 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-sm text-[#F4EEE7] outline-none" />
+                            <label className="block text-xs text-[#8C7A6B]/50 mb-1">Schema Type</label>
+                            <input type="text" value={form.schemaType} onChange={(e) => setForm({ ...form, schemaType: e.target.value })} className="w-full px-3 py-2 bg-white border border-[#D4BCAA]/20 rounded-lg text-sm text-[#0F0A09] outline-none" />
                         </div>
                         <div>
-                            <label className="block text-xs text-[#D4BCAA]/50 mb-1">Entity ID (opsional)</label>
-                            <input type="text" value={form.entityId} onChange={(e) => setForm({ ...form, entityId: e.target.value })} placeholder="ID post/page" className="w-full px-3 py-2 bg-[#1a1412] border border-[#D4BCAA]/10 rounded-lg text-sm text-[#F4EEE7] placeholder-[#D4BCAA]/20 outline-none" />
+                            <label className="block text-xs text-[#8C7A6B]/50 mb-1">Entity ID (opsional)</label>
+                            <input type="text" value={form.entityId} onChange={(e) => setForm({ ...form, entityId: e.target.value })} placeholder="ID post/page" className="w-full px-3 py-2 bg-white border border-[#D4BCAA]/20 rounded-lg text-sm text-[#0F0A09] placeholder-[#D4BCAA]/20 outline-none" />
                         </div>
                     </div>
 
                     <div>
-                        <label className="block text-xs text-[#D4BCAA]/50 mb-1">JSON-LD Data</label>
+                        <label className="block text-xs text-[#8C7A6B]/50 mb-1">JSON-LD Data</label>
                         <textarea
                             value={form.schemaData}
                             onChange={(e) => { setForm({ ...form, schemaData: e.target.value }); validateJson(e.target.value) }}
                             rows={12}
-                            className={`w-full px-4 py-3 bg-[#1a1412] border ${jsonError ? "border-red-500/30" : "border-[#D4BCAA]/10"} rounded-lg text-xs text-[#F4EEE7] font-mono outline-none resize-y focus:ring-2 focus:ring-[#466A68]/30 transition-all`}
+                            className={`w-full px-4 py-3 bg-white border ${jsonError ? "border-red-500/30" : "border-[#D4BCAA]/20"} rounded-lg text-xs text-[#0F0A09] font-mono outline-none resize-y focus:ring-2 focus:ring-[#466A68]/30 transition-all`}
                             placeholder='{"@context": "https://schema.org", ...}'
                         />
-                        {jsonError && <p className="text-[10px] text-red-400 mt-1">{jsonError}</p>}
+                        {jsonError && <p className="text-[10px] text-red-600 mt-1">{jsonError}</p>}
                     </div>
 
                     <button onClick={handleSave} disabled={saving || !form.schemaData} className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#466A68] to-[#3a5856] text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-all">
@@ -227,34 +227,34 @@ export default function SchemasPage() {
                 {loading ? (
                     <div className="flex items-center justify-center h-32"><Loader2 className="h-6 w-6 text-[#466A68] animate-spin" /></div>
                 ) : schemas.length === 0 ? (
-                    <div className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl flex flex-col items-center justify-center h-32 text-[#D4BCAA]/30">
+                    <div className="bg-white border border-[#D4BCAA]/20 rounded-xl flex flex-col items-center justify-center h-32 text-[#8C7A6B]/30">
                         <FileJson className="h-6 w-6 mb-2" />
                         <p className="text-sm">Belum ada schema</p>
                     </div>
                 ) : (
                     schemas.map((schema) => (
-                        <div key={schema.id} className="bg-[#2a2018] border border-[#D4BCAA]/10 rounded-xl p-4">
+                        <div key={schema.id} className="bg-white border border-[#D4BCAA]/20 rounded-xl p-4">
                             <div className="flex items-center gap-3">
-                                <Code2 className={`h-4 w-4 flex-shrink-0 ${schema.isActive ? "text-[#466A68]" : "text-[#D4BCAA]/20"}`} />
+                                <Code2 className={`h-4 w-4 flex-shrink-0 ${schema.isActive ? "text-[#466A68]" : "text-[#8C7A6B]/20"}`} />
                                 <div className="flex-1 min-w-0">
-                                    <p className={`text-sm font-medium ${schema.isActive ? "text-[#F4EEE7]" : "text-[#D4BCAA]/40"}`}>{schema.schemaType}</p>
-                                    <p className="text-[10px] text-[#D4BCAA]/25 mt-0.5">
+                                    <p className={`text-sm font-medium ${schema.isActive ? "text-[#0F0A09]" : "text-[#8C7A6B]/40"}`}>{schema.schemaType}</p>
+                                    <p className="text-[10px] text-[#8C7A6B]/25 mt-0.5">
                                         {schema.entityType}{schema.entityId ? ` · ${schema.entityId}` : ""} · {new Date(schema.createdAt).toLocaleDateString("id-ID")}
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-1 flex-shrink-0">
-                                    <button onClick={() => handleToggle(schema)} className={`p-1.5 transition-colors ${schema.isActive ? "text-green-400 hover:text-green-300" : "text-[#D4BCAA]/20 hover:text-[#D4BCAA]/50"}`}>
+                                    <button onClick={() => handleToggle(schema)} className={`p-1.5 transition-colors ${schema.isActive ? "text-green-600 hover:text-green-700" : "text-[#8C7A6B]/20 hover:text-[#8C7A6B]/50"}`}>
                                         {schema.isActive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                                     </button>
-                                    <button onClick={() => startEdit(schema)} className="p-1.5 text-[#D4BCAA]/30 hover:text-[#466A68] transition-colors">
+                                    <button onClick={() => startEdit(schema)} className="p-1.5 text-[#8C7A6B]/30 hover:text-[#466A68] transition-colors">
                                         <Pencil className="h-4 w-4" />
                                     </button>
-                                    <button onClick={() => handleDelete(schema.id)} className="p-1.5 text-[#D4BCAA]/30 hover:text-red-400 transition-colors">
+                                    <button onClick={() => handleDelete(schema.id)} className="p-1.5 text-[#8C7A6B]/30 hover:text-red-600 transition-colors">
                                         <Trash2 className="h-4 w-4" />
                                     </button>
                                 </div>
                             </div>
-                            <pre className="mt-2 px-3 py-2 bg-[#1a1412] rounded-lg text-[10px] text-[#D4BCAA]/40 font-mono overflow-x-auto max-h-20 scrollbar-thin">
+                            <pre className="mt-2 px-3 py-2 bg-white rounded-lg text-[10px] text-[#8C7A6B]/40 font-mono overflow-x-auto max-h-20 scrollbar-thin">
                                 {(() => { try { return JSON.stringify(JSON.parse(schema.schemaData), null, 2) } catch { return schema.schemaData } })()}
                             </pre>
                         </div>
