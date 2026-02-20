@@ -75,7 +75,7 @@ export default function GeneralSettingsPage() {
     }
 
     const settingsConfig = [
-        { key: "site_name", label: "Nama Website", type: "text", placeholder: "Mum 'N Hun" },
+        { key: "site_name", label: "Nama Website", type: "text", placeholder: "Mum 'n Hun" },
         { key: "site_description", label: "Deskripsi Website", type: "textarea", placeholder: "Deskripsi singkat website..." },
         { key: "site_url", label: "URL Website", type: "url", placeholder: "https://mumnhun.id" },
         { key: "site_logo", label: "Logo (Cloudinary URL)", type: "url", placeholder: "https://res.cloudinary.com/..." },

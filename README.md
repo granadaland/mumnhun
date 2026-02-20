@@ -1,4 +1,4 @@
-# Mum 'N Hun - Blog Parenting Indonesia
+# Mum 'n Hun - Blog Parenting Indonesia
 
 Website layanan sewa freezer ASI. Dibangun dengan Next.js 16, TypeScript, Tailwind CSS, dan Supabase.
 
@@ -162,4 +162,4 @@ Or connect your GitHub repo to Vercel for automatic deployments.
 
 ## 📄 License
 
-Copyright © 2026 Mum 'N Hun. All rights reserved.
+Copyright © 2026 Mum 'n Hun. All rights reserved.

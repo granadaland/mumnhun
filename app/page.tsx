@@ -49,7 +49,7 @@ function getPackageWhatsAppLink(duration: string, priceDisplay: string) {
 
 // Homepage-specific SEO metadata
 export const metadata: Metadata = {
-  title: "Sewa Freezer ASI | Rental Kulkas ASI Bulanan | Mum 'N Hun",
+  title: "Sewa Freezer ASI | Rental Kulkas ASI Bulanan | Mum 'n Hun",
   description:
     "Sewa freezer ASI murah untuk wilayah Jakarta Selatan, Depok, Jakarta Timur, Jakarta Utara, Jakarta Pusat, Bogor, Tangerang, Bintaro, Bekasi, BSD",
   keywords: [
@@ -64,7 +64,7 @@ export const metadata: Metadata = {
     canonical: `${SITE_URL}/`,
   },
   openGraph: {
-    title: "Sewa Freezer ASI | Rental Kulkas ASI Bulanan | Mum 'N Hun",
+    title: "Sewa Freezer ASI | Rental Kulkas ASI Bulanan | Mum 'n Hun",
     description:
       "Sewa freezer ASI murah untuk wilayah Jakarta Selatan, Depok, Jakarta Timur, Jakarta Utara, Jakarta Pusat, Bogor, Tangerang, Bintaro, Bekasi, BSD",
     url: `${SITE_URL}/`,
@@ -332,7 +332,7 @@ export default async function HomePage() {
                   <span>Garansi unit selama masa sewa</span>
                 </div>
                 <div className="w-1 h-1 bg-[#382821]/20 rounded-full hidden md:block" />
-                <div>10k+ ibu terbantu</div>
+                <div>5k+ ibu terbantu</div>
               </div>
             </div>
 
@@ -425,7 +425,7 @@ export default async function HomePage() {
 
 
       {/* ═══════════════════════════════════════════════════════ */}
-      {/* SECTION: ABOUT - Tentang Mum 'N Hun                    */}
+      {/* SECTION: ABOUT - Tentang Mum 'n Hun                    */}
       {/* ═══════════════════════════════════════════════════════ */}
       <section className="py-20 md:py-28 px-6 relative overflow-hidden">
         <Container>
@@ -439,7 +439,7 @@ export default async function HomePage() {
               <div className="relative rounded-[2.5rem] overflow-hidden shadow-2xl shadow-stone-900/10 aspect-video">
                 <iframe
                   src="https://www.youtube.com/embed/N9FIL22ro7I?rel=0"
-                  title="Tentang Mum 'N Hun - Video Company Profile"
+                  title="Tentang Mum 'n Hun - Video Company Profile"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
                   className="absolute inset-0 w-full h-full"
@@ -474,7 +474,7 @@ export default async function HomePage() {
                   <strong className="text-[#382821]">sewa freezer ASI</strong> terpercaya, Mum &apos;N Hun menyediakan unit freezer khusus yang dirancang untuk menjaga nutrisi dan kesegaran ASI perah dalam jangka panjang.
                 </p>
                 <p>
-                  Kami melayani pengiriman <strong className="text-[#382821]">sewa freezer ASI Jakarta</strong>, Bogor, Depok, Tangerang, dan Bekasi. Lebih dari <strong className="text-[#382821]">10.000+ ibu menyusui</strong> telah mempercayakan penyimpanan ASI mereka kepada kami.
+                  Kami melayani pengiriman <strong className="text-[#382821]">sewa freezer ASI Jakarta</strong>, Bogor, Depok, Tangerang, dan Bekasi. Lebih dari <strong className="text-[#382821]">5.000+ ibu menyusui</strong> telah mempercayakan penyimpanan ASI mereka kepada kami.
                 </p>
               </div>
 
@@ -492,7 +492,7 @@ export default async function HomePage() {
                 </div>
                 <div className="rounded-2xl bg-gradient-to-br from-[#F6FAF9] via-white to-[#EAF3F2] px-5 py-5 text-center border border-[#466A68]/20 shadow-sm shadow-[#466A68]/10">
                   <span className="mx-auto mb-3 block h-1.5 w-14 rounded-full bg-gradient-to-r from-[#466A68]/75 to-[#9CB9B7]/80" />
-                  <p className="text-3xl md:text-4xl font-bold text-[#382821]">10k+</p>
+                  <p className="text-3xl md:text-4xl font-bold text-[#382821]">5k+</p>
                   <p className="mt-1 text-sm text-[#382821]/55 font-medium">Ibu Terbantu</p>
                 </div>
                 <div className="rounded-2xl bg-gradient-to-br from-[#FFFDF8] via-white to-[#F2EADF] px-5 py-5 text-center border border-[#B08A79]/20 shadow-sm shadow-[#C48B77]/10">

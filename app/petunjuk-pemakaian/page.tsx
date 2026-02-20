@@ -23,14 +23,14 @@ import { SITE_NAME, SITE_URL } from "@/lib/constants"
 export const metadata: Metadata = {
     title: "Petunjuk Penggunaan Freezer ASI",
     description:
-        "Panduan lengkap penggunaan freezer ASI dari Mum 'N Hun. Tips penyimpanan ASI yang benar, cara defrost, dan perawatan freezer.",
+        "Panduan lengkap penggunaan freezer ASI dari Mum 'n Hun. Tips penyimpanan ASI yang benar, cara defrost, dan perawatan freezer.",
     alternates: {
         canonical: `${SITE_URL}/petunjuk-pemakaian`,
     },
     openGraph: {
         title: "Petunjuk Penggunaan Freezer ASI",
         description:
-            "Panduan lengkap penggunaan freezer ASI dari Mum 'N Hun. Tips penyimpanan ASI yang benar, cara defrost, dan perawatan freezer.",
+            "Panduan lengkap penggunaan freezer ASI dari Mum 'n Hun. Tips penyimpanan ASI yang benar, cara defrost, dan perawatan freezer.",
         url: `${SITE_URL}/petunjuk-pemakaian`,
         type: "article",
         siteName: SITE_NAME,
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
         card: "summary_large_image",
         title: "Petunjuk Penggunaan Freezer ASI",
         description:
-            "Panduan lengkap penggunaan freezer ASI dari Mum 'N Hun. Tips penyimpanan ASI yang benar, cara defrost, dan perawatan freezer.",
+            "Panduan lengkap penggunaan freezer ASI dari Mum 'n Hun. Tips penyimpanan ASI yang benar, cara defrost, dan perawatan freezer.",
     },
 }
 

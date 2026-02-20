@@ -1,6 +1,6 @@
 // App-wide constants
 
-export const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || "Mum 'N Hun"
+export const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || "Mum 'n Hun"
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://mumnhun.id"
 export const SITE_DESCRIPTION = "Sewa freezer ASI murah untuk wilayah Jakarta Selatan, Depok, Jakarta Timur, Jakarta Utara, Jakarta Pusat, Bogor, Tangerang, Bintaro, Bekasi, BSD"
 

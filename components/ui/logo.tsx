@@ -36,7 +36,7 @@ export function Logo({ variant = "default", className, ...props }: LogoProps) {
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 310 70"
             className={cn("w-full h-auto", className)}
-            aria-label="Mum 'N Hun Logo"
+            aria-label="Mum 'n Hun Logo"
             {...props}
         >
             <defs>
@@ -130,7 +130,7 @@ export function Logo({ variant = "default", className, ...props }: LogoProps) {
                     fontWeight="400"
                     fill={currentColors.accent}
                 >
-                    &#39;N
+                    &#39;n
                 </text>
 
                 {/* "Hun" */}

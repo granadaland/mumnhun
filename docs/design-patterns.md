@@ -23,6 +23,7 @@
 ## 1. Hero Section
 
 ### Structure
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │ HERO SECTION                                                            │
@@ -47,6 +48,7 @@
 ```
 
 ### Key Styling Classes
+
 ```tsx
 // Section container
 <section className="pt-36 pb-20 md:pt-48 md:pb-32 px-6 overflow-hidden relative">
@@ -83,10 +85,12 @@
 ## 2. Navigation/Header
 
 ### Behavior
+
 - **Sticky** fixed to top with z-60
 - **Morphs** on scroll: Full-width → Floating pill with blur
 
 ### Key Styling Classes
+
 ```tsx
 // Nav container
 <nav className="fixed z-[60] w-full flex justify-center pt-6">
@@ -112,10 +116,12 @@
 ## 3. Features/Benefits Section
 
 ### Structure
+
 - 6 cards in 3x2 grid (lg) / 2 columns (md) / 1 column (mobile)
 - Each card has: Icon box, Title, Description, Decorative line
 
 ### Key Styling Classes
+
 ```tsx
 // Section
 <section className="py-24 px-6 relative">
@@ -123,7 +129,7 @@
 // Section heading
 <h2 className="text-3xl md:text-5xl font-bold text-secondary tracking-tight">
   Kenapa Harus <span className="text-primary relative inline-block">
-    Mum 'N Hun?
+    Mum 'n Hun?
     <span className="absolute bottom-2 left-0 w-full h-2 bg-accent/20 -z-10 rounded-full" />
   </span>
 </h2>
@@ -146,10 +152,12 @@
 ## 4. Pricing Cards
 
 ### Structure
+
 - 3 cards in horizontal row (md) / stacked (mobile)
 - Middle card (Popular) is scaled up and highlighted
 
 ### Key Styling Classes
+
 ```tsx
 // Section
 <section className="py-24 px-6 relative bg-white/40 overflow-hidden">
@@ -195,11 +203,13 @@
 ## 5. About Section
 
 ### Structure
+
 - Two-column layout: Video on left, Text content on right
 - Video has play button overlay with ripple animation
 - Stats section at bottom of text
 
 ### Key Styling Classes
+
 ```tsx
 // Section
 <section className="py-20 px-6 bg-white/40">
@@ -229,11 +239,13 @@
 ## 6. Testimonials
 
 ### Structure
+
 - Large glass card with image and quote
 - Carousel navigation (prev/next)
 - Floating rating badge on image
 
 ### Key Styling Classes
+
 ```tsx
 // Section
 <section className="py-24 px-6 relative overflow-hidden">
@@ -270,6 +282,7 @@
 ## 7. FAQ Accordion
 
 ### Key Styling Classes
+
 ```tsx
 // Container
 <div className="space-y-4">
@@ -303,6 +316,7 @@
 ## 8. Articles/Blog Cards
 
 ### Key Styling Classes
+
 ```tsx
 // Card container
 <div className="group flex gap-5 p-4 rounded-3xl bg-white/40 hover:bg-white/80 border border-white/60 hover:shadow-xl hover:shadow-stone-200/50 backdrop-blur-sm cursor-pointer">
@@ -329,10 +343,12 @@
 ## 9. Footer
 
 ### Structure
+
 - Warm gradient background
 - 3 columns: Brand + Socials | Links | Contact info
 
 ### Key Styling Classes
+
 ```tsx
 // Footer container
 <footer className="bg-gradient-to-r from-[#D4BCAA] to-[#F4EEE7] border-t border-[#382821]/10 pt-20 pb-10">
@@ -364,6 +380,7 @@
 ## 10. Global Effects & Animations
 
 ### Paper Texture (Noise overlay)
+
 ```css
 body::before {
   content: "";
@@ -377,6 +394,7 @@ body::before {
 ```
 
 ### Custom Scrollbar
+
 ```css
 ::-webkit-scrollbar {
   width: 10px;
@@ -395,6 +413,7 @@ body::before {
 ```
 
 ### Common Transitions
+
 ```tsx
 // Hover lift
 hover:-translate-y-1 transition-transform // or hover:-translate-y-2
@@ -412,6 +431,7 @@ shadow-lg hover:shadow-xl transition-shadow
 ```
 
 ### Glassmorphism Pattern
+
 ```tsx
 // Glass card
 bg-white/40 backdrop-blur-md // or backdrop-blur-sm
@@ -424,6 +444,7 @@ border border-white/60
 ```
 
 ### Animation Classes (Custom)
+
 ```tsx
 animate-bounce-slow   // Slow bounce for floating cards
 animate-float         // Floating animation

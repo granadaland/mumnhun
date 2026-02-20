@@ -154,7 +154,7 @@ export default async function AdminDashboard() {
                 <div className="relative">
                     <p className="text-[#466A68] text-sm font-medium mb-1">{greeting} 👋</p>
                     <h1 className="text-2xl lg:text-3xl font-bold text-[#F4EEE7] mb-2">
-                        {siteName || "Mum 'N Hun"} Dashboard
+                        {siteName || "Mum 'n Hun"} Dashboard
                     </h1>
                     <p className="text-[#D4BCAA]/50 text-sm">
                         {stats.postCount} artikel published · {stats.draftCount} draft · {stats.pageCount} halaman · {stats.mediaCount} media

@@ -61,7 +61,7 @@ export default function LoginPage() {
                 <div className="text-center mb-8">
                     <Image
                         src="https://res.cloudinary.com/dvqcs0zqi/image/upload/v1769979416/Logo_MumNhun_krpo1l.webp"
-                        alt="Mum 'N Hun Logo"
+                        alt="Mum 'n Hun Logo"
                         width={160}
                         height={64}
                         className="mx-auto mb-4 brightness-110"
