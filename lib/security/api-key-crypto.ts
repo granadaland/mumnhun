@@ -9,10 +9,19 @@ const DERIVATION_SALT = "mumnhun/api-keys/v1"
 
 let cachedEncryptionKey: Buffer | null = null
 
+export type ApiKeyCryptoConfigErrorCode =
+    | "CRYPTO_CONFIG_MISSING"
+    | "CRYPTO_CONFIG_EMPTY"
+    | "CRYPTO_CONFIG_MALFORMED"
+    | "CRYPTO_CONFIG_INVALID_LENGTH"
+
 export class ApiKeyCryptoConfigError extends Error {
-    constructor(message: string) {
+    code: ApiKeyCryptoConfigErrorCode
+
+    constructor(message: string, code: ApiKeyCryptoConfigErrorCode) {
         super(message)
         this.name = "ApiKeyCryptoConfigError"
+        this.code = code
     }
 }
 
@@ -26,14 +35,42 @@ export class ApiKeyCryptoError extends Error {
 function decodeSecretWithPrefix(secret: string, encodingPrefix: "base64:" | "hex:"): Buffer {
     const encoded = secret.slice(encodingPrefix.length).trim()
     if (!encoded) {
-        throw new ApiKeyCryptoConfigError("API_KEYS_ENCRYPTION_SECRET value is empty")
+        throw new ApiKeyCryptoConfigError(
+            "API_KEYS_ENCRYPTION_SECRET value is empty",
+            "CRYPTO_CONFIG_EMPTY"
+        )
     }
 
-    const encoding = encodingPrefix === "base64:" ? "base64" : "hex"
-    const buffer = Buffer.from(encoded, encoding)
+    let buffer: Buffer
+
+    if (encodingPrefix === "base64:") {
+        const normalized = encoded.replace(/\s+/g, "")
+        const base64Pattern = /^[A-Za-z0-9+/]+={0,2}$/
+        const paddingLength = normalized.match(/=+$/)?.[0]?.length ?? 0
+
+        if (!base64Pattern.test(normalized) || normalized.length % 4 !== 0 || paddingLength > 2) {
+            throw new ApiKeyCryptoConfigError(
+                "API_KEYS_ENCRYPTION_SECRET base64 payload is malformed",
+                "CRYPTO_CONFIG_MALFORMED"
+            )
+        }
+
+        buffer = Buffer.from(normalized, "base64")
+    } else {
+        if (encoded.length % 2 !== 0 || !/^[0-9a-fA-F]+$/.test(encoded)) {
+            throw new ApiKeyCryptoConfigError(
+                "API_KEYS_ENCRYPTION_SECRET hex payload is malformed",
+                "CRYPTO_CONFIG_MALFORMED"
+            )
+        }
+        buffer = Buffer.from(encoded, "hex")
+    }
 
     if (buffer.length !== 32) {
-        throw new ApiKeyCryptoConfigError("API_KEYS_ENCRYPTION_SECRET must resolve to exactly 32 bytes")
+        throw new ApiKeyCryptoConfigError(
+            "API_KEYS_ENCRYPTION_SECRET must resolve to exactly 32 bytes",
+            "CRYPTO_CONFIG_INVALID_LENGTH"
+        )
     }
 
     return buffer
@@ -46,7 +83,7 @@ function getEncryptionKey(): Buffer {
 
     const secret = process.env.API_KEYS_ENCRYPTION_SECRET?.trim()
     if (!secret) {
-        throw new ApiKeyCryptoConfigError("API_KEYS_ENCRYPTION_SECRET is missing")
+        throw new ApiKeyCryptoConfigError("API_KEYS_ENCRYPTION_SECRET is missing", "CRYPTO_CONFIG_MISSING")
     }
 
     if (secret.startsWith("base64:")) {
@@ -129,4 +166,3 @@ export function decryptStoredApiKey(storedApiKey: string): string {
 
     return decryptEncryptedApiKey(storedApiKey)
 }
-

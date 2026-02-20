@@ -3,6 +3,11 @@ import { z } from "zod"
 import prisma from "@/lib/db/prisma"
 import { requireAdminMutationApi } from "@/lib/security/admin"
 import { decryptStoredApiKey } from "@/lib/security/api-key-crypto"
+import {
+    classifyAiKeyFailure,
+    formatStoredAiKeyFailure,
+    toAiKeyFailureHttpStatus,
+} from "@/lib/security/ai-key-status"
 import { logAdminError, logAdminInfo, logAdminWarn } from "@/lib/observability/admin-log"
 import { summarizeUnknownError } from "@/lib/security/admin-helpers"
 
@@ -43,6 +48,18 @@ function errorJson(message: string, status: number, data?: unknown) {
         {
             success: false,
             error: message,
+            ...(typeof data === "undefined" ? {} : { data }),
+        },
+        { status }
+    )
+}
+
+function errorJsonWithCode(message: string, status: number, errorCode: string, data?: unknown) {
+    return NextResponse.json(
+        {
+            success: false,
+            error: message,
+            errorCode,
             ...(typeof data === "undefined" ? {} : { data }),
         },
         { status }
@@ -280,13 +297,14 @@ export async function POST(request: NextRequest) {
 
                 break
             } catch (error) {
-                lastErrorMessage = summarizeUnknownError(error)
+                const failure = classifyAiKeyFailure(error)
+                lastErrorMessage = failure.message
 
                 await prisma.aiApiKey.update({
                     where: { id: keyRecord.id },
                     data: {
                         lastUsedAt: new Date(),
-                        lastError: lastErrorMessage.slice(0, 500),
+                        lastError: formatStoredAiKeyFailure(failure),
                     },
                 })
             }
@@ -383,6 +401,7 @@ export async function POST(request: NextRequest) {
         })
     } catch (error) {
         const summarizedError = summarizeUnknownError(error).slice(0, 800)
+        const failure = classifyAiKeyFailure(error)
 
         await prisma.aiTask.update({
             where: { id: task.id },
@@ -405,6 +424,11 @@ export async function POST(request: NextRequest) {
             payloadSummary: { taskId: task.id },
         })
 
-        return errorJson("Gagal generate artikel AI", 500, { taskId: task.id })
+        return errorJsonWithCode(
+            "Gagal generate artikel AI",
+            toAiKeyFailureHttpStatus(failure),
+            failure.code,
+            { taskId: task.id }
+        )
     }
 }

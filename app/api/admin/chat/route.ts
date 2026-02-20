@@ -3,6 +3,11 @@ import { z } from "zod"
 import prisma from "@/lib/db/prisma"
 import { requireAdminApi, requireAdminMutationApi } from "@/lib/security/admin"
 import { decryptStoredApiKey } from "@/lib/security/api-key-crypto"
+import {
+    classifyAiKeyFailure,
+    formatStoredAiKeyFailure,
+    toAiKeyFailureHttpStatus,
+} from "@/lib/security/ai-key-status"
 import { logAdminError, logAdminInfo, logAdminWarn } from "@/lib/observability/admin-log"
 import { summarizeUnknownError } from "@/lib/security/admin-helpers"
 
@@ -140,7 +145,11 @@ export async function POST(request: NextRequest) {
 
         if (activeKeys.length === 0) {
             return NextResponse.json(
-                { success: false, error: "Tidak ada API key AI yang aktif. Tambahkan key di Settings." },
+                {
+                    success: false,
+                    error: "Tidak ada API key AI yang aktif. Tambahkan key di Settings.",
+                    errorCode: "AI_KEY_NOT_AVAILABLE",
+                },
                 { status: 503 }
             )
         }
@@ -173,7 +182,7 @@ export async function POST(request: NextRequest) {
 
         // Try keys with round-robin
         let aiResponse: string | null = null
-        let lastError = ""
+        let lastFailure: ReturnType<typeof classifyAiKeyFailure> | null = null
         const maxAttempts = Math.min(activeKeys.length, 3)
 
         for (let i = 0; i < maxAttempts; i++) {
@@ -192,21 +201,30 @@ export async function POST(request: NextRequest) {
                 })
                 break
             } catch (error) {
-                lastError = summarizeUnknownError(error)
+                const failure = classifyAiKeyFailure(error)
+                lastFailure = failure
+
                 await prisma.aiApiKey.update({
                     where: { id: keyRecord.id },
                     data: {
                         lastUsedAt: new Date(),
-                        lastError: lastError.slice(0, 500),
+                        lastError: formatStoredAiKeyFailure(failure),
                     },
                 })
             }
         }
 
         if (!aiResponse) {
+            const errorCode = lastFailure?.code ?? "UNKNOWN_ERROR"
+            const errorMessage = lastFailure?.message ?? "Semua API key AI gagal merespons"
+
             return NextResponse.json(
-                { success: false, error: `AI gagal merespons: ${lastError}` },
-                { status: 502 }
+                {
+                    success: false,
+                    error: `AI gagal merespons: ${errorMessage}`,
+                    errorCode,
+                },
+                { status: lastFailure ? toAiKeyFailureHttpStatus(lastFailure) : 502 }
             )
         }
 
@@ -234,6 +252,8 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ success: true, data: assistantMessage })
     } catch (error) {
+        const failure = classifyAiKeyFailure(error)
+
         logAdminError({
             requestId,
             action: "chat:send",
@@ -245,7 +265,11 @@ export async function POST(request: NextRequest) {
         })
 
         return NextResponse.json(
-            { success: false, error: "Gagal mengirim pesan" },
+            {
+                success: false,
+                error: "Gagal mengirim pesan",
+                errorCode: failure.code,
+            },
             { status: 500 }
         )
     }

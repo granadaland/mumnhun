@@ -6,7 +6,21 @@ import {
     decryptStoredApiKey,
     encryptApiKey,
 } from "@/lib/security/api-key-crypto"
+import {
+    classifyAiKeyFailure,
+    deriveAiKeyConnectionState,
+    formatStoredAiKeyFailure,
+    toAiKeyFailureHttpStatus,
+    verifyGeminiApiKey,
+} from "@/lib/security/ai-key-status"
 import { logAdminError, logAdminInfo, logAdminWarn } from "@/lib/observability/admin-log"
+
+type ApiKeyErrorResponse = {
+    success: false
+    error: string
+    errorCode: string
+    details?: Record<string, unknown>
+}
 
 function maskApiKey(value: string): string {
     if (!value) return ""
@@ -33,6 +47,11 @@ function sanitizeKeyRecord(key: {
     lastError: string | null
     apiKey: string
 }) {
+    const connectionState = deriveAiKeyConnectionState({
+        lastError: key.lastError,
+        lastUsedAt: key.lastUsedAt,
+    })
+
     return {
         id: key.id,
         provider: key.provider,
@@ -41,9 +60,43 @@ function sanitizeKeyRecord(key: {
         usageCount: key.usageCount,
         order: key.order,
         lastUsedAt: key.lastUsedAt,
-        lastError: key.lastError,
+        connectionStatus: connectionState.connectionStatus,
+        lastError: connectionState.lastError,
+        lastErrorCode: connectionState.lastErrorCode,
         apiKeyMasked: maskStoredApiKey(key.apiKey),
     }
+}
+
+function errorJson(error: string, errorCode: string, status: number, details?: Record<string, unknown>) {
+    const payload: ApiKeyErrorResponse = {
+        success: false,
+        error,
+        errorCode,
+        ...(details ? { details } : {}),
+    }
+
+    return NextResponse.json(payload, { status })
+}
+
+async function validateGeminiKey(apiKey: string) {
+    const verifyResult = await verifyGeminiApiKey(apiKey)
+    if (verifyResult.ok) {
+        return { ok: true as const }
+    }
+
+    return {
+        ok: false as const,
+        status: verifyResult.status,
+        failure: verifyResult.failure,
+    }
+}
+
+function getVerificationFailureMessage(errorCode: string): string {
+    if (errorCode === "PROVIDER_KEY_INVALID") {
+        return "API key tidak valid"
+    }
+
+    return "Gagal memverifikasi API key"
 }
 
 // GET: List all API keys (never return plaintext key)
@@ -81,7 +134,7 @@ export async function GET() {
             error: error instanceof Error ? error.message : "Unknown error",
         })
 
-        return NextResponse.json({ error: "Failed to load API keys" }, { status: 500 })
+        return errorJson("Failed to load API keys", "AI_KEYS_LIST_FAILED", 500)
     }
 }
 
@@ -106,20 +159,44 @@ export async function POST(request: NextRequest) {
                 status: 400,
                 validation: { ok: false, reason: "missing_api_key" },
             })
-            return NextResponse.json({ error: "API key is required" }, { status: 400 })
+            return errorJson("API key is required", "AI_KEY_REQUIRED", 400)
         }
 
         // Check max 5 keys
         const count = await prisma.aiApiKey.count()
         if (count >= 5) {
-            return NextResponse.json({ error: "Maximum 5 API keys allowed" }, { status: 400 })
+            return errorJson("Maximum 5 API keys allowed", "AI_KEYS_LIMIT_REACHED", 400)
+        }
+
+        const normalizedApiKey = apiKey.trim()
+        const verification = await validateGeminiKey(normalizedApiKey)
+        if (!verification.ok) {
+            logAdminWarn({
+                requestId,
+                action: "ai-keys:create",
+                userId: adminCheck.identity.id,
+                role: adminCheck.identity.role,
+                roleSource: adminCheck.identity.source,
+                status: verification.status,
+                validation: {
+                    ok: false,
+                    reason: verification.failure.code,
+                },
+            })
+
+            return errorJson(getVerificationFailureMessage(verification.failure.code), verification.failure.code, verification.status, {
+                provider: "gemini",
+                reason: verification.failure.message,
+            })
         }
 
         const newKey = await prisma.aiApiKey.create({
             data: {
                 label: label?.trim() ? label.trim() : null,
-                apiKey: encryptApiKey(apiKey.trim()),
+                apiKey: encryptApiKey(normalizedApiKey),
                 order: count,
+                lastUsedAt: new Date(),
+                lastError: null,
             },
         })
 
@@ -137,6 +214,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, data: sanitizeKeyRecord(newKey) })
     } catch (error) {
         if (error instanceof ApiKeyCryptoConfigError) {
+            const failure = classifyAiKeyFailure(error)
             logAdminError({
                 requestId,
                 action: "ai-keys:create",
@@ -147,9 +225,12 @@ export async function POST(request: NextRequest) {
                 error: error.message,
             })
 
-            return NextResponse.json({ error: "Failed to add API key" }, { status: 500 })
+            return errorJson("Konfigurasi enkripsi API key bermasalah", failure.code, 500, {
+                reason: failure.message,
+            })
         }
 
+        const failure = classifyAiKeyFailure(error)
         logAdminError({
             requestId,
             action: "ai-keys:create",
@@ -157,9 +238,11 @@ export async function POST(request: NextRequest) {
             role: adminCheck.identity.role,
             roleSource: adminCheck.identity.source,
             status: 500,
-            error: error instanceof Error ? error.message : "Unknown error",
+            error: failure.message,
         })
-        return NextResponse.json({ error: "Failed to add API key" }, { status: 500 })
+        return errorJson("Failed to add API key", failure.code, toAiKeyFailureHttpStatus(failure), {
+            reason: failure.message,
+        })
     }
 }
 
@@ -175,28 +258,132 @@ export async function PUT(request: NextRequest) {
         const { id, isActive, apiKey } = body as { id?: string; isActive?: boolean; apiKey?: string }
 
         if (!id) {
-            return NextResponse.json({ error: "Key ID is required" }, { status: 400 })
+            return errorJson("Key ID is required", "AI_KEY_ID_REQUIRED", 400)
+        }
+
+        const existingKey = await prisma.aiApiKey.findUnique({ where: { id } })
+        if (!existingKey) {
+            return errorJson("API key not found", "AI_KEY_NOT_FOUND", 404)
         }
 
         const updateData: {
             isActive?: boolean
             apiKey?: string
+            lastUsedAt?: Date | null
+            lastError?: string | null
         } = {}
 
         if (typeof isActive === "boolean") {
             updateData.isActive = isActive
         }
 
+        const shouldVerifyActivationWithExistingKey =
+            typeof isActive === "boolean" && isActive === true && typeof apiKey !== "string" && !existingKey.isActive
+
+        if (shouldVerifyActivationWithExistingKey) {
+            try {
+                const decryptedExistingKey = decryptStoredApiKey(existingKey.apiKey)
+                const verification = await validateGeminiKey(decryptedExistingKey)
+
+                if (!verification.ok) {
+                    await prisma.aiApiKey.update({
+                        where: { id },
+                        data: {
+                            lastError: formatStoredAiKeyFailure(verification.failure),
+                            lastUsedAt: new Date(),
+                        },
+                    })
+
+                    logAdminWarn({
+                        requestId,
+                        action: "ai-keys:update",
+                        userId: adminCheck.identity.id,
+                        role: adminCheck.identity.role,
+                        roleSource: adminCheck.identity.source,
+                        status: verification.status,
+                        validation: { ok: false, reason: verification.failure.code },
+                    })
+
+                    return errorJson(
+                        getVerificationFailureMessage(verification.failure.code),
+                        verification.failure.code,
+                        verification.status,
+                        {
+                            provider: "gemini",
+                            reason: verification.failure.message,
+                        }
+                    )
+                }
+
+                updateData.lastError = null
+                updateData.lastUsedAt = new Date()
+            } catch (error) {
+                const failure = classifyAiKeyFailure(error)
+
+                await prisma.aiApiKey.update({
+                    where: { id },
+                    data: {
+                        lastError: formatStoredAiKeyFailure(failure),
+                        lastUsedAt: new Date(),
+                    },
+                })
+
+                return errorJson(
+                    getVerificationFailureMessage(failure.code),
+                    failure.code,
+                    toAiKeyFailureHttpStatus(failure),
+                    {
+                        provider: "gemini",
+                        reason: failure.message,
+                    }
+                )
+            }
+        }
+
         if (typeof apiKey === "string") {
             if (!apiKey.trim()) {
-                return NextResponse.json({ error: "API key cannot be empty" }, { status: 400 })
+                return errorJson("API key cannot be empty", "AI_KEY_EMPTY", 400)
             }
 
-            updateData.apiKey = encryptApiKey(apiKey.trim())
+            const normalizedApiKey = apiKey.trim()
+            const verification = await validateGeminiKey(normalizedApiKey)
+            if (!verification.ok) {
+                await prisma.aiApiKey.update({
+                    where: { id },
+                    data: {
+                        lastError: formatStoredAiKeyFailure(verification.failure),
+                        lastUsedAt: new Date(),
+                    },
+                })
+
+                logAdminWarn({
+                    requestId,
+                    action: "ai-keys:update",
+                    userId: adminCheck.identity.id,
+                    role: adminCheck.identity.role,
+                    roleSource: adminCheck.identity.source,
+                    status: verification.status,
+                    validation: { ok: false, reason: verification.failure.code },
+                })
+
+                return errorJson(
+                    getVerificationFailureMessage(verification.failure.code),
+                    verification.failure.code,
+                    verification.status,
+                    {
+                        provider: "gemini",
+                        reason: verification.failure.message,
+                    }
+                )
+            }
+
+            updateData.apiKey = encryptApiKey(normalizedApiKey)
+            updateData.lastUsedAt = new Date()
+            updateData.lastError = null
         }
 
         if (Object.keys(updateData).length === 0) {
-            return NextResponse.json({ error: "No fields to update" }, { status: 400 })
+            return errorJson("No fields to update", "AI_KEY_NO_UPDATES", 400)
         }
 
         const updated = await prisma.aiApiKey.update({
@@ -211,13 +398,17 @@ export async function PUT(request: NextRequest) {
             role: adminCheck.identity.role,
             roleSource: adminCheck.identity.source,
             status: 200,
-            payloadSummary: { id, updatedFields: Object.keys(updateData) },
+            payloadSummary: {
+                id,
+                updatedFields: Object.keys(updateData),
+            },
             validation: { ok: true },
         })
 
         return NextResponse.json({ success: true, data: sanitizeKeyRecord(updated) })
     } catch (error) {
         if (error instanceof ApiKeyCryptoConfigError) {
+            const failure = classifyAiKeyFailure(error)
             logAdminError({
                 requestId,
                 action: "ai-keys:update",
@@ -228,9 +419,12 @@ export async function PUT(request: NextRequest) {
                 error: error.message,
             })
 
-            return NextResponse.json({ error: "Failed to update API key" }, { status: 500 })
+            return errorJson("Konfigurasi enkripsi API key bermasalah", failure.code, 500, {
+                reason: failure.message,
+            })
         }
 
+        const failure = classifyAiKeyFailure(error)
         logAdminError({
             requestId,
             action: "ai-keys:update",
@@ -238,9 +432,11 @@ export async function PUT(request: NextRequest) {
             role: adminCheck.identity.role,
             roleSource: adminCheck.identity.source,
             status: 500,
-            error: error instanceof Error ? error.message : "Unknown error",
+            error: failure.message,
         })
-        return NextResponse.json({ error: "Failed to update API key" }, { status: 500 })
+        return errorJson("Failed to update API key", failure.code, toAiKeyFailureHttpStatus(failure), {
+            reason: failure.message,
+        })
     }
 }
 
@@ -256,7 +452,7 @@ export async function DELETE(request: NextRequest) {
         const { id } = body as { id?: string }
 
         if (!id) {
-            return NextResponse.json({ error: "Key ID is required" }, { status: 400 })
+            return errorJson("Key ID is required", "AI_KEY_ID_REQUIRED", 400)
         }
 
         await prisma.aiApiKey.delete({ where: { id } })
@@ -284,6 +480,6 @@ export async function DELETE(request: NextRequest) {
             error: error instanceof Error ? error.message : "Unknown error",
         })
 
-        return NextResponse.json({ error: "Failed to delete API key" }, { status: 500 })
+        return errorJson("Failed to delete API key", "AI_KEY_DELETE_FAILED", 500)
     }
 }

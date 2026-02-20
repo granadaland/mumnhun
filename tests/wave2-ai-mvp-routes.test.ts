@@ -4,6 +4,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 const mockRequireAdminApi = vi.fn()
 const mockRequireAdminMutationApi = vi.fn()
 const mockDecryptStoredApiKey = vi.fn()
+const mockClassifyAiKeyFailure = vi.fn((error: unknown) => {
+    if (error instanceof Error && /Gemini HTTP 503/.test(error.message)) {
+        return { code: "PROVIDER_UNAVAILABLE", message: "Layanan Gemini sedang tidak tersedia" }
+    }
+
+    if (error && typeof error === "object" && "code" in error) {
+        const code = (error as { code?: unknown }).code
+        if (typeof code === "string") {
+            return { code, message: "error" }
+        }
+    }
+
+    return { code: "UNKNOWN_ERROR", message: "Unknown error" }
+})
 const mockSummarizeUnknownError = vi.fn((error: unknown) => {
     if (error instanceof Error) return error.message
     if (typeof error === "string") return error
@@ -44,6 +58,17 @@ vi.mock("@/lib/db/prisma", () => ({
 
 vi.mock("@/lib/security/api-key-crypto", () => ({
     decryptStoredApiKey: mockDecryptStoredApiKey,
+}))
+
+vi.mock("@/lib/security/ai-key-status", () => ({
+    classifyAiKeyFailure: mockClassifyAiKeyFailure,
+    formatStoredAiKeyFailure: vi.fn(({ code, message }: { code: string; message: string }) => `${code}::${message}`),
+    toAiKeyFailureHttpStatus: vi.fn((failure: { code: string }) => {
+        if (failure.code === "PROVIDER_RATE_LIMITED") return 429
+        if (failure.code === "PROVIDER_KEY_INVALID") return 400
+        if (failure.code === "NETWORK_TIMEOUT") return 504
+        return 502
+    }),
 }))
 
 vi.mock("@/lib/security/admin-helpers", () => ({
@@ -258,10 +283,11 @@ describe("Wave 2 AI MVP flow: generate + tasks routes", () => {
             const response = await createAiDraftPost(request)
             const body = await response.json()
 
-            expect(response.status).toBe(500)
+            expect(response.status).toBe(502)
             expect(body).toEqual({
                 success: false,
                 error: "Gagal generate artikel AI",
+                errorCode: "UNKNOWN_ERROR",
                 data: { taskId: "task-failed-1" },
             })
             expect(mockPrisma.post.create).not.toHaveBeenCalled()
@@ -270,7 +296,7 @@ describe("Wave 2 AI MVP flow: generate + tasks routes", () => {
                 expect.objectContaining({
                     where: { id: "key-failed-1" },
                     data: expect.objectContaining({
-                        lastError: expect.stringContaining("Gemini HTTP 503"),
+                        lastError: expect.stringContaining("PROVIDER_UNAVAILABLE::"),
                     }),
                 })
             )
@@ -286,6 +312,41 @@ describe("Wave 2 AI MVP flow: generate + tasks routes", () => {
                     progress: 100,
                     error: expect.stringContaining("Semua API key gagal"),
                 },
+            })
+        })
+
+        it("gagal provider saat generate mengembalikan status + errorCode terklasifikasi", async () => {
+            mockPrisma.aiTask.create.mockResolvedValueOnce({ id: "task-failed-2" })
+            mockPrisma.aiApiKey.findMany.mockResolvedValueOnce([
+                {
+                    id: "key-failed-2",
+                    apiKey: "enc-key-failed-2",
+                    usageCount: 0,
+                    order: 1,
+                    createdAt: new Date("2026-02-17T00:00:00.000Z"),
+                },
+            ])
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 503,
+                text: async () => "service unavailable",
+            })
+
+            const request = new NextRequest("http://localhost/api/admin/ai/generate", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ topic: "Konten AI saat provider sedang error" }),
+            })
+
+            const response = await createAiDraftPost(request)
+            const body = await response.json()
+
+            expect(response.status).toBe(502)
+            expect(body).toEqual({
+                success: false,
+                error: "Gagal generate artikel AI",
+                errorCode: "UNKNOWN_ERROR",
+                data: { taskId: "task-failed-2" },
             })
         })
     })

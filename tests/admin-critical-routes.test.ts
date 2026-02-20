@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const mockCheckRateLimit = vi.fn()
 const mockCreateRateLimitExceededResponse = vi.fn()
+const mockVerifyGeminiApiKey = vi.fn()
 
 const mockRequireAdminApi = vi.fn()
 const mockRequireAdminMutationApi = vi.fn()
@@ -12,6 +13,10 @@ const mockUpdateSettingsStore = vi.fn()
 const mockPrisma = {
     aiApiKey: {
         findMany: vi.fn(),
+        count: vi.fn(),
+        create: vi.fn(),
+        findUnique: vi.fn(),
+        update: vi.fn(),
     },
     media: {
         findMany: vi.fn(),
@@ -50,6 +55,44 @@ vi.mock("@/lib/security/rate-limit", () => ({
     createRateLimitExceededResponse: mockCreateRateLimitExceededResponse,
 }))
 
+vi.mock("@/lib/security/ai-key-status", () => ({
+    verifyGeminiApiKey: mockVerifyGeminiApiKey,
+    deriveAiKeyConnectionState: vi.fn(({ lastError, lastUsedAt }: { lastError: string | null; lastUsedAt: Date | null }) => {
+        if (lastError) {
+            return {
+                connectionStatus: "failed",
+                lastError: "Error koneksi",
+                lastErrorCode: "UNKNOWN_ERROR",
+            }
+        }
+
+        if (lastUsedAt) {
+            return {
+                connectionStatus: "connected",
+                lastError: null,
+                lastErrorCode: null,
+            }
+        }
+
+        return {
+            connectionStatus: "not_tested",
+            lastError: null,
+            lastErrorCode: null,
+        }
+    }),
+    classifyAiKeyFailure: vi.fn((error: unknown) => {
+        if (error && typeof error === "object" && "code" in error) {
+            const code = (error as { code?: unknown }).code
+            if (typeof code === "string") {
+                return { code, message: "error" }
+            }
+        }
+        return { code: "UNKNOWN_ERROR", message: "error" }
+    }),
+    formatStoredAiKeyFailure: vi.fn(({ code, message }: { code: string; message: string }) => `${code}::${message}`),
+    toAiKeyFailureHttpStatus: vi.fn(() => 502),
+}))
+
 vi.mock("@/components/admin/sidebar", () => ({
     AdminSidebar: () => null,
 }))
@@ -72,6 +115,8 @@ const adminIdentity = {
 }
 
 const { GET: getAiKeys } = await import("@/app/api/admin/ai/keys/route")
+const { POST: createAiKey } = await import("@/app/api/admin/ai/keys/route")
+const { PUT: updateAiKey } = await import("@/app/api/admin/ai/keys/route")
 const { POST: createPost } = await import("@/app/api/admin/posts/route")
 const { GET: listMedia, POST: createMedia, DELETE: deleteMedia } = await import("@/app/api/admin/media/route")
 const { POST: createHero, PUT: updateHero, DELETE: deleteHero } = await import("@/app/api/admin/hero/route")
@@ -103,6 +148,9 @@ function findFormSubmitHandler(node: unknown): ((event: { preventDefault: () => 
 describe("Critical admin routes: authz and payload validation", () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        process.env.API_KEYS_ENCRYPTION_SECRET = "unit-test-secret-for-ai-keys"
+
+        mockVerifyGeminiApiKey.mockResolvedValue({ ok: true })
         mockCheckRateLimit.mockReturnValue({
             ok: true,
             limit: 60,
@@ -162,6 +210,333 @@ describe("Critical admin routes: authz and payload validation", () => {
             expect(response.status).toBe(401)
             expect(body).toEqual({ error: "Unauthorized" })
             expect(mockPrisma.aiApiKey.findMany).not.toHaveBeenCalled()
+        })
+
+        it("mengembalikan status koneksi terstruktur dari backend", async () => {
+            mockRequireAdminApi.mockResolvedValueOnce({
+                ok: true,
+                identity: adminIdentity,
+            })
+
+            mockPrisma.aiApiKey.findMany.mockResolvedValueOnce([
+                {
+                    id: "key-1",
+                    provider: "gemini",
+                    label: "Primary",
+                    isActive: true,
+                    usageCount: 3,
+                    order: 0,
+                    lastUsedAt: null,
+                    lastError: null,
+                    apiKey: "enc:v1:dummy",
+                },
+            ])
+
+            const response = await getAiKeys()
+            const body = await response.json()
+
+            expect(response.status).toBe(200)
+            expect(body).toMatchObject({
+                success: true,
+                data: [
+                    expect.objectContaining({
+                        id: "key-1",
+                        connectionStatus: "not_tested",
+                        lastError: null,
+                        lastErrorCode: null,
+                    }),
+                ],
+            })
+        })
+
+        it("mengembalikan status connected dan failed secara konsisten", async () => {
+            mockRequireAdminApi.mockResolvedValueOnce({
+                ok: true,
+                identity: adminIdentity,
+            })
+
+            mockPrisma.aiApiKey.findMany.mockResolvedValueOnce([
+                {
+                    id: "key-failed",
+                    provider: "gemini",
+                    label: "Broken",
+                    isActive: true,
+                    usageCount: 1,
+                    order: 0,
+                    lastUsedAt: new Date("2026-02-20T00:00:00.000Z"),
+                    lastError: "PROVIDER_KEY_INVALID::invalid",
+                    apiKey: "enc:v1:dummy:failed",
+                },
+                {
+                    id: "key-connected",
+                    provider: "gemini",
+                    label: "Healthy",
+                    isActive: true,
+                    usageCount: 5,
+                    order: 1,
+                    lastUsedAt: new Date("2026-02-20T00:01:00.000Z"),
+                    lastError: null,
+                    apiKey: "enc:v1:dummy:connected",
+                },
+            ])
+
+            const response = await getAiKeys()
+            const body = await response.json()
+
+            expect(response.status).toBe(200)
+            expect(body).toMatchObject({
+                success: true,
+                data: expect.arrayContaining([
+                    expect.objectContaining({
+                        id: "key-failed",
+                        connectionStatus: "failed",
+                        lastError: "Error koneksi",
+                        lastErrorCode: "UNKNOWN_ERROR",
+                    }),
+                    expect.objectContaining({
+                        id: "key-connected",
+                        connectionStatus: "connected",
+                        lastError: null,
+                        lastErrorCode: null,
+                    }),
+                ]),
+            })
+        })
+    })
+
+    describe("POST /api/admin/ai/keys", () => {
+        it("menolak API key provider yang invalid dengan errorCode terstruktur", async () => {
+            mockRequireAdminMutationApi.mockResolvedValueOnce({
+                ok: true,
+                identity: adminIdentity,
+            })
+
+            mockPrisma.aiApiKey.count.mockResolvedValueOnce(0)
+            mockVerifyGeminiApiKey.mockResolvedValueOnce({
+                ok: false,
+                status: 400,
+                failure: {
+                    code: "PROVIDER_KEY_INVALID",
+                    message: "API key Gemini tidak valid atau tidak memiliki izin akses",
+                },
+            })
+
+            const request = new NextRequest("http://localhost/api/admin/ai/keys", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ label: "Invalid", apiKey: "AIza-invalid" }),
+            })
+
+            const response = await createAiKey(request)
+            const body = await response.json()
+
+            expect(response.status).toBe(400)
+            expect(body).toMatchObject({
+                success: false,
+                errorCode: "PROVIDER_KEY_INVALID",
+            })
+            expect(mockPrisma.aiApiKey.create).not.toHaveBeenCalled()
+        })
+
+        it("menyimpan key valid dan mengembalikan status koneksi connected", async () => {
+            mockRequireAdminMutationApi.mockResolvedValueOnce({
+                ok: true,
+                identity: adminIdentity,
+            })
+
+            mockPrisma.aiApiKey.count.mockResolvedValueOnce(1)
+            mockVerifyGeminiApiKey.mockResolvedValueOnce({ ok: true })
+            mockPrisma.aiApiKey.create.mockResolvedValueOnce({
+                id: "key-valid-1",
+                provider: "gemini",
+                label: "Primary",
+                isActive: true,
+                usageCount: 0,
+                order: 1,
+                lastUsedAt: new Date("2026-02-20T00:02:00.000Z"),
+                lastError: null,
+                apiKey: "enc:v1:iv:tag:cipher",
+            })
+
+            const request = new NextRequest("http://localhost/api/admin/ai/keys", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ label: " Primary ", apiKey: "AIza-valid-key" }),
+            })
+
+            const response = await createAiKey(request)
+            const body = await response.json()
+
+            expect(response.status).toBe(200)
+            expect(body).toMatchObject({
+                success: true,
+                data: expect.objectContaining({
+                    id: "key-valid-1",
+                    connectionStatus: "connected",
+                    lastError: null,
+                    lastErrorCode: null,
+                }),
+            })
+
+            expect(mockPrisma.aiApiKey.create).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    data: expect.objectContaining({
+                        label: "Primary",
+                        order: 1,
+                        lastError: null,
+                        lastUsedAt: expect.any(Date),
+                        apiKey: expect.stringMatching(/^enc:v1:/),
+                    }),
+                })
+            )
+        })
+    })
+
+    describe("PUT /api/admin/ai/keys", () => {
+        it("update key invalid menyimpan lastError terstruktur dan return 4xx", async () => {
+            mockRequireAdminMutationApi.mockResolvedValueOnce({
+                ok: true,
+                identity: adminIdentity,
+            })
+
+            mockPrisma.aiApiKey.findUnique.mockResolvedValueOnce({
+                id: "key-1",
+            })
+
+            mockVerifyGeminiApiKey.mockResolvedValueOnce({
+                ok: false,
+                status: 400,
+                failure: {
+                    code: "PROVIDER_KEY_INVALID",
+                    message: "API key Gemini tidak valid atau tidak memiliki izin akses",
+                },
+            })
+
+            const request = new NextRequest("http://localhost/api/admin/ai/keys", {
+                method: "PUT",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ id: "key-1", apiKey: "AIza-invalid" }),
+            })
+
+            const response = await updateAiKey(request)
+            const body = await response.json()
+
+            expect(response.status).toBe(400)
+            expect(body).toMatchObject({
+                success: false,
+                errorCode: "PROVIDER_KEY_INVALID",
+            })
+
+            expect(mockPrisma.aiApiKey.update).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    where: { id: "key-1" },
+                    data: expect.objectContaining({
+                        lastError: expect.stringContaining("PROVIDER_KEY_INVALID::"),
+                    }),
+                })
+            )
+        })
+
+        it("aktivasi key existing tetap memverifikasi koneksi dan reset error saat valid", async () => {
+            mockRequireAdminMutationApi.mockResolvedValueOnce({
+                ok: true,
+                identity: adminIdentity,
+            })
+
+            mockPrisma.aiApiKey.findUnique.mockResolvedValueOnce({
+                id: "key-activate-1",
+                isActive: false,
+                apiKey: "AIza-existing-valid-key",
+            })
+            mockVerifyGeminiApiKey.mockResolvedValueOnce({ ok: true })
+            mockPrisma.aiApiKey.update.mockResolvedValueOnce({
+                id: "key-activate-1",
+                provider: "gemini",
+                label: "Secondary",
+                isActive: true,
+                usageCount: 2,
+                order: 0,
+                lastUsedAt: new Date("2026-02-20T00:03:00.000Z"),
+                lastError: null,
+                apiKey: "enc:v1:iv:tag:activated",
+            })
+
+            const request = new NextRequest("http://localhost/api/admin/ai/keys", {
+                method: "PUT",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ id: "key-activate-1", isActive: true }),
+            })
+
+            const response = await updateAiKey(request)
+            const body = await response.json()
+
+            expect(response.status).toBe(200)
+            expect(body).toMatchObject({
+                success: true,
+                data: expect.objectContaining({
+                    id: "key-activate-1",
+                    isActive: true,
+                    connectionStatus: "connected",
+                    lastError: null,
+                    lastErrorCode: null,
+                }),
+            })
+            expect(mockVerifyGeminiApiKey).toHaveBeenCalledWith("AIza-existing-valid-key")
+            expect(mockPrisma.aiApiKey.update).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    where: { id: "key-activate-1" },
+                    data: expect.objectContaining({
+                        isActive: true,
+                        lastError: null,
+                        lastUsedAt: expect.any(Date),
+                    }),
+                })
+            )
+        })
+
+        it("aktivasi key existing ditolak saat validasi koneksi gagal", async () => {
+            mockRequireAdminMutationApi.mockResolvedValueOnce({
+                ok: true,
+                identity: adminIdentity,
+            })
+
+            mockPrisma.aiApiKey.findUnique.mockResolvedValueOnce({
+                id: "key-activate-failed",
+                isActive: false,
+                apiKey: "AIza-existing-invalid-key",
+            })
+            mockVerifyGeminiApiKey.mockResolvedValueOnce({
+                ok: false,
+                status: 400,
+                failure: {
+                    code: "PROVIDER_KEY_INVALID",
+                    message: "API key Gemini tidak valid atau tidak memiliki izin akses",
+                },
+            })
+
+            const request = new NextRequest("http://localhost/api/admin/ai/keys", {
+                method: "PUT",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ id: "key-activate-failed", isActive: true }),
+            })
+
+            const response = await updateAiKey(request)
+            const body = await response.json()
+
+            expect(response.status).toBe(400)
+            expect(body).toMatchObject({
+                success: false,
+                errorCode: "PROVIDER_KEY_INVALID",
+            })
+            expect(mockPrisma.aiApiKey.update).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    where: { id: "key-activate-failed" },
+                    data: expect.objectContaining({
+                        lastError: expect.stringContaining("PROVIDER_KEY_INVALID::"),
+                        lastUsedAt: expect.any(Date),
+                    }),
+                })
+            )
         })
     })
 
