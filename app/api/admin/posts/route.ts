@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { Prisma } from "@prisma/client"
 import { z } from "zod"
 import prisma from "@/lib/db/prisma"
 import { requireAdminApi, requireAdminMutationApi } from "@/lib/security/admin"
 import { logAdminError, logAdminInfo, logAdminWarn } from "@/lib/observability/admin-log"
 import { adminJsonValidationError, getPrismaErrorCode, summarizeUnknownError } from "@/lib/security/admin-helpers"
+import { sanitizeArticleHtml, validatePublishReadiness } from "@/lib/content/post-publishing"
 
 const listPostsQuerySchema = z.object({
     page: z.coerce.number().int().min(1).default(1),
@@ -57,6 +59,11 @@ const createPostDataSchema = z.object({
     ogDescription: z.string().nullable().optional(),
     schemaType: z.string().nullable().optional(),
     schemaData: z.string().nullable().optional(),
+    author: z
+        .object({
+            connect: z.object({ id: z.string() }),
+        })
+        .optional(),
     categories: z
         .object({
             create: z.array(
@@ -246,14 +253,59 @@ export async function POST(request: NextRequest) {
 
         const status = payload.status || "DRAFT"
 
+        // Editor content is untrusted input; keep the stored HTML within the allowed tag set.
+        const safeContent = sanitizeArticleHtml(payload.content || "")
+
+        if (status === "PUBLISHED") {
+            const publishIssues = validatePublishReadiness({
+                title: payload.title,
+                contentHtml: safeContent,
+                excerpt: payload.excerpt,
+                metaDescription: payload.metaDescription,
+            })
+
+            if (publishIssues.length > 0) {
+                logAdminWarn({
+                    requestId,
+                    action: "posts:create",
+                    userId: adminCheck.identity.id,
+                    role: adminCheck.identity.role,
+                    roleSource: adminCheck.identity.source,
+                    status: 422,
+                    validation: { ok: false, reason: "not_publishable" },
+                })
+
+                return NextResponse.json(
+                    { error: "Artikel belum memenuhi syarat publish", issues: publishIssues },
+                    { status: 422 }
+                )
+            }
+        }
+
+        if (status === "SCHEDULED" && !parsedScheduledAt) {
+            return NextResponse.json(
+                {
+                    error: "Validation failed",
+                    issues: [
+                        {
+                            path: "scheduledAt",
+                            code: "custom",
+                            message: "scheduledAt is required for SCHEDULED status",
+                        },
+                    ],
+                },
+                { status: 400 }
+            )
+        }
+
         // Calculate reading time
-        const wordCount = (payload.content || "").replace(/<[^>]*>/g, "").split(/\s+/).filter(Boolean).length
+        const wordCount = safeContent.replace(/<[^>]*>/g, "").split(/\s+/).filter(Boolean).length
         const readingTime = Math.max(1, Math.ceil(wordCount / 200))
 
         const rawData = {
             title: payload.title,
             slug: payload.slug,
-            content: payload.content || "",
+            content: safeContent,
             excerpt: payload.excerpt,
             featuredImage: payload.featuredImage,
             status,
@@ -270,6 +322,7 @@ export async function POST(request: NextRequest) {
             ogDescription: payload.ogDescription,
             schemaType: payload.schemaType,
             schemaData: payload.schemaData,
+            author: { connect: { id: adminCheck.identity.id } },
             categories: payload.categoryIds?.length
                 ? {
                     create: payload.categoryIds.map((catId) => ({
@@ -295,6 +348,11 @@ export async function POST(request: NextRequest) {
                 tags: { select: { tag: true } },
             },
         })
+
+        if (post.status === "PUBLISHED") {
+            revalidatePath(`/${post.slug}`)
+            revalidatePath("/")
+        }
 
         logAdminInfo({
             requestId,

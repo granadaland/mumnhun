@@ -7,6 +7,9 @@ import { AdminClientError, adminDelete, adminGet, adminPost, adminPut } from "@/
 
 type ConnectionStatus = "connected" | "failed" | "not_tested"
 
+type AiProvider = "gemini" | "openai_compatible"
+type AiCapability = "text" | "image"
+
 type ApiKeyItem = {
     id: string
     provider?: string
@@ -16,6 +19,9 @@ type ApiKeyItem = {
     usageCount: number
     order: number
     lastUsedAt?: string | null
+    baseUrl?: string | null
+    model?: string | null
+    capability?: string | null
     connectionStatus: ConnectionStatus
     lastError?: string | null
     lastErrorCode?: string | null
@@ -52,6 +58,22 @@ function mapApiKeyErrorCode(errorCode: string | null, reason: string | null, fal
             return reason
                 ? `API key provider tidak valid: ${reason}`
                 : "API key provider tidak valid atau tidak punya izin akses."
+        case "PROVIDER_BASE_URL_INVALID":
+            return reason
+                ? `Base URL tidak diizinkan: ${reason}`
+                : "Base URL provider tidak valid atau mengarah ke jaringan internal."
+        case "PROVIDER_MODEL_UNAVAILABLE":
+            return reason
+                ? `Model tidak tersedia: ${reason}`
+                : "Model tidak tersedia pada provider ini."
+        case "AI_KEY_MODEL_REQUIRED":
+            return "Model wajib diisi untuk custom provider."
+        case "AI_KEY_CAPABILITY_UNSUPPORTED":
+            return "Provider Gemini hanya mendukung capability text."
+        case "AI_KEY_BASE_URL_NOT_APPLICABLE":
+            return "Base URL hanya berlaku untuk custom provider."
+        case "AI_KEY_MODEL_NOT_APPLICABLE":
+            return "Model hanya berlaku untuk custom provider."
         case "AI_KEY_NOT_FOUND":
             return "API key tidak ditemukan. Silakan muat ulang halaman."
         case "AI_KEY_ID_REQUIRED":
@@ -197,17 +219,74 @@ type FeedbackState = {
     message: string
 }
 
+type NewKeyFormState = {
+    label: string
+    apiKey: string
+    provider: AiProvider
+    baseUrl: string
+    model: string
+    capability: AiCapability
+}
+
+const EMPTY_NEW_KEY: NewKeyFormState = {
+    label: "",
+    apiKey: "",
+    provider: "gemini",
+    baseUrl: "",
+    model: "",
+    capability: "text",
+}
+
+type CreateKeyPayload = {
+    label: string
+    apiKey: string
+    provider: AiProvider
+    capability: AiCapability
+    baseUrl?: string
+    model?: string
+}
+
+function validateNewKeyForm(form: NewKeyFormState): string | null {
+    const apiKeyError = validateApiKey(form.apiKey)
+    if (apiKeyError) return apiKeyError
+
+    if (form.provider === "openai_compatible") {
+        const baseUrl = form.baseUrl.trim()
+        if (!baseUrl) {
+            return "Base URL wajib diisi untuk custom provider."
+        }
+
+        let parsed: URL
+        try {
+            parsed = new URL(baseUrl)
+        } catch {
+            return "Base URL harus berupa URL absolut, contoh: https://api.openai.com/v1"
+        }
+
+        if (parsed.protocol !== "https:") {
+            return "Base URL harus menggunakan https."
+        }
+
+        if (!form.model.trim()) {
+            return "Model wajib diisi untuk custom provider."
+        }
+    }
+
+    return null
+}
+
 export default function AiSettingsPage() {
     const [keys, setKeys] = useState<ApiKeyItem[]>([])
     const [loading, setLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
     const [feedback, setFeedback] = useState<FeedbackState | null>(null)
-    const [newKey, setNewKey] = useState({ label: "", apiKey: "" })
+    const [newKey, setNewKey] = useState<NewKeyFormState>(EMPTY_NEW_KEY)
     const [formError, setFormError] = useState<string | null>(null)
     const [adding, setAdding] = useState(false)
     const [mutatingKeyId, setMutatingKeyId] = useState<string | null>(null)
 
     const trimmedApiKey = useMemo(() => newKey.apiKey.trim(), [newKey.apiKey])
+    const isCustomProvider = newKey.provider === "openai_compatible"
 
     const fetchKeys = useCallback(async (mode: "initial" | "refresh" = "refresh") => {
         if (mode === "initial") {
@@ -243,7 +322,7 @@ export default function AiSettingsPage() {
     const handleAddKey = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault()
 
-        const validationError = validateApiKey(newKey.apiKey)
+        const validationError = validateNewKeyForm(newKey)
         if (validationError) {
             setFormError(validationError)
             return
@@ -253,19 +332,25 @@ export default function AiSettingsPage() {
         setFeedback(null)
         setFormError(null)
 
-        const normalizedPayload = {
+        const normalizedPayload: CreateKeyPayload = {
             label: newKey.label.trim(),
             apiKey: newKey.apiKey.trim(),
+            provider: newKey.provider,
+            capability: newKey.provider === "gemini" ? "text" : newKey.capability,
+            ...(newKey.provider === "openai_compatible"
+                ? { baseUrl: newKey.baseUrl.trim(), model: newKey.model.trim() }
+                : {}),
         }
 
         try {
-            const data = await adminPost<ApiKeyMutationResponse, { label: string; apiKey: string }>("/api/admin/ai/keys", {
+            const data = await adminPost<ApiKeyMutationResponse, CreateKeyPayload>("/api/admin/ai/keys", {
                 body: normalizedPayload,
+                timeoutMs: 20000,
             })
 
             if (data.success) {
                 setKeys((prev) => [...prev, data.data].sort((a, b) => a.order - b.order))
-                setNewKey({ label: "", apiKey: "" })
+                setNewKey(EMPTY_NEW_KEY)
                 setFeedback({
                     type: "success",
                     message: "API key berhasil disimpan dan diuji koneksi.",
@@ -358,7 +443,7 @@ export default function AiSettingsPage() {
                 <div>
                     <h1 className="text-2xl font-bold text-[#0F0A09]">AI Configuration</h1>
                     <p className="text-[#8C7A6B]/50 text-sm mt-1">
-                        Kelola API keys Google Gemini (maks 5 keys, auto-rotary)
+                        Kelola API key Gemini atau custom provider OpenAI-compatible (maks 5 key, auto-rotary)
                     </p>
                 </div>
 
@@ -435,6 +520,18 @@ export default function AiSettingsPage() {
 
                                         <p className="text-xs text-[#8C7A6B]/40 font-mono mt-0.5">{key.apiKeyMasked}</p>
 
+                                        <p className="text-[10px] text-[#8C7A6B]/40 mt-1">
+                                            {key.provider === "openai_compatible" ? "Custom (OpenAI-compatible)" : "Gemini"}
+                                            {key.capability ? ` · ${key.capability}` : ""}
+                                            {key.model ? ` · ${key.model}` : ""}
+                                        </p>
+
+                                        {key.baseUrl && (
+                                            <p className="text-[10px] text-[#8C7A6B]/35 font-mono mt-0.5 break-all">
+                                                {key.baseUrl}
+                                            </p>
+                                        )}
+
                                         <p className="text-[10px] text-[#8C7A6B]/30 mt-1">
                                             Digunakan {key.usageCount}x · {key.isActive ? "Aktif" : "Nonaktif"}
                                             {lastUsedLabel ? ` · Terakhir dicek ${lastUsedLabel}` : ""}
@@ -496,11 +593,60 @@ export default function AiSettingsPage() {
                         <h2 className="font-semibold text-[#0F0A09]">Tambah API Key</h2>
                     </div>
                     <form className="px-6 py-4 space-y-4" onSubmit={handleAddKey}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label htmlFor="ai-key-provider" className="block text-sm font-medium text-[#8C7A6B]/80 mb-1.5">
+                                    Provider
+                                </label>
+                                <select
+                                    id="ai-key-provider"
+                                    value={newKey.provider}
+                                    onChange={(e) => {
+                                        const provider = e.target.value as AiProvider
+                                        setNewKey((prev) => ({
+                                            ...prev,
+                                            provider,
+                                            ...(provider === "gemini"
+                                                ? { baseUrl: "", model: "", capability: "text" as AiCapability }
+                                                : {}),
+                                        }))
+                                        setFormError(null)
+                                    }}
+                                    className="w-full px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all"
+                                >
+                                    <option value="gemini">Google Gemini</option>
+                                    <option value="openai_compatible">Custom (OpenAI-compatible)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label htmlFor="ai-key-capability" className="block text-sm font-medium text-[#8C7A6B]/80 mb-1.5">
+                                    Capability
+                                </label>
+                                <select
+                                    id="ai-key-capability"
+                                    value={newKey.provider === "gemini" ? "text" : newKey.capability}
+                                    disabled={newKey.provider === "gemini"}
+                                    onChange={(e) => setNewKey({ ...newKey, capability: e.target.value as AiCapability })}
+                                    className="w-full px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all disabled:opacity-60"
+                                >
+                                    <option value="text">Text (artikel)</option>
+                                    <option value="image">Image (gambar)</option>
+                                </select>
+                                {newKey.provider === "gemini" && (
+                                    <p className="text-[10px] text-[#8C7A6B]/40 mt-1">
+                                        Gemini hanya mendukung capability text.
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
                         <div>
-                            <label className="block text-sm font-medium text-[#8C7A6B]/80 mb-1.5">
+                            <label htmlFor="ai-key-label" className="block text-sm font-medium text-[#8C7A6B]/80 mb-1.5">
                                 Label (opsional)
                             </label>
                             <input
+                                id="ai-key-label"
                                 type="text"
                                 value={newKey.label}
                                 onChange={(e) => setNewKey({ ...newKey, label: e.target.value })}
@@ -508,11 +654,57 @@ export default function AiSettingsPage() {
                                 className="w-full px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all"
                             />
                         </div>
+
+                        {isCustomProvider && (
+                            <>
+                                <div>
+                                    <label htmlFor="ai-key-base-url" className="block text-sm font-medium text-[#8C7A6B]/80 mb-1.5">
+                                        Base URL
+                                    </label>
+                                    <input
+                                        id="ai-key-base-url"
+                                        type="url"
+                                        value={newKey.baseUrl}
+                                        onChange={(e) => {
+                                            setNewKey({ ...newKey, baseUrl: e.target.value })
+                                            if (formError) setFormError(null)
+                                        }}
+                                        placeholder="https://api.openai.com/v1"
+                                        className="w-full px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all font-mono"
+                                    />
+                                    <p className="text-[10px] text-[#8C7A6B]/40 mt-1">
+                                        Endpoint akan dipanggil sebagai <code>{"{baseUrl}"}/chat/completions</code>. Wajib https dan tidak boleh mengarah ke jaringan internal.
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label htmlFor="ai-key-model" className="block text-sm font-medium text-[#8C7A6B]/80 mb-1.5">
+                                        Model
+                                    </label>
+                                    <input
+                                        id="ai-key-model"
+                                        type="text"
+                                        value={newKey.model}
+                                        onChange={(e) => {
+                                            setNewKey({ ...newKey, model: e.target.value })
+                                            if (formError) setFormError(null)
+                                        }}
+                                        placeholder="gpt-4o-mini"
+                                        className="w-full px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all font-mono"
+                                    />
+                                    <p className="text-[10px] text-[#8C7A6B]/40 mt-1">
+                                        Model diverifikasi terhadap daftar <code>/models</code> provider saat disimpan.
+                                    </p>
+                                </div>
+                            </>
+                        )}
+
                         <div>
-                            <label className="block text-sm font-medium text-[#8C7A6B]/80 mb-1.5">
+                            <label htmlFor="ai-key-value" className="block text-sm font-medium text-[#8C7A6B]/80 mb-1.5">
                                 API Key
                             </label>
                             <input
+                                id="ai-key-value"
                                 type="password"
                                 value={newKey.apiKey}
                                 onChange={(e) => {
@@ -523,7 +715,7 @@ export default function AiSettingsPage() {
                                         setFormError(validateApiKey(nextValue))
                                     }
                                 }}
-                                placeholder="AIza..."
+                                placeholder={isCustomProvider ? "sk-..." : "AIza..."}
                                 className={`w-full px-4 py-2.5 bg-white border rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 focus:outline-none focus:ring-2 transition-all font-mono ${formError
                                     ? "border-red-500/40 focus:ring-red-500/30"
                                     : "border-[#D4BCAA]/20 focus:ring-[#466A68]/30"

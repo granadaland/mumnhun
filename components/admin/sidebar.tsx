@@ -21,13 +21,13 @@ import {
     Link as LinkIcon,
     Globe,
     Bot,
+    KeyRound,
     Menu,
     X,
     LogOut,
     ChevronDown,
 } from "lucide-react"
-import { createClient } from "@/lib/supabase/client"
-import { useRouter } from "next/navigation"
+import { signOut } from "next-auth/react"
 import { cn } from "@/lib/utils"
 
 type NavItem = {
@@ -93,6 +93,7 @@ const navGroups: NavGroup[] = [
             { href: "/admin/settings/navigation", label: "Navigasi", icon: <Menu className="h-4 w-4" /> },
             { href: "/admin/settings/social", label: "Media Sosial", icon: <Globe className="h-4 w-4" /> },
             { href: "/admin/settings/ai", label: "AI Config", icon: <Bot className="h-4 w-4" /> },
+            { href: "/admin/settings/agent-tokens", label: "Agent Tokens", icon: <KeyRound className="h-4 w-4" /> },
         ],
     },
 ]
@@ -105,7 +106,6 @@ export function AdminSidebar() {
         content: true,
     })
     const pathname = usePathname()
-    const router = useRouter()
 
     useEffect(() => {
         // Auto-open groups that contain the active path
@@ -120,10 +120,7 @@ export function AdminSidebar() {
     }, [pathname])
 
     const handleLogout = async () => {
-        const supabase = createClient()
-        await supabase.auth.signOut()
-        router.push("/login")
-        router.refresh()
+        await signOut({ redirectTo: "/login" })
     }
 
     const isActive = (href: string) => {

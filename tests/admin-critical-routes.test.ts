@@ -921,7 +921,7 @@ describe("Critical admin routes: authz and payload validation", () => {
 
             const push = vi.fn()
             const refresh = vi.fn()
-            const signInWithPassword = vi.fn().mockResolvedValue({ error: null })
+            const signIn = vi.fn().mockResolvedValue({ ok: true, error: null })
 
             vi.doMock("react", async () => {
                 const actual = await vi.importActual<typeof import("react")>("react")
@@ -931,12 +931,8 @@ describe("Critical admin routes: authz and payload validation", () => {
                 }
             })
 
-            vi.doMock("@/lib/supabase/client", () => ({
-                createClient: () => ({
-                    auth: {
-                        signInWithPassword,
-                    },
-                }),
+            vi.doMock("next-auth/react", () => ({
+                signIn,
             }))
 
             vi.doMock("next/navigation", () => ({
@@ -957,7 +953,7 @@ describe("Critical admin routes: authz and payload validation", () => {
             expect(typeof onSubmit).toBe("function")
             await onSubmit?.({ preventDefault: vi.fn() })
 
-            expect(signInWithPassword).toHaveBeenCalledWith({ email: "", password: "" })
+            expect(signIn).toHaveBeenCalledWith("credentials", { email: "", password: "", redirect: false })
             expect(push).toHaveBeenCalledWith("/admin")
             expect(refresh).toHaveBeenCalledTimes(1)
         })

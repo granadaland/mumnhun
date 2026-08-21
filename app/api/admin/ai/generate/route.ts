@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import prisma from "@/lib/db/prisma"
 import { requireAdminMutationApi } from "@/lib/security/admin"
-import { decryptStoredApiKey } from "@/lib/security/api-key-crypto"
 import {
     classifyAiKeyFailure,
     formatStoredAiKeyFailure,
@@ -10,32 +10,32 @@ import {
 } from "@/lib/security/ai-key-status"
 import { logAdminError, logAdminInfo, logAdminWarn } from "@/lib/observability/admin-log"
 import { summarizeUnknownError } from "@/lib/security/admin-helpers"
+import { sanitizeHtmlContent } from "@/lib/security/sanitize-html"
+import {
+    AllAiKeysFailedError,
+    NoActiveAiKeyError,
+    generateArticleWithRotary,
+    loadActiveAiKeys,
+    resolveImageProvider,
+} from "@/lib/ai/key-rotary"
+import { buildImagePrompt, generateImageWithProvider } from "@/lib/ai/provider"
+import { MAX_IMAGE_BYTES, assertAllowedImageBuffer, ingestImage } from "@/lib/media/ingest"
+import {
+    ensureUniquePostSlug,
+    estimateReadingTime,
+    slugifyTitle,
+    validatePublishReadiness,
+} from "@/lib/content/post-publishing"
 
 const generateArticleSchema = z.object({
     topic: z.string().trim().min(3, "Topic/keyword minimal 3 karakter").max(200),
     tone: z.string().trim().min(2).max(80).optional(),
     targetWordCount: z.coerce.number().int().min(300).max(3000).optional(),
+    status: z.enum(["DRAFT", "PUBLISHED"]).optional(),
+    providerKeyId: z.string().trim().min(1).max(60).optional(),
+    generateImage: z.boolean().optional(),
+    imageProviderKeyId: z.string().trim().min(1).max(60).optional(),
 })
-
-const aiArticleOutputSchema = z.object({
-    title: z.string().trim().min(10).max(180),
-    contentHtml: z.string().trim().min(200),
-    excerpt: z.string().trim().min(30).max(320),
-    metaTitle: z.string().trim().min(10).max(70),
-    metaDescription: z.string().trim().min(30).max(170),
-    focusKeyword: z.string().trim().min(2).max(120),
-    slugSuggestion: z.string().trim().min(3).max(180),
-})
-
-type GeminiResponse = {
-    candidates?: Array<{
-        content?: {
-            parts?: Array<{ text?: string }>
-        }
-    }>
-}
-
-const GEMINI_MODEL_CANDIDATES = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-flash-001"]
 
 function toJsonString(value: unknown): string {
     try {
@@ -69,151 +69,84 @@ function errorJsonWithCode(message: string, status: number, errorCode: string, d
 }
 
 function slugify(text: string): string {
-    return text
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-+|-+$/g, "")
+    return slugifyTitle(text)
 }
 
-function estimateReadingTime(contentHtml: string): number {
-    const words = contentHtml.replace(/<[^>]*>/g, " ").split(/\s+/).filter(Boolean).length
-    return Math.max(1, Math.ceil(words / 200))
+class ArticleNotPublishableError extends Error {
+    issues: ReturnType<typeof validatePublishReadiness>
+
+    constructor(issues: ReturnType<typeof validatePublishReadiness>) {
+        super("Artikel hasil AI belum memenuhi syarat publish langsung")
+        this.name = "ArticleNotPublishableError"
+        this.issues = issues
+    }
 }
 
-async function ensureUniquePostSlug(base: string): Promise<string> {
-    const normalizedBase = slugify(base) || `artikel-${Date.now()}`
-    let attempt = 0
+type FeaturedImageResult = {
+    url: string
+    mediaId: string
+    keyId: string
+}
 
-    while (attempt < 50) {
-        const candidate = attempt === 0 ? normalizedBase : `${normalizedBase}-${attempt + 1}`
-        const existing = await prisma.post.findUnique({ where: { slug: candidate }, select: { id: true } })
-
-        if (!existing) {
-            return candidate
-        }
-
-        attempt += 1
+/**
+ * Best-effort featured image generation. A failure here must not discard an otherwise
+ * successful article, so the error is reported in the task output instead of thrown.
+ */
+async function tryGenerateFeaturedImage(input: {
+    title: string
+    topic: string
+    imageProviderKeyId?: string
+}): Promise<{ image: FeaturedImageResult } | { error: string }> {
+    const provider = await resolveImageProvider(input.imageProviderKeyId)
+    if (!provider) {
+        return { error: "Tidak ada provider gambar AI aktif (capability=image)" }
     }
 
-    return `${normalizedBase}-${Date.now()}`
-}
-
-function buildPrompt(input: z.infer<typeof generateArticleSchema>): string {
-    const toneText = input.tone?.trim() ? input.tone.trim() : "informatif"
-    const targetWordCount = input.targetWordCount ?? 900
-
-    return [
-        "Tulis artikel blog berbahasa Indonesia yang siap dipublikasikan.",
-        `Topik utama: ${input.topic}`,
-        `Tone: ${toneText}`,
-        `Target jumlah kata: sekitar ${targetWordCount} kata`,
-        "",
-        "Keluaran HARUS valid JSON object tanpa markdown code fence.",
-        "Gunakan struktur persis berikut:",
-        "{",
-        '  "title": "...",',
-        '  "contentHtml": "...",',
-        '  "excerpt": "...",',
-        '  "metaTitle": "...",',
-        '  "metaDescription": "...",',
-        '  "focusKeyword": "...",',
-        '  "slugSuggestion": "..."',
-        "}",
-        "",
-        "Ketentuan penting:",
-        "- contentHtml harus berupa HTML sederhana dan valid.",
-        "- Sertakan <h2> untuk subjudul, <p> untuk paragraf, dan setidaknya satu <ul><li>.",
-        "- Jangan gunakan <script> atau style inline.",
-        "- excerpt maksimal 320 karakter.",
-        "- metaTitle maksimal 70 karakter.",
-        "- metaDescription maksimal 170 karakter.",
-        "- slugSuggestion berupa slug URL-friendly (huruf kecil, dash).",
-    ].join("\n")
-}
-
-function extractJsonObject(raw: string): string {
-    const trimmed = raw.trim()
-    if (trimmed.startsWith("{")) return trimmed
-
-    const codeFenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i)
-    if (codeFenceMatch?.[1]) {
-        return codeFenceMatch[1].trim()
-    }
-
-    const firstBrace = trimmed.indexOf("{")
-    const lastBrace = trimmed.lastIndexOf("}")
-    if (firstBrace >= 0 && lastBrace > firstBrace) {
-        return trimmed.slice(firstBrace, lastBrace + 1)
-    }
-
-    throw new Error("AI response tidak berformat JSON")
-}
-
-async function callGeminiGenerateArticle(apiKey: string, input: z.infer<typeof generateArticleSchema>) {
-    const controller = new AbortController()
-    const timeoutHandle = setTimeout(() => {
-        controller.abort()
-    }, 90000)
+    const prompt = buildImagePrompt({ title: input.title, topic: input.topic })
 
     try {
-        let lastModelError: Error | null = null
+        const generated = await generateImageWithProvider(
+            { apiKey: provider.apiKey, baseUrl: provider.baseUrl, model: provider.model },
+            prompt,
+            { maxBytes: MAX_IMAGE_BYTES }
+        )
 
-        for (let index = 0; index < GEMINI_MODEL_CANDIDATES.length; index += 1) {
-            const model = GEMINI_MODEL_CANDIDATES[index]
-            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`
+        const mimeType = assertAllowedImageBuffer(generated.buffer)
 
-            const response = await fetch(endpoint, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    contents: [{ role: "user", parts: [{ text: buildPrompt(input) }] }],
-                    generationConfig: {
-                        temperature: 0.7,
-                        topP: 0.9,
-                        maxOutputTokens: 4096,
-                        responseMimeType: "application/json",
-                    },
-                }),
-                signal: controller.signal,
+        const media = await ingestImage({
+            buffer: generated.buffer,
+            mimeType,
+            filename: `${slugify(input.title) || "featured"}.${mimeType.split("/")[1] || "png"}`,
+            source: "ai",
+            alt: input.title,
+            aiPrompt: prompt,
+            folder: "mumnhun/ai",
+        })
+
+        await prisma.aiApiKey.update({
+            where: { id: provider.keyId },
+            data: {
+                usageCount: { increment: 1 },
+                lastUsedAt: new Date(),
+                lastError: null,
+            },
+        })
+
+        return { image: { url: media.url, mediaId: media.mediaId, keyId: provider.keyId } }
+    } catch (error) {
+        const failure = classifyAiKeyFailure(error)
+
+        await prisma.aiApiKey
+            .update({
+                where: { id: provider.keyId },
+                data: {
+                    lastUsedAt: new Date(),
+                    lastError: formatStoredAiKeyFailure(failure),
+                },
             })
+            .catch(() => undefined)
 
-            if (!response.ok) {
-                const rawText = await response.text()
-                const isNotFound = response.status === 404
-                lastModelError = new Error(`Gemini HTTP ${response.status} (${model}): ${rawText.slice(0, 200)}`)
-
-                if (isNotFound && index < GEMINI_MODEL_CANDIDATES.length - 1) {
-                    continue
-                }
-
-                throw lastModelError
-            }
-
-            const payload = (await response.json()) as GeminiResponse
-            const candidateText = payload.candidates?.[0]?.content?.parts
-                ?.map((part) => part.text || "")
-                .join("\n")
-                .trim()
-
-            if (!candidateText) {
-                throw new Error("Gemini tidak mengembalikan konten")
-            }
-
-            const jsonText = extractJsonObject(candidateText)
-            const parsed = aiArticleOutputSchema.safeParse(JSON.parse(jsonText))
-
-            if (!parsed.success) {
-                throw new Error(`Output AI tidak valid: ${parsed.error.issues[0]?.message || "unknown"}`)
-            }
-
-            return parsed.data
-        }
-
-        throw lastModelError ?? new Error("Semua model Gemini gagal diakses")
-    } finally {
-        clearTimeout(timeoutHandle)
+        return { error: failure.message }
     }
 }
 
@@ -253,6 +186,8 @@ export async function POST(request: NextRequest) {
         return errorJson("Invalid request payload", 400)
     }
 
+    const targetStatus = payload.status || "DRAFT"
+
     const task = await prisma.aiTask.create({
         data: {
             type: "generate_article",
@@ -269,108 +204,120 @@ export async function POST(request: NextRequest) {
             data: { status: "processing", progress: 15 },
         })
 
-        const activeKeys = await prisma.aiApiKey.findMany({
-            where: { isActive: true },
-            orderBy: [{ usageCount: "asc" }, { order: "asc" }, { createdAt: "asc" }],
+        const activeKeys = await loadActiveAiKeys({
+            capability: "text",
+            keyId: payload.providerKeyId,
         })
 
-        if (activeKeys.length === 0) {
-            throw new Error("Tidak ada API key AI aktif")
+        const generation = await generateArticleWithRotary({
+            keys: activeKeys,
+            payload: {
+                topic: payload.topic,
+                tone: payload.tone,
+                targetWordCount: payload.targetWordCount,
+            },
+            onAttempt: async (attemptIndex, attemptedKeyIds) => {
+                await prisma.aiTask.update({
+                    where: { id: task.id },
+                    data: {
+                        progress: Math.min(70, 25 + attemptIndex * 20),
+                        output: toJsonString({ attemptedKeyIds }),
+                    },
+                })
+            },
+        })
+
+        const aiResult = generation.article
+
+        // AI output is untrusted input: strip anything outside the editor's allowed HTML.
+        const safeContentHtml = sanitizeHtmlContent(aiResult.contentHtml)
+        if (!safeContentHtml.trim()) {
+            throw new Error("Konten hasil AI kosong setelah sanitasi HTML")
         }
 
-        const attemptedKeyIds: string[] = []
-        const maxAttempts = Math.min(activeKeys.length, 3)
-
-        let aiResult: z.infer<typeof aiArticleOutputSchema> | null = null
-        let selectedKeyId: string | null = null
-        let lastErrorMessage = "AI generation failed"
-
-        for (let index = 0; index < maxAttempts; index += 1) {
-            const keyRecord = activeKeys[index]
-            attemptedKeyIds.push(keyRecord.id)
-
-            await prisma.aiTask.update({
-                where: { id: task.id },
-                data: {
-                    progress: Math.min(70, 25 + index * 20),
-                    output: toJsonString({ attemptedKeyIds }),
-                },
+        if (targetStatus === "PUBLISHED") {
+            const publishIssues = validatePublishReadiness({
+                title: aiResult.title,
+                contentHtml: safeContentHtml,
+                excerpt: aiResult.excerpt,
+                metaDescription: aiResult.metaDescription,
             })
 
-            try {
-                const decryptedKey = decryptStoredApiKey(keyRecord.apiKey)
-                aiResult = await callGeminiGenerateArticle(decryptedKey, payload)
-                selectedKeyId = keyRecord.id
-
-                await prisma.aiApiKey.update({
-                    where: { id: keyRecord.id },
-                    data: {
-                        usageCount: { increment: 1 },
-                        lastUsedAt: new Date(),
-                        lastError: null,
-                    },
-                })
-
-                break
-            } catch (error) {
-                const failure = classifyAiKeyFailure(error)
-                lastErrorMessage = failure.message
-
-                await prisma.aiApiKey.update({
-                    where: { id: keyRecord.id },
-                    data: {
-                        lastUsedAt: new Date(),
-                        lastError: formatStoredAiKeyFailure(failure),
-                    },
-                })
+            if (publishIssues.length > 0) {
+                throw new ArticleNotPublishableError(publishIssues)
             }
-        }
-
-        if (!aiResult || !selectedKeyId) {
-            throw new Error(`Semua API key gagal: ${lastErrorMessage}`)
         }
 
         await prisma.aiTask.update({
             where: { id: task.id },
-            data: { progress: 80 },
+            data: { progress: 75 },
+        })
+
+        let featuredImage: FeaturedImageResult | null = null
+        let featuredImageError: string | null = null
+
+        if (payload.generateImage) {
+            const imageResult = await tryGenerateFeaturedImage({
+                title: aiResult.title,
+                topic: payload.topic,
+                imageProviderKeyId: payload.imageProviderKeyId,
+            })
+
+            if ("image" in imageResult) {
+                featuredImage = imageResult.image
+            } else {
+                featuredImageError = imageResult.error
+            }
+        }
+
+        await prisma.aiTask.update({
+            where: { id: task.id },
+            data: { progress: 85 },
         })
 
         const slug = await ensureUniquePostSlug(aiResult.slugSuggestion || aiResult.title || payload.topic)
-
-        const dbUser = adminCheck.identity.email
-            ? await prisma.user.findUnique({
-                where: { email: adminCheck.identity.email },
-                select: { id: true },
-            })
-            : null
 
         const post = await prisma.post.create({
             data: {
                 title: aiResult.title,
                 slug,
-                content: aiResult.contentHtml,
+                content: safeContentHtml,
                 excerpt: aiResult.excerpt,
-                status: "DRAFT",
-                readingTime: estimateReadingTime(aiResult.contentHtml),
+                status: targetStatus,
+                publishedAt: targetStatus === "PUBLISHED" ? new Date() : null,
+                readingTime: estimateReadingTime(safeContentHtml),
                 metaTitle: aiResult.metaTitle,
                 metaDescription: aiResult.metaDescription,
                 focusKeyword: aiResult.focusKeyword,
-                authorId: dbUser?.id,
+                featuredImage: featuredImage?.url ?? null,
+                ogImage: featuredImage?.url ?? null,
+                authorId: adminCheck.identity.id,
+                source: "ai_dashboard",
+                createdVia: adminCheck.identity.id,
             },
             select: {
                 id: true,
                 slug: true,
                 title: true,
                 status: true,
+                featuredImage: true,
             },
         })
+
+        if (targetStatus === "PUBLISHED") {
+            revalidatePath(`/${post.slug}`)
+            revalidatePath("/")
+        }
 
         const taskOutput = {
             postId: post.id,
             postSlug: post.slug,
             postTitle: post.title,
-            usedKeyId: selectedKeyId,
-            attemptedKeyIds,
+            postStatus: post.status,
+            featuredImage: post.featuredImage,
+            featuredImageError,
+            usedKeyId: generation.usedKeyId,
+            attemptedKeyIds: generation.attemptedKeyIds,
             editUrl: `/admin/posts/${post.id}/edit`,
         }
 
@@ -395,8 +342,10 @@ export async function POST(request: NextRequest) {
             payloadSummary: {
                 taskId: task.id,
                 postId: post.id,
-                attempts: attemptedKeyIds.length,
-                usedKeyId: selectedKeyId,
+                postStatus: post.status,
+                attempts: generation.attemptedKeyIds.length,
+                usedKeyId: generation.usedKeyId,
+                generatedImage: Boolean(featuredImage),
             },
             validation: { ok: true },
         })
@@ -411,13 +360,16 @@ export async function POST(request: NextRequest) {
                     slug: post.slug,
                     title: post.title,
                     status: post.status,
+                    featuredImage: post.featuredImage,
                     editUrl: `/admin/posts/${post.id}/edit`,
                 },
+                ...(featuredImageError ? { warnings: { featuredImage: featuredImageError } } : {}),
             },
         })
     } catch (error) {
         const summarizedError = summarizeUnknownError(error).slice(0, 800)
-        const failure = classifyAiKeyFailure(error)
+        const failure =
+            error instanceof AllAiKeysFailedError ? error.failure : classifyAiKeyFailure(error)
 
         await prisma.aiTask.update({
             where: { id: task.id },
@@ -439,6 +391,21 @@ export async function POST(request: NextRequest) {
             error: summarizedError,
             payloadSummary: { taskId: task.id },
         })
+
+        if (error instanceof NoActiveAiKeyError) {
+            return errorJsonWithCode("Tidak ada API key AI aktif", 400, "AI_KEYS_NOT_CONFIGURED", {
+                taskId: task.id,
+            })
+        }
+
+        if (error instanceof ArticleNotPublishableError) {
+            return errorJsonWithCode(
+                "Artikel hasil AI belum memenuhi syarat publish langsung",
+                422,
+                "ARTICLE_NOT_PUBLISHABLE",
+                { taskId: task.id, issues: error.issues }
+            )
+        }
 
         return errorJsonWithCode(
             "Gagal generate artikel AI",

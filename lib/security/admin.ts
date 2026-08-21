@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/db/prisma"
-import { createClient } from "@/lib/supabase/server"
+import { auth } from "@/auth"
 import { observeAdminOperationalEvent } from "@/lib/observability/admin-alerts"
 import { verifyAdminCsrf } from "@/lib/security/csrf"
 import { checkRateLimit, createRateLimitExceededResponse } from "@/lib/security/rate-limit"
 import { redirect } from "next/navigation"
 
-type AdminRoleSource = "metadata" | "env" | "database"
+type AdminRoleSource = "env" | "database"
 
 export type AdminIdentity = {
     id: string
@@ -28,69 +28,52 @@ function parseAdminEmails(): Set<string> {
     )
 }
 
-function isAdminMetadataRole(role: unknown): boolean {
-    return typeof role === "string" && role.toUpperCase() === "ADMIN"
-}
-
 async function resolveAdminIdentity(): Promise<{
     authenticated: boolean
     identity: AdminIdentity | null
 }> {
-    const supabase = await createClient()
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
+    const session = await auth()
+    const sessionEmail = session?.user?.email?.toLowerCase() ?? null
 
-    if (!user) {
+    if (!sessionEmail) {
         return { authenticated: false, identity: null }
     }
 
-    const appRole = user.app_metadata?.role
-    const userRole = user.user_metadata?.role
+    // Always resolve the canonical Prisma user so identity.id is a stable User.id
+    // (used across ~26 admin routes for logging, rate-limit keys, CSRF HMAC, and
+    // AiTask/AiChatMessage.userId), and so role revocation takes effect immediately.
+    const dbUser = await prisma.user.findUnique({
+        where: { email: sessionEmail },
+        select: { id: true, email: true, role: true },
+    })
 
-    if (isAdminMetadataRole(appRole) || isAdminMetadataRole(userRole)) {
+    if (!dbUser) {
+        // Authenticated session but no backing user row — treat as non-admin.
+        return { authenticated: true, identity: null }
+    }
+
+    if (dbUser.role === "ADMIN") {
         return {
             authenticated: true,
             identity: {
-                id: user.id,
-                email: user.email ?? null,
+                id: dbUser.id,
+                email: dbUser.email,
                 role: "ADMIN",
-                source: "metadata",
+                source: "database",
             },
         }
     }
 
-    const normalizedEmail = user.email?.toLowerCase() ?? null
     const adminEmails = parseAdminEmails()
-
-    if (normalizedEmail && adminEmails.has(normalizedEmail)) {
+    if (adminEmails.has(sessionEmail)) {
         return {
             authenticated: true,
             identity: {
-                id: user.id,
-                email: normalizedEmail,
+                id: dbUser.id,
+                email: dbUser.email,
                 role: "ADMIN",
                 source: "env",
             },
-        }
-    }
-
-    if (normalizedEmail) {
-        const dbUser = await prisma.user.findUnique({
-            where: { email: normalizedEmail },
-            select: { role: true },
-        })
-
-        if (dbUser?.role === "ADMIN") {
-            return {
-                authenticated: true,
-                identity: {
-                    id: user.id,
-                    email: normalizedEmail,
-                    role: "ADMIN",
-                    source: "database",
-                },
-            }
         }
     }
 

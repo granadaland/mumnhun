@@ -20,6 +20,8 @@ type GenerateRequest = {
     topic: string
     tone?: string
     targetWordCount?: number
+    status?: "DRAFT" | "PUBLISHED"
+    generateImage?: boolean
 }
 
 type GenerateResponse = {
@@ -32,7 +34,11 @@ type GenerateResponse = {
             slug: string
             title: string
             status: string
+            featuredImage?: string | null
             editUrl: string
+        }
+        warnings?: {
+            featuredImage?: string
         }
     }
     error?: string
@@ -49,6 +55,9 @@ type TaskDetailResponse = {
             postId?: string
             postSlug?: string
             postTitle?: string
+            postStatus?: string
+            featuredImage?: string | null
+            featuredImageError?: string | null
             editUrl?: string
         } | null
         error?: string | null
@@ -69,6 +78,8 @@ export default function AiGeneratePage() {
     const [topic, setTopic] = useState("")
     const [tone, setTone] = useState("informatif")
     const [targetWordCount, setTargetWordCount] = useState("900")
+    const [targetStatus, setTargetStatus] = useState<"DRAFT" | "PUBLISHED">("DRAFT")
+    const [generateImage, setGenerateImage] = useState(false)
     const [submitting, setSubmitting] = useState(false)
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
@@ -76,10 +87,13 @@ export default function AiGeneratePage() {
     const [taskStatus, setTaskStatus] = useState<string | null>(null)
     const [taskProgress, setTaskProgress] = useState<number>(0)
     const [taskError, setTaskError] = useState<string | null>(null)
+    const [imageWarning, setImageWarning] = useState<string | null>(null)
     const [postResult, setPostResult] = useState<{
         id: string
         title?: string
         slug?: string
+        status?: string
+        featuredImage?: string | null
         editUrl?: string
     } | null>(null)
 
@@ -102,11 +116,17 @@ export default function AiGeneratePage() {
         setTaskProgress(taskData.data.progress)
         setTaskError(taskData.data.error || null)
 
+        if (taskData.data.output?.featuredImageError) {
+            setImageWarning(taskData.data.output.featuredImageError)
+        }
+
         if (taskData.data.output?.postId) {
             setPostResult({
                 id: taskData.data.output.postId,
                 slug: taskData.data.output.postSlug,
                 title: taskData.data.output.postTitle,
+                status: taskData.data.output.postStatus,
+                featuredImage: taskData.data.output.featuredImage ?? null,
                 editUrl: taskData.data.output.editUrl,
             })
         }
@@ -153,6 +173,7 @@ export default function AiGeneratePage() {
         setSubmitting(true)
         setErrorMessage(null)
         setTaskError(null)
+        setImageWarning(null)
         setTaskId(null)
         setTaskStatus(null)
         setTaskProgress(0)
@@ -163,6 +184,8 @@ export default function AiGeneratePage() {
 
         const payload: GenerateRequest = {
             topic: normalizedTopic,
+            status: targetStatus,
+            ...(generateImage ? { generateImage: true } : {}),
             ...(tone.trim() ? { tone: tone.trim() } : {}),
             ...(hasTargetWordCount ? { targetWordCount: Math.floor(parsedWordCount) } : {}),
         }
@@ -170,7 +193,7 @@ export default function AiGeneratePage() {
         try {
             const data = await adminPost<GenerateResponse, GenerateRequest>("/api/admin/ai/generate", {
                 body: payload,
-                timeoutMs: 90000,
+                timeoutMs: 180000,
             })
 
             if (!data.success || !data.data) {
@@ -181,11 +204,17 @@ export default function AiGeneratePage() {
             setTaskStatus(data.data.taskStatus)
             setTaskProgress(data.data.taskStatus === "completed" ? 100 : 0)
 
+            if (data.data.warnings?.featuredImage) {
+                setImageWarning(data.data.warnings.featuredImage)
+            }
+
             if (data.data.post) {
                 setPostResult({
                     id: data.data.post.id,
                     slug: data.data.post.slug,
                     title: data.data.post.title,
+                    status: data.data.post.status,
+                    featuredImage: data.data.post.featuredImage ?? null,
                     editUrl: data.data.post.editUrl,
                 })
             }
@@ -256,13 +285,47 @@ export default function AiGeneratePage() {
                                 </div>
                             </div>
 
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                    <label htmlFor="ai-generate-status" className="block text-sm font-medium text-[#8C7A6B]/80 mb-1.5">
+                                        Status setelah dibuat
+                                    </label>
+                                    <select
+                                        id="ai-generate-status"
+                                        value={targetStatus}
+                                        onChange={(e) => setTargetStatus(e.target.value as "DRAFT" | "PUBLISHED")}
+                                        className="w-full px-4 py-2.5 bg-white border border-[#D4BCAA]/15 rounded-lg text-[#0F0A09] text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30"
+                                    >
+                                        <option value="DRAFT">Simpan sebagai draft</option>
+                                        <option value="PUBLISHED">Publish langsung</option>
+                                    </select>
+                                    {targetStatus === "PUBLISHED" && (
+                                        <p className="text-[10px] text-amber-700 mt-1">
+                                            Artikel langsung tampil di website jika lolos pemeriksaan kelayakan publish.
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="flex items-end">
+                                    <label className="inline-flex items-center gap-2 text-sm text-[#8C7A6B]/80 py-2.5">
+                                        <input
+                                            type="checkbox"
+                                            checked={generateImage}
+                                            onChange={(e) => setGenerateImage(e.target.checked)}
+                                            className="h-4 w-4 rounded border-[#D4BCAA]/40 text-violet-600 focus:ring-violet-500/30"
+                                        />
+                                        Generate featured image dengan AI
+                                    </label>
+                                </div>
+                            </div>
+
                             <button
                                 onClick={handleSubmit}
                                 disabled={submitting}
                                 className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-violet-600 to-purple-700 text-white text-sm font-medium rounded-lg hover:from-violet-500 hover:to-purple-600 disabled:opacity-60 transition-all"
                             >
                                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                                {submitting ? "Generating..." : "Generate Draft"}
+                                {submitting ? "Generating..." : targetStatus === "PUBLISHED" ? "Generate & Publish" : "Generate Draft"}
                             </button>
                         </div>
                     </div>
@@ -316,16 +379,29 @@ export default function AiGeneratePage() {
                                 </div>
                             )}
 
+                            {imageWarning && (
+                                <div className="text-sm text-amber-700 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                                    Artikel dibuat, tetapi gambar gagal di-generate: {imageWarning}
+                                </div>
+                            )}
+
                             {postResult && (
                                 <div className="text-sm bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-3 space-y-1">
-                                    <p className="text-green-700 font-medium">Draft berhasil dibuat</p>
+                                    <p className="text-green-700 font-medium">
+                                        {postResult.status === "PUBLISHED" ? "Artikel berhasil dipublikasikan" : "Draft berhasil dibuat"}
+                                    </p>
                                     <p className="text-[#8C7A6B]/70 text-xs">Post ID: {postResult.id}</p>
                                     {postResult.title && <p className="text-[#0F0A09]">{postResult.title}</p>}
+                                    {postResult.featuredImage && (
+                                        <p className="text-[#8C7A6B]/70 text-xs break-all">
+                                            Featured image: {postResult.featuredImage}
+                                        </p>
+                                    )}
                                     <Link
                                         href={postResult.editUrl || `/admin/posts/${postResult.id}/edit`}
-                                        className="inline-flex text-[#9AE6B4] hover:text-[#C6F6D5] text-xs underline"
+                                        className="inline-flex text-[#466A68] hover:text-[#3a5856] text-xs underline"
                                     >
-                                        Buka halaman edit draft
+                                        Buka halaman edit artikel
                                     </Link>
                                 </div>
                             )}

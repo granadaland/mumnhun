@@ -47,6 +47,42 @@ function cleanupExpiredEntries(store: Map<string, RateLimitEntry>, now: number) 
     }
 }
 
+export function peekRateLimit(key: string, config: RateLimitConfig): RateLimitCheckResult {
+    const now = Date.now()
+    const limit = Math.max(1, Math.floor(config.limit))
+    const windowMs = Math.max(1000, Math.floor(config.windowMs))
+    const store = getRateLimitStore()
+
+    const existing = store.get(key)
+
+    if (!existing || existing.resetAt <= now) {
+        return {
+            ok: true,
+            limit,
+            remaining: limit,
+            resetAt: now + windowMs,
+        }
+    }
+
+    if (existing.count >= limit) {
+        const retryAfterSec = Math.max(1, Math.ceil((existing.resetAt - now) / 1000))
+        return {
+            ok: false,
+            limit,
+            remaining: 0,
+            resetAt: existing.resetAt,
+            retryAfterSec,
+        }
+    }
+
+    return {
+        ok: true,
+        limit,
+        remaining: Math.max(0, limit - existing.count),
+        resetAt: existing.resetAt,
+    }
+}
+
 export function checkRateLimit(key: string, config: RateLimitConfig): RateLimitCheckResult {
     const now = Date.now()
     const limit = Math.max(1, Math.floor(config.limit))
@@ -56,7 +92,6 @@ export function checkRateLimit(key: string, config: RateLimitConfig): RateLimitC
     cleanupExpiredEntries(store, now)
 
     const existing = store.get(key)
-
     if (!existing || existing.resetAt <= now) {
         const resetAt = now + windowMs
         store.set(key, { count: 1, resetAt })

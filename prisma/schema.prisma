@@ -18,6 +18,7 @@ model User {
   name      String?
   role      Role     @default(AUTHOR)
   avatarUrl String?  @map("avatar_url")
+  passwordHash String? @map("password_hash")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -65,6 +66,10 @@ model Post {
   schemaType      String?     @map("schema_type")
   schemaData      String?     @map("schema_data")
   internalLinks   String?     @map("internal_links")
+  
+  // Provenance (manual editor, AI dashboard, or external agent)
+  source          String      @default("manual") @map("source")
+  createdVia      String?     @map("created_via")
   
   // Relations
   authorId        String?     @map("author_id")
@@ -202,6 +207,13 @@ model Media {
   wpUrl           String?  @map("wp_url")
   wpPath          String?  @map("wp_path")
   
+  // Provenance & licensing (upload, free stock provider, or AI generated)
+  source          String   @default("upload") @map("source")
+  sourceRef       String?  @map("source_ref")
+  attribution     String?  @map("attribution")
+  aiPrompt        String?  @map("ai_prompt")
+  publicId        String?  @map("public_id")
+  
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
   
@@ -209,6 +221,7 @@ model Media {
   wpId            Int?     @unique @map("wp_id")
 
   @@index([wpPath])
+  @@index([source])
   @@map("media")
 }
 
@@ -253,12 +266,20 @@ model SiteSetting {
 
 // =============================================================================
 // AI API KEYS (encrypted, rotary support — up to 5 keys)
+// Supports native Gemini keys and custom OpenAI-compatible providers where the
+// operator supplies their own base URL and model.
 // =============================================================================
 model AiApiKey {
   id          String    @id @default(cuid())
   provider    String    @default("gemini")
   apiKey      String    @map("api_key")
   label       String?
+  
+  // Custom OpenAI-compatible provider configuration
+  baseUrl     String?   @map("base_url")
+  model       String?   @map("model")
+  capability  String    @default("text") @map("capability")
+  
   isActive    Boolean   @default(true) @map("is_active")
   usageCount  Int       @default(0) @map("usage_count")
   lastUsedAt  DateTime? @map("last_used_at")
@@ -267,7 +288,30 @@ model AiApiKey {
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
+  @@index([provider, capability])
   @@map("ai_api_keys")
+}
+
+// =============================================================================
+// AGENT API TOKENS (external agents: OpenClaw, Hermes, AI code editors)
+// Only the SHA-256 hash is persisted; plaintext is shown once at creation.
+// =============================================================================
+model AgentApiToken {
+  id          String    @id @default(cuid())
+  name        String
+  tokenHash   String    @unique @map("token_hash")
+  tokenPrefix String    @map("token_prefix")
+  scopes      String
+  isActive    Boolean   @default(true) @map("is_active")
+  lastUsedAt  DateTime? @map("last_used_at")
+  expiresAt   DateTime? @map("expires_at")
+  revokedAt   DateTime? @map("revoked_at")
+  createdById String?   @map("created_by_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@map("agent_api_tokens")
 }
 
 // =============================================================================

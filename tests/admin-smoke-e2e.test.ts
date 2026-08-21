@@ -30,7 +30,7 @@ describe("Admin smoke e2e-ish flow", () => {
     it("login success mengarahkan ke path admin internal yang aman", async () => {
         const push = vi.fn()
         const refresh = vi.fn()
-        const signInWithPassword = vi.fn().mockResolvedValue({ error: null })
+        const signIn = vi.fn().mockResolvedValue({ ok: true, error: null })
 
         vi.doMock("react", async () => {
             const actual = await vi.importActual<typeof import("react")>("react")
@@ -40,12 +40,8 @@ describe("Admin smoke e2e-ish flow", () => {
             }
         })
 
-        vi.doMock("@/lib/supabase/client", () => ({
-            createClient: () => ({
-                auth: {
-                    signInWithPassword,
-                },
-            }),
+        vi.doMock("next-auth/react", () => ({
+            signIn,
         }))
 
         vi.doMock("next/navigation", () => ({
@@ -66,7 +62,7 @@ describe("Admin smoke e2e-ish flow", () => {
         expect(typeof onSubmit).toBe("function")
         await onSubmit?.({ preventDefault: vi.fn() })
 
-        expect(signInWithPassword).toHaveBeenCalledWith({ email: "", password: "" })
+        expect(signIn).toHaveBeenCalledWith("credentials", { email: "", password: "", redirect: false })
         expect(push).toHaveBeenCalledWith("/admin/posts")
         expect(refresh).toHaveBeenCalledTimes(1)
     })
@@ -76,7 +72,7 @@ describe("Admin smoke e2e-ish flow", () => {
             id: "admin-1",
             email: "admin@example.com",
             role: "ADMIN",
-            source: "metadata",
+            source: "database",
         })
 
         vi.doMock("@/lib/security/admin", () => ({
@@ -104,28 +100,24 @@ describe("Admin smoke e2e-ish flow", () => {
             updateSettings: mockUpdateSettingsStore,
         }))
 
-        vi.doMock("@/lib/supabase/server", () => ({
-            createClient: () =>
-                Promise.resolve({
-                    auth: {
-                        getUser: async () => ({
-                            data: {
-                                user: {
-                                    id: "admin-smoke-1",
-                                    email: "admin@example.com",
-                                    app_metadata: { role: "ADMIN" },
-                                    user_metadata: {},
-                                },
-                            },
-                        }),
-                    },
-                }),
+        vi.doMock("@/auth", () => ({
+            auth: async () => ({
+                user: {
+                    id: "admin-smoke-1",
+                    email: "admin@example.com",
+                    role: "ADMIN",
+                },
+            }),
         }))
 
         vi.doMock("@/lib/db/prisma", () => ({
             default: {
                 user: {
-                    findUnique: vi.fn(),
+                    findUnique: vi.fn().mockResolvedValue({
+                        id: "admin-smoke-1",
+                        email: "admin@example.com",
+                        role: "ADMIN",
+                    }),
                 },
                 siteSetting: {
                     findMany: vi.fn(),

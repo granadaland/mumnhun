@@ -1,4 +1,5 @@
 import type { ApiKeyCryptoConfigErrorCode } from "@/lib/security/api-key-crypto"
+import { UrlGuardError, getAiProviderGuardOptions, safeExternalFetch } from "@/lib/security/url-guard"
 
 export type AiKeyConnectionStatus = "connected" | "failed" | "not_tested"
 
@@ -9,6 +10,8 @@ export type AiKeyErrorCode =
     | "PROVIDER_RATE_LIMITED"
     | "PROVIDER_UNAVAILABLE"
     | "PROVIDER_REQUEST_FAILED"
+    | "PROVIDER_BASE_URL_INVALID"
+    | "PROVIDER_MODEL_UNAVAILABLE"
     | "NETWORK_TIMEOUT"
     | "NETWORK_ERROR"
     | "UNKNOWN_ERROR"
@@ -28,6 +31,8 @@ export type VerifyGeminiApiKeyResult =
     | { ok: true }
     | { ok: false; status: number; failure: AiKeyFailure }
 
+export type VerifyProviderApiKeyResult = VerifyGeminiApiKeyResult
+
 const LAST_ERROR_DELIMITER = "::"
 const MAX_ERROR_MESSAGE_LENGTH = 300
 
@@ -45,6 +50,8 @@ const AI_KEY_ERROR_CODES: AiKeyErrorCode[] = [
     "PROVIDER_RATE_LIMITED",
     "PROVIDER_UNAVAILABLE",
     "PROVIDER_REQUEST_FAILED",
+    "PROVIDER_BASE_URL_INVALID",
+    "PROVIDER_MODEL_UNAVAILABLE",
     "NETWORK_TIMEOUT",
     "NETWORK_ERROR",
     "UNKNOWN_ERROR",
@@ -74,13 +81,24 @@ function toErrorLike(error: unknown): { name?: string; code?: string; message?: 
 
 export function sanitizeAiKeyErrorMessage(message: string): string {
     const collapsed = message.replace(/\s+/g, " ").trim()
-    const maskedGeminiKey = collapsed.replace(/AIza[0-9A-Za-z\-_]{16,}/g, "AIza***")
 
-    if (!maskedGeminiKey) {
+    const masked = collapsed
+        // Gemini keys
+        .replace(/AIza[0-9A-Za-z\-_]{16,}/g, "AIza***")
+        // OpenAI-style keys, including project/org-scoped variants (sk-proj-..., sk-or-v1-...)
+        .replace(/\bsk-[0-9A-Za-z\-_]{8,}/gi, "sk-***")
+        // Anthropic-style keys
+        .replace(/\bsk-ant-[0-9A-Za-z\-_]{8,}/gi, "sk-ant-***")
+        // Authorization headers echoed back inside provider error payloads
+        .replace(/\b(bearer)\s+[0-9A-Za-z\-._~+/]{8,}=*/gi, "$1 ***")
+        // key/api_key/access_token query params or JSON fields
+        .replace(/\b(api[-_]?key|access[-_]?token|authorization|key)(["']?\s*[:=]\s*["']?)[0-9A-Za-z\-._~+/]{8,}=*/gi, "$1$2***")
+
+    if (!masked) {
         return "Terjadi kesalahan koneksi API key AI"
     }
 
-    return maskedGeminiKey.slice(0, MAX_ERROR_MESSAGE_LENGTH)
+    return masked.slice(0, MAX_ERROR_MESSAGE_LENGTH)
 }
 
 export function formatStoredAiKeyFailure(failure: AiKeyFailure): string {
@@ -135,32 +153,47 @@ export function deriveAiKeyConnectionState(input: { lastError: string | null; la
     }
 }
 
-function classifyGeminiHttpStatus(status: number): AiKeyFailure {
+function classifyProviderHttpStatus(status: number, providerLabel: string): AiKeyFailure {
     if (status === 400 || status === 401 || status === 403) {
         return {
             code: "PROVIDER_KEY_INVALID",
-            message: "API key Gemini tidak valid atau tidak memiliki izin akses",
+            message: `API key ${providerLabel} tidak valid atau tidak memiliki izin akses`,
         }
     }
 
     if (status === 429) {
         return {
             code: "PROVIDER_RATE_LIMITED",
-            message: "API key Gemini terkena rate limit",
+            message: `API key ${providerLabel} terkena rate limit`,
         }
     }
 
     if (status >= 500) {
         return {
             code: "PROVIDER_UNAVAILABLE",
-            message: "Layanan Gemini sedang tidak tersedia",
+            message: `Layanan ${providerLabel} sedang tidak tersedia`,
         }
     }
 
     return {
         code: "PROVIDER_REQUEST_FAILED",
-        message: `Permintaan ke Gemini gagal (HTTP ${status})`,
+        message: `Permintaan ke ${providerLabel} gagal (HTTP ${status})`,
     }
+}
+
+function classifyGeminiHttpStatus(status: number): AiKeyFailure {
+    return classifyProviderHttpStatus(status, "Gemini")
+}
+
+function classifyOpenAiCompatibleHttpStatus(status: number): AiKeyFailure {
+    if (status === 404) {
+        return {
+            code: "PROVIDER_MODEL_UNAVAILABLE",
+            message: "Endpoint atau model tidak ditemukan pada provider ini",
+        }
+    }
+
+    return classifyProviderHttpStatus(status, "provider AI")
 }
 
 function mapCryptoConfigToFailure(code: ApiKeyCryptoConfigErrorCode): AiKeyFailure {
@@ -193,6 +226,8 @@ function mapCryptoConfigToFailure(code: ApiKeyCryptoConfigErrorCode): AiKeyFailu
 
 function mapFailureToHttpStatus(failure: AiKeyFailure): number {
     if (failure.code === "PROVIDER_KEY_INVALID") return 400
+    if (failure.code === "PROVIDER_BASE_URL_INVALID") return 400
+    if (failure.code === "PROVIDER_MODEL_UNAVAILABLE") return 400
     if (failure.code === "PROVIDER_RATE_LIMITED") return 429
     if (failure.code.startsWith("CRYPTO_CONFIG_")) return 500
     if (failure.code === "NETWORK_TIMEOUT") return 504
@@ -214,6 +249,13 @@ function inferGeminiHttpStatusFromMessage(message: string): number | null {
 
 export function classifyAiKeyFailure(error: unknown): AiKeyFailure {
     const errorLike = toErrorLike(error)
+
+    if (error instanceof UrlGuardError) {
+        return {
+            code: "PROVIDER_BASE_URL_INVALID",
+            message: sanitizeAiKeyErrorMessage(error.message),
+        }
+    }
 
     if (errorLike.name === "ApiKeyCryptoConfigError") {
         const code = errorLike.code && isCryptoConfigCode(errorLike.code)
@@ -304,5 +346,108 @@ export async function verifyGeminiApiKey(apiKey: string): Promise<VerifyGeminiAp
         }
     } finally {
         clearTimeout(timeoutHandle)
+    }
+}
+
+/**
+ * Reads the optional operator allowlist for custom AI providers. Re-exported from the URL
+ * guard so provider verification and provider calls share one policy source.
+ */
+export { getAiProviderGuardOptions } from "@/lib/security/url-guard"
+
+export type OpenAiCompatibleModel = {
+    id: string
+}
+
+export type VerifyOpenAiCompatibleResult =
+    | { ok: true; models: OpenAiCompatibleModel[] }
+    | { ok: false; status: number; failure: AiKeyFailure }
+
+function parseOpenAiModelList(payload: unknown): OpenAiCompatibleModel[] {
+    if (!payload || typeof payload !== "object") return []
+
+    const data = (payload as { data?: unknown }).data
+    if (!Array.isArray(data)) return []
+
+    const models: OpenAiCompatibleModel[] = []
+    for (const entry of data) {
+        if (!entry || typeof entry !== "object") continue
+        const id = (entry as { id?: unknown }).id
+        if (typeof id === "string" && id.trim()) {
+            models.push({ id: id.trim() })
+        }
+    }
+
+    return models.slice(0, 200)
+}
+
+/**
+ * Verifies a custom OpenAI-compatible provider by listing its models. The base URL is
+ * re-validated against the SSRF guard on every call, including redirect hops.
+ */
+export async function verifyOpenAiCompatibleApiKey(input: {
+    baseUrl: string
+    apiKey: string
+    model?: string | null
+}): Promise<VerifyOpenAiCompatibleResult> {
+    const normalizedKey = input.apiKey.trim()
+    if (!normalizedKey) {
+        return {
+            ok: false,
+            status: 400,
+            failure: {
+                code: "PROVIDER_KEY_INVALID",
+                message: "API key provider wajib diisi",
+            },
+        }
+    }
+
+    try {
+        const response = await safeExternalFetch(`${input.baseUrl.replace(/\/+$/, "")}/models`, {
+            method: "GET",
+            headers: {
+                Accept: "application/json",
+                Authorization: `Bearer ${normalizedKey}`,
+            },
+            cache: "no-store",
+            guard: getAiProviderGuardOptions(),
+            timeoutMs: 12_000,
+        })
+
+        if (!response.ok) {
+            const failure = classifyOpenAiCompatibleHttpStatus(response.status)
+            return {
+                ok: false,
+                status: mapFailureToHttpStatus(failure),
+                failure,
+            }
+        }
+
+        const models = parseOpenAiModelList(await response.json().catch(() => null))
+
+        if (input.model?.trim() && models.length > 0) {
+            const requestedModel = input.model.trim()
+            const hasModel = models.some((model) => model.id === requestedModel)
+
+            if (!hasModel) {
+                return {
+                    ok: false,
+                    status: 400,
+                    failure: {
+                        code: "PROVIDER_MODEL_UNAVAILABLE",
+                        message: `Model "${requestedModel}" tidak tersedia pada provider ini`,
+                    },
+                }
+            }
+        }
+
+        return { ok: true, models }
+    } catch (error) {
+        const failure = classifyAiKeyFailure(error)
+        return {
+            ok: false,
+            status: mapFailureToHttpStatus(failure),
+            failure,
+        }
     }
 }

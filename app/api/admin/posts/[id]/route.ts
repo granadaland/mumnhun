@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { PostStatus, Prisma } from "@prisma/client"
 import { z } from "zod"
 import prisma from "@/lib/db/prisma"
 import { requireAdminApi, requireAdminMutationApi } from "@/lib/security/admin"
 import { logAdminError, logAdminInfo, logAdminWarn } from "@/lib/observability/admin-log"
 import { adminJsonValidationError, getPrismaErrorCode, summarizeUnknownError } from "@/lib/security/admin-helpers"
+import { sanitizeArticleHtml } from "@/lib/content/post-publishing"
 
 const routeParamsSchema = z.object({
     id: z.string().min(1, "Post ID is required"),
@@ -210,8 +212,11 @@ export async function PUT(
         }
 
         let readingTime: number | undefined
+        let safeContent: string | undefined
         if (payload.content !== undefined) {
-            const wordCount = payload.content.replace(/<[^>]*>/g, "").split(/\s+/).filter(Boolean).length
+            // Editor content is untrusted input; keep the stored HTML within the allowed tag set.
+            safeContent = sanitizeArticleHtml(payload.content)
+            const wordCount = safeContent.replace(/<[^>]*>/g, "").split(/\s+/).filter(Boolean).length
             readingTime = Math.max(1, Math.ceil(wordCount / 200))
         }
 
@@ -270,7 +275,7 @@ export async function PUT(
                 data: {
                     title: payload.title,
                     slug: payload.slug,
-                    content: payload.content,
+                    content: safeContent,
                     excerpt: payload.excerpt,
                     featuredImage: payload.featuredImage,
                     status: payload.status,
@@ -295,6 +300,12 @@ export async function PUT(
         }
 
         const post = await prisma.$transaction((tx) => updatePostWithRelations(tx))
+
+        // Public pages are cached; refresh the affected paths when visibility can change.
+        if (post.slug) {
+            revalidatePath(`/${post.slug}`)
+            revalidatePath("/")
+        }
 
         logAdminInfo({
             requestId,
@@ -339,7 +350,10 @@ export async function DELETE(
 
     const { id } = await params
 
-    await prisma.post.delete({ where: { id } })
+    const post = await prisma.post.delete({ where: { id }, select: { slug: true } })
+
+    revalidatePath(`/${post.slug}`)
+    revalidatePath("/")
 
     return NextResponse.json({ success: true })
 }

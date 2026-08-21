@@ -5,6 +5,15 @@ import { Pool } from 'pg'
 // Create a PostgreSQL connection pool
 const connectionString = process.env.DATABASE_URL
 
+// Fail fast with an actionable message. Without this, `pg` silently falls back
+// to localhost:5432, producing a confusing ECONNREFUSED surfaced by Prisma as
+// a generic `PrismaClientKnownRequestError` on the first query.
+if (!connectionString) {
+    throw new Error(
+        "DATABASE_URL is not set. Ensure it is defined in .env / .env.local and restart the dev server so the connection pool is recreated with the correct value."
+    )
+}
+
 const globalForPrisma = globalThis as unknown as {
     prisma: PrismaClient | undefined
     pool: Pool | undefined

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 
@@ -32,20 +32,26 @@ export default function LoginPage() {
         setLoading(true)
         setError(null)
 
-        const supabase = createClient()
-        const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        })
+        try {
+            const result = await signIn("credentials", {
+                email,
+                password,
+                redirect: false,
+            })
 
-        if (error) {
-            setError(error.message)
+            if (!result || result.error) {
+                setError("Email atau password salah")
+                setLoading(false)
+                return
+            }
+
+            router.push(redirect)
+            router.refresh()
+        } catch {
+            // Network / unexpected error — keep the form usable instead of hanging.
+            setError("Terjadi kesalahan. Silakan coba lagi.")
             setLoading(false)
-            return
         }
-
-        router.push(redirect)
-        router.refresh()
     }
 
     return (

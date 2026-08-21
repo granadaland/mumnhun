@@ -534,6 +534,7 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
                           src={getPostThumbnail(related)}
                           alt={related.title}
                           fill
+                          sizes="64px"
                           className="object-cover group-hover:scale-110 transition-transform"
                         />
                       </div>
@@ -669,6 +670,7 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
                             src={getPostThumbnail(recent)}
                             alt={recent.title}
                             fill
+                            sizes="64px"
                             className="object-cover group-hover:scale-110 transition-transform"
                           />
                         </div>
@@ -710,6 +712,7 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
                             src={getPostThumbnail(pop)}
                             alt={pop.title}
                             fill
+                            sizes="64px"
                             className="object-cover group-hover:scale-110 transition-transform"
                           />
                           <div className="absolute top-1 left-1 bg-[#466A68] text-white text-xs font-bold w-5 h-5 rounded flex items-center justify-center">

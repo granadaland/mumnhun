@@ -67,6 +67,33 @@ Required variables:
 - `DIRECT_URL` - Direct database connection (for migrations)
 - `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anon key
+- `API_KEYS_ENCRYPTION_SECRET` - AES-256-GCM master key for stored AI API keys. Accepts `base64:<32 bytes>`, `hex:<32 bytes>`, or a passphrase (derived via scrypt). Rotating this value makes existing stored keys undecryptable.
+- `CSRF_SECRET` - HMAC secret for admin mutation CSRF tokens
+- `NEXT_PUBLIC_SITE_URL` - Canonical site origin (used for CSRF origin checks and agent `publicUrl`)
+- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` - media storage
+
+Optional variables:
+
+- `AI_PROVIDER_ALLOWED_HOSTS` - Comma-separated allowlist of hostnames permitted as a custom OpenAI-compatible provider base URL (e.g. `api.openai.com,openrouter.ai`). When unset, any public host is allowed but private/loopback/link-local/metadata addresses are still blocked.
+- `AI_PROVIDER_ALLOW_HTTP` - Set to `true` to permit plain `http` provider base URLs. Ignored when `NODE_ENV=production`.
+- `UNSPLASH_ACCESS_KEY` / `PEXELS_API_KEY` - Free stock image providers. May also be stored as site settings `unsplash_access_key` / `pexels_api_key`.
+
+### 2b. AI Providers, Images, and Agent Tokens
+
+**Custom OpenAI-compatible providers.** In `/admin/settings/ai` you can register a provider by supplying a base URL (e.g. `https://api.openai.com/v1`), an API key, and a model. The server calls `{baseUrl}/chat/completions` for articles and `{baseUrl}/images/generations` for images. Base URLs are validated against an SSRF guard (https only, no embedded credentials, DNS resolved and checked against private/reserved ranges, redirects re-validated on every hop) before any outbound request. API keys are encrypted at rest with AES-256-GCM and never returned to the browser in plaintext.
+
+**Images.** Featured images come from either a free stock provider (searched via `/api/admin/media/free-image`, then re-hosted into Cloudinary with attribution recorded) or AI generation (`/api/admin/ai/image`, requires an active key with `capability = "image"`). All ingested images are validated by magic bytes, capped at 10MB, and restricted to JPEG/PNG/WebP/GIF/AVIF — SVG is intentionally excluded.
+
+**External agents.** Issue Bearer tokens in `/admin/settings/agent-tokens`, then call:
+
+```bash
+curl -X POST https://your-site/api/agent/articles \
+  -H "Authorization: Bearer mnh_agent_..." \
+  -H "Content-Type: application/json" \
+  -d '{"mode":"generate","topic":"tips memilih layanan sewa","status":"DRAFT"}'
+```
+
+`mode: "content"` accepts ready-made HTML; `mode: "generate"` asks the configured AI provider to write the article. Scopes are enforced per request (`article:create`, `article:generate`, `article:publish`, `image:generate`), and publishing requires `article:publish` in addition to the create/generate scope. Only the SHA-256 hash of each token is stored, so the plaintext is shown exactly once.
 
 ### 3. Setup Database
 

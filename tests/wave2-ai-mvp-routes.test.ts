@@ -231,7 +231,7 @@ describe("Wave 2 AI MVP flow: generate + tasks routes", () => {
                     data: expect.objectContaining({
                         slug: "strategi-seo-lokal-untuk-umkm",
                         status: "DRAFT",
-                        authorId: "user-1",
+                        authorId: adminIdentity.id,
                     }),
                 })
             )
@@ -287,7 +287,7 @@ describe("Wave 2 AI MVP flow: generate + tasks routes", () => {
             expect(body).toEqual({
                 success: false,
                 error: "Gagal generate artikel AI",
-                errorCode: "UNKNOWN_ERROR",
+                errorCode: "PROVIDER_UNAVAILABLE",
                 data: { taskId: "task-failed-1" },
             })
             expect(mockPrisma.post.create).not.toHaveBeenCalled()
@@ -345,7 +345,7 @@ describe("Wave 2 AI MVP flow: generate + tasks routes", () => {
             expect(body).toEqual({
                 success: false,
                 error: "Gagal generate artikel AI",
-                errorCode: "UNKNOWN_ERROR",
+                errorCode: "PROVIDER_UNAVAILABLE",
                 data: { taskId: "task-failed-2" },
             })
         })
