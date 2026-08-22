@@ -24,6 +24,7 @@ function httpError(status: number, body = "err"): Response {
 }
 
 const config = {
+    provider: "openai_compatible",
     apiKey: "sk-test",
     baseUrl: "https://ai.example.com/v1",
     model: "gpt-image-1",

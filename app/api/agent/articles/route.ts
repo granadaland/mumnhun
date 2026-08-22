@@ -148,12 +148,7 @@ async function tryGenerateFeaturedImage(input: {
 
     try {
         const generated = await generateImageWithProvider(
-            {
-                apiKey: provider.apiKey,
-                baseUrl: provider.baseUrl,
-                model: provider.model,
-                authStyle: provider.authStyle,
-            },
+            provider,
             prompt,
             { maxBytes: MAX_IMAGE_BYTES }
         )
