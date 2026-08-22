@@ -23,6 +23,8 @@ import {
     Bot,
     KeyRound,
     Menu,
+    CalendarDays,
+    Cpu,
     X,
     LogOut,
     ChevronDown,
@@ -35,6 +37,8 @@ type NavItem = {
     label: string
     icon: React.ReactNode
     badge?: string
+    /** Highlight only on an exact path match, for parents that have their own child routes. */
+    exact?: boolean
 }
 
 type NavGroup = {
@@ -43,8 +47,7 @@ type NavGroup = {
     items: NavItem[]
 }
 
-const navGroups: NavGroup[] = [
-    {
+const navGroups: NavGroup[] = [    {
         id: "dashboard",
         title: "Dashboard",
         items: [
@@ -78,6 +81,7 @@ const navGroups: NavGroup[] = [
         title: "AI Tools",
         items: [
             { href: "/admin/ai", label: "AI Dashboard", icon: <Bot className="h-4 w-4" /> },
+            { href: "/admin/ai/content-audit", label: "Audit & Kalender", icon: <CalendarDays className="h-4 w-4" />, badge: "Baru" },
             { href: "/admin/ai/generate", label: "Generate", icon: <SparklesIcon className="h-4 w-4" /> },
             { href: "/admin/ai/rewrite", label: "Rewrite", icon: <FileText className="h-4 w-4" /> },
             { href: "/admin/ai/internal-links", label: "Internal Links", icon: <LinkIcon className="h-4 w-4" /> },
@@ -92,7 +96,8 @@ const navGroups: NavGroup[] = [
             { href: "/admin/settings", label: "Umum", icon: <Settings className="h-4 w-4" /> },
             { href: "/admin/settings/navigation", label: "Navigasi", icon: <Menu className="h-4 w-4" /> },
             { href: "/admin/settings/social", label: "Media Sosial", icon: <Globe className="h-4 w-4" /> },
-            { href: "/admin/settings/ai", label: "AI Config", icon: <Bot className="h-4 w-4" /> },
+            { href: "/admin/settings/ai/models", label: "AI Models per Tugas", icon: <Cpu className="h-4 w-4" /> },
+            { href: "/admin/settings/ai", label: "AI Key Pool", icon: <Bot className="h-4 w-4" />, exact: true },
             { href: "/admin/settings/agent-tokens", label: "Agent Tokens", icon: <KeyRound className="h-4 w-4" /> },
         ],
     },
@@ -110,8 +115,10 @@ export function AdminSidebar() {
     useEffect(() => {
         // Auto-open groups that contain the active path
         navGroups.forEach((group) => {
-            const hasActiveItem = group.items.some(item =>
-                item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href)
+            const hasActiveItem = group.items.some((item) =>
+                item.href === "/admin" || item.exact
+                    ? pathname === item.href
+                    : pathname.startsWith(item.href)
             )
             if (hasActiveItem) {
                 setOpenGroups(prev => ({ ...prev, [group.id]: true }))
@@ -123,9 +130,9 @@ export function AdminSidebar() {
         await signOut({ redirectTo: "/login" })
     }
 
-    const isActive = (href: string) => {
-        if (href === "/admin") return pathname === "/admin"
-        return pathname.startsWith(href)
+    const isActive = (item: NavItem) => {
+        if (item.href === "/admin" || item.exact) return pathname === item.href
+        return pathname.startsWith(item.href)
     }
 
     const toggleGroup = (id: string) => {
@@ -185,7 +192,7 @@ export function AdminSidebar() {
             <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-2 no-scrollbar">
                 {navGroups.map((group) => {
                     const isOpen = openGroups[group.id] || false
-                    const hasActiveChild = group.items.some(item => isActive(item.href))
+                    const hasActiveChild = group.items.some(item => isActive(item))
 
                     return (
                         <div key={group.id} className="pt-1">
@@ -212,11 +219,11 @@ export function AdminSidebar() {
                             {/* Group Items */}
                             <div className={cn(
                                 "space-y-0.5 overflow-hidden transition-all duration-200 ease-in-out",
-                                !collapsed && isOpen ? "max-h-96 mt-1" : "max-h-0",
+                                !collapsed && isOpen ? "max-h-[32rem] mt-1" : "max-h-0",
                                 collapsed && "max-h-none opacity-100 mt-1"
                             )}>
                                 {(isOpen || collapsed) && group.items.map((item) => {
-                                    const active = isActive(item.href)
+                                    const active = isActive(item)
                                     return (
                                         <Link
                                             key={item.href}

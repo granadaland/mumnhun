@@ -2,7 +2,7 @@
 
 import { ADMIN_CSRF_HEADER, CsrfTokenRequestError, getAdminCsrfToken } from "@/lib/security/csrf-client"
 
-export type AdminRequestMethod = "GET" | "POST" | "PUT" | "DELETE"
+export type AdminRequestMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
 
 type AdminClientErrorCode = "HTTP_ERROR" | "TIMEOUT" | "ABORTED" | "NETWORK_ERROR"
 
@@ -280,6 +280,16 @@ export function adminPut<TResponse, TBody = unknown>(
     return adminClient<TResponse, TBody>(endpoint, {
         ...(options ?? {}),
         method: "PUT",
+    })
+}
+
+export function adminPatch<TResponse, TBody = unknown>(
+    endpoint: string,
+    options?: Omit<AdminClientOptions<TBody>, "method">
+): Promise<TResponse> {
+    return adminClient<TResponse, TBody>(endpoint, {
+        ...(options ?? {}),
+        method: "PATCH",
     })
 }
 

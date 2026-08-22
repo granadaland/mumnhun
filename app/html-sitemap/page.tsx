@@ -8,12 +8,12 @@ export const metadata: Metadata = {
     title: `Peta Situs | ${SITE_NAME}`,
     description: `Jelajahi semua artikel dan kategori di ${SITE_NAME}. Temukan informasi lengkap seputar ASI, menyusui, dan parenting.`,
     alternates: {
-        canonical: `${SITE_URL}/sitemap`,
+        canonical: `${SITE_URL}/html-sitemap`,
     },
     openGraph: {
         title: `Peta Situs | ${SITE_NAME}`,
         description: `Jelajahi semua artikel dan kategori di ${SITE_NAME}.`,
-        url: `${SITE_URL}/sitemap`,
+        url: `${SITE_URL}/html-sitemap`,
         siteName: SITE_NAME,
         type: 'website',
     },

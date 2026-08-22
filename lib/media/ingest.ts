@@ -199,6 +199,7 @@ export type IngestImageInput = {
     filename: string
     source: MediaSource
     alt?: string | null
+    caption?: string | null
     attribution?: string | null
     sourceRef?: string | null
     aiPrompt?: string | null
@@ -238,6 +239,7 @@ export async function ingestImage(input: IngestImageInput): Promise<IngestedMedi
             width: upload.width,
             height: upload.height,
             alt: input.alt?.trim() ? input.alt.trim().slice(0, 500) : null,
+            caption: input.caption?.trim() ? input.caption.trim().slice(0, 500) : null,
             source: input.source,
             sourceRef: input.sourceRef?.trim() ? input.sourceRef.trim().slice(0, 500) : null,
             attribution: input.attribution?.trim() ? input.attribution.trim().slice(0, 500) : null,

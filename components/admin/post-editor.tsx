@@ -2,15 +2,17 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
+import NextImage from "next/image"
 import { RichTextEditor } from "@/components/admin/rich-text-editor"
 import { SeoScanner } from "@/components/admin/seo-scanner"
-import { CloudinaryUploader } from "@/components/admin/cloudinary-uploader"
-import { AiAssistantPanel } from "@/components/admin/ai-assistant-panel"
+import { AiAssistantPanel, type AiSeoPackage } from "@/components/admin/ai-assistant-panel"
+import { ImageSourcePicker, type PickedImage } from "@/components/admin/image-source-picker"
 import { ADMIN_CSRF_HEADER, getAdminCsrfToken } from "@/lib/security/csrf-client"
+import { SITE_URL } from "@/lib/constants"
 import {
     Save, Loader2, ArrowLeft, Eye, ChevronDown, ChevronUp,
     Calendar, Globe, FileText, Search as SearchIcon, BarChart3,
-    Sparkles,
+    Sparkles, ImagePlus, Trash2,
 } from "lucide-react"
 
 type Category = { id: string; name: string; slug: string }
@@ -70,7 +72,9 @@ export function PostEditor({ postId }: { postId?: string }) {
     const [showSchedule, setShowSchedule] = useState(false)
     const [showScanner, setShowScanner] = useState(false)
     const [showAiAssistant, setShowAiAssistant] = useState(false)
+    const [showFeaturedPicker, setShowFeaturedPicker] = useState(false)
     const [autoSlug, setAutoSlug] = useState(!postId)
+    const [autoCanonical, setAutoCanonical] = useState(true)
 
     // Fetch categories and tags
     useEffect(() => {
@@ -118,6 +122,8 @@ export function PostEditor({ postId }: { postId?: string }) {
                         schemaData: p.schemaData || "",
                     })
                     if (p.status === "SCHEDULED") setShowSchedule(true)
+                    // A canonical the editor already set by hand must not be overwritten.
+                    if (p.canonicalUrl) setAutoCanonical(false)
                 }
             })
             .finally(() => setLoading(false))
@@ -129,6 +135,13 @@ export function PostEditor({ postId }: { postId?: string }) {
             setPost((prev) => ({ ...prev, slug: slugify(prev.title) }))
         }
     }, [post.title, autoSlug])
+
+    // Canonical URL follows the slug until an editor types their own.
+    useEffect(() => {
+        if (!autoCanonical) return
+        const nextCanonical = post.slug ? `${SITE_URL}/${post.slug}` : ""
+        setPost((prev) => (prev.canonicalUrl === nextCanonical ? prev : { ...prev, canonicalUrl: nextCanonical }))
+    }, [post.slug, autoCanonical])
 
     // Filter tags on search
     useEffect(() => {
@@ -147,10 +160,103 @@ export function PostEditor({ postId }: { postId?: string }) {
         setPost((prev) => ({ ...prev, [field]: value }))
     }, [])
 
+    /**
+     * Applies the AI SEO package.
+     *
+     * Categories are matched against existing ones only (the API already restricts the
+     * model to real slugs). Tags may be new, so unknown names are created first and the
+     * local tag list is refreshed to keep the chips rendering.
+     */
+    const applySeoPackage = useCallback(
+        async (seo: AiSeoPackage) => {
+            setPost((prev) => ({
+                ...prev,
+                focusKeyword: seo.focusKeyword || prev.focusKeyword,
+                focusKeywords: seo.secondaryKeywords.length
+                    ? seo.secondaryKeywords.join(", ")
+                    : prev.focusKeywords,
+                metaTitle: seo.metaTitle || prev.metaTitle,
+                metaDescription: seo.metaDescription || prev.metaDescription,
+                schemaType: seo.schemaType || prev.schemaType,
+            }))
+
+            if (seo.categorySlug) {
+                const matched = categories.find((category) => category.slug === seo.categorySlug)
+                if (matched) {
+                    setPost((prev) =>
+                        prev.categoryIds.includes(matched.id)
+                            ? prev
+                            : { ...prev, categoryIds: [...prev.categoryIds, matched.id] }
+                    )
+                }
+            }
+
+            if (seo.tags.length === 0) return
+
+            const csrfToken = await getAdminCsrfToken().catch(() => null)
+            const resolvedTagIds: string[] = []
+            const createdTags: Tag[] = []
+
+            for (const tagName of seo.tags) {
+                const normalized = tagName.trim()
+                if (!normalized) continue
+
+                const existing = tags.find(
+                    (tag) => tag.name.toLowerCase() === normalized.toLowerCase()
+                )
+                if (existing) {
+                    resolvedTagIds.push(existing.id)
+                    continue
+                }
+
+                if (!csrfToken) continue
+
+                try {
+                    const response = await fetch("/api/admin/tags", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", [ADMIN_CSRF_HEADER]: csrfToken },
+                        body: JSON.stringify({ name: normalized }),
+                    })
+                    const data = await response.json()
+                    if (data.success) {
+                        createdTags.push(data.data)
+                        resolvedTagIds.push(data.data.id)
+                    }
+                } catch {
+                    // A failed tag creation must not abort the rest of the SEO application.
+                }
+            }
+
+            if (createdTags.length > 0) {
+                setTags((prev) => [...prev, ...createdTags])
+            }
+
+            if (resolvedTagIds.length > 0) {
+                setPost((prev) => ({
+                    ...prev,
+                    tagIds: Array.from(new Set([...prev.tagIds, ...resolvedTagIds])),
+                }))
+            }
+        },
+        [categories, tags]
+    )
+
+    const handleFeaturedImagePicked = useCallback((image: PickedImage) => {
+        setPost((prev) => ({
+            ...prev,
+            featuredImage: image.url,
+            // Social previews reuse the featured image; there is no separate OG image field.
+            ogImage: image.url,
+        }))
+    }, [])
+
     const handleSave = async (overrideStatus?: string) => {
         const status = overrideStatus || post.status
         if (!post.title.trim()) return alert("Judul wajib diisi")
         if (!post.slug.trim()) return alert("Slug wajib diisi")
+        if (status === "SCHEDULED" && !post.scheduledAt) {
+            return alert("Status Scheduled memerlukan tanggal jadwal publish")
+        }
 
         setSaving(true)
         try {
@@ -160,7 +266,7 @@ export function PostEditor({ postId }: { postId?: string }) {
             const res = await fetch(url, {
                 method,
                 headers: { "Content-Type": "application/json", [ADMIN_CSRF_HEADER]: csrfToken },
-                body: JSON.stringify({ ...post, status }),
+                body: JSON.stringify({ ...post, status, ogImage: post.featuredImage }),
             })
             const data = await res.json()
             if (data.success) {
@@ -169,7 +275,10 @@ export function PostEditor({ postId }: { postId?: string }) {
                 }
                 router.refresh()
             } else {
-                alert(data.error || "Gagal menyimpan")
+                const issues = Array.isArray(data.issues)
+                    ? `\n\n${data.issues.map((issue: { message: string }) => `- ${issue.message}`).join("\n")}`
+                    : ""
+                alert(`${data.error || "Gagal menyimpan"}${issues}`)
             }
         } catch (err) {
             console.error("Save failed:", err)
@@ -267,6 +376,8 @@ export function PostEditor({ postId }: { postId?: string }) {
                     <RichTextEditor
                         content={post.content}
                         onChange={(html) => update("content", html)}
+                        articleTitle={post.title}
+                        articleKeyword={post.focusKeyword}
                     />
 
                     {/* Excerpt */}
@@ -311,9 +422,34 @@ export function PostEditor({ postId }: { postId?: string }) {
                                         <input type="text" value={post.focusKeyword} onChange={(e) => update("focusKeyword", e.target.value)} placeholder="sewa freezer ASI" className="w-full bg-white border border-[#D4BCAA]/20 rounded-lg px-3 py-2 text-sm text-[#0F0A09] placeholder-[#8C7A6B]/60 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
                                     </div>
                                     <div>
-                                        <label className="block text-xs text-[#8C7A6B]/50 mb-1">Canonical URL</label>
-                                        <input type="url" value={post.canonicalUrl} onChange={(e) => update("canonicalUrl", e.target.value)} placeholder="https://..." className="w-full bg-white border border-[#D4BCAA]/20 rounded-lg px-3 py-2 text-sm text-[#0F0A09] placeholder-[#8C7A6B]/60 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
+                                        <label className="block text-xs text-[#8C7A6B]/50 mb-1">Keyword Pendukung</label>
+                                        <input type="text" value={post.focusKeywords} onChange={(e) => update("focusKeywords", e.target.value)} placeholder="dipisah koma" className="w-full bg-white border border-[#D4BCAA]/20 rounded-lg px-3 py-2 text-sm text-[#0F0A09] placeholder-[#8C7A6B]/60 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
                                     </div>
+                                </div>
+                                <div>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <label className="block text-xs text-[#8C7A6B]/50">Canonical URL</label>
+                                        <label className="flex items-center gap-1.5 text-[10px] text-[#8C7A6B]/60 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={autoCanonical}
+                                                onChange={(e) => setAutoCanonical(e.target.checked)}
+                                                className="rounded border-[#D4BCAA]/20 text-[#466A68] focus:ring-[#466A68]/30"
+                                            />
+                                            Ikuti slug otomatis
+                                        </label>
+                                    </div>
+                                    <input
+                                        type="url"
+                                        value={post.canonicalUrl}
+                                        onChange={(e) => {
+                                            setAutoCanonical(false)
+                                            update("canonicalUrl", e.target.value)
+                                        }}
+                                        placeholder={`${SITE_URL}/slug-artikel`}
+                                        className="w-full bg-white border border-[#D4BCAA]/20 rounded-lg px-3 py-2 text-sm text-[#0F0A09] placeholder-[#8C7A6B]/60 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all disabled:bg-[#FAF9F7]"
+                                        disabled={autoCanonical}
+                                    />
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
@@ -321,30 +457,23 @@ export function PostEditor({ postId }: { postId?: string }) {
                                         <input type="text" value={post.ogTitle} onChange={(e) => update("ogTitle", e.target.value)} placeholder={post.title} className="w-full bg-white border border-[#D4BCAA]/20 rounded-lg px-3 py-2 text-sm text-[#0F0A09] placeholder-[#8C7A6B]/60 outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all" />
                                     </div>
                                     <div>
-                                        <label className="block text-xs text-[#8C7A6B]/50 mb-2">OG Image</label>
-                                        <CloudinaryUploader
-                                            value={post.ogImage}
-                                            onChange={(url) => update("ogImage", url)}
-                                            folder="mumnhun/posts/og"
-                                            label=""
-                                            description=""
-                                        />
+                                        <label className="block text-xs text-[#8C7A6B]/50 mb-1">Schema Type</label>
+                                        <select value={post.schemaType} onChange={(e) => update("schemaType", e.target.value)} className="w-full bg-white border border-[#D4BCAA]/20 rounded-lg px-3 py-2 text-sm text-[#0F0A09] outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all">
+                                            <option value="" className="bg-white">Pilih Schema...</option>
+                                            <option value="Article" className="bg-white">Article</option>
+                                            <option value="BlogPosting" className="bg-white">BlogPosting</option>
+                                            <option value="HowTo" className="bg-white">HowTo</option>
+                                            <option value="FAQPage" className="bg-white">FAQPage</option>
+                                        </select>
                                     </div>
                                 </div>
                                 <div>
                                     <label className="block text-xs text-[#8C7A6B]/50 mb-1">OG Description</label>
                                     <textarea value={post.ogDescription} onChange={(e) => update("ogDescription", e.target.value)} rows={2} placeholder="Deskripsi Open Graph..." className="w-full bg-white border border-[#D4BCAA]/20 rounded-lg px-3 py-2 text-sm text-[#0F0A09] placeholder-[#8C7A6B]/60 outline-none focus:ring-2 focus:ring-[#466A68]/30 resize-none transition-all" />
                                 </div>
-                                <div>
-                                    <label className="block text-xs text-[#8C7A6B]/50 mb-1">Schema Type</label>
-                                    <select value={post.schemaType} onChange={(e) => update("schemaType", e.target.value)} className="w-full bg-white border border-[#D4BCAA]/20 rounded-lg px-3 py-2 text-sm text-[#0F0A09] outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all">
-                                        <option value="" className="bg-white">Pilih Schema...</option>
-                                        <option value="Article" className="bg-white">Article</option>
-                                        <option value="BlogPosting" className="bg-white">BlogPosting</option>
-                                        <option value="HowTo" className="bg-white">HowTo</option>
-                                        <option value="FAQPage" className="bg-white">FAQPage</option>
-                                    </select>
-                                </div>
+                                <p className="text-[10px] text-[#8C7A6B]/50">
+                                    OG Image mengikuti Featured Image secara otomatis.
+                                </p>
                             </div>
                         )}
                     </div>
@@ -409,13 +538,49 @@ export function PostEditor({ postId }: { postId?: string }) {
                     {/* Featured Image */}
                     <div className="bg-white border border-[#D4BCAA]/20 rounded-xl p-5 space-y-3">
                         <h3 className="text-sm font-semibold text-[#0F0A09]">Featured Image</h3>
-                        <CloudinaryUploader
-                            value={post.featuredImage}
-                            onChange={(url) => update("featuredImage", url)}
-                            folder="mumnhun/posts/featured"
-                            label=""
-                            description=""
-                        />
+
+                        {post.featuredImage ? (
+                            <div className="space-y-2">
+                                <div className="relative aspect-video rounded-lg overflow-hidden border border-[#D4BCAA]/30 bg-[#FAF9F7]">
+                                    <NextImage
+                                        src={post.featuredImage}
+                                        alt="Featured image artikel"
+                                        fill
+                                        sizes="(max-width: 1280px) 100vw, 320px"
+                                        className="object-cover"
+                                        unoptimized
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowFeaturedPicker(true)}
+                                        className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium border border-[#466A68]/30 text-[#466A68] rounded-lg hover:bg-[#466A68]/5 transition-colors"
+                                    >
+                                        <ImagePlus className="h-3.5 w-3.5" />
+                                        Ganti Gambar
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPost((prev) => ({ ...prev, featuredImage: "", ogImage: "" }))}
+                                        className="px-3 py-2 text-xs text-[#8C7A6B] hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                        aria-label="Hapus featured image"
+                                    >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => setShowFeaturedPicker(true)}
+                                className="w-full py-8 border-2 border-dashed border-[#D4BCAA]/40 rounded-lg flex flex-col items-center gap-2 text-[#8C7A6B] hover:border-[#466A68]/40 hover:text-[#466A68] transition-colors"
+                            >
+                                <ImagePlus className="h-5 w-5" />
+                                <span className="text-xs font-medium">Pilih sumber gambar</span>
+                                <span className="text-[10px] text-[#8C7A6B]/70">AI, upload, atau stock photo</span>
+                            </button>
+                        )}
                     </div>
 
                     {/* Categories */}
@@ -536,7 +701,18 @@ export function PostEditor({ postId }: { postId?: string }) {
                 onUpdateTitle={(title) => update("title", title)}
                 onUpdateExcerpt={(excerpt) => update("excerpt", excerpt)}
                 onUpdateContent={(content) => update("content", content)}
-                onUpdateSeo={(seo) => setPost(prev => ({ ...prev, ...seo }))}
+                onApplySeoPackage={applySeoPackage}
+            />
+
+            <ImageSourcePicker
+                isOpen={showFeaturedPicker}
+                onClose={() => setShowFeaturedPicker(false)}
+                onSelect={handleFeaturedImagePicked}
+                articleTitle={post.title}
+                articleKeyword={post.focusKeyword}
+                articleContext={post.excerpt || post.content}
+                purpose="featured"
+                title="Pilih Featured Image"
             />
         </div>
     )

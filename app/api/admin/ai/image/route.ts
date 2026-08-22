@@ -1,30 +1,36 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
-import prisma from "@/lib/db/prisma"
 import { requireAdminMutationApi } from "@/lib/security/admin"
 import { logAdminError, logAdminInfo, logAdminWarn } from "@/lib/observability/admin-log"
 import { summarizeUnknownError } from "@/lib/security/admin-helpers"
-import { classifyAiKeyFailure, formatStoredAiKeyFailure, toAiKeyFailureHttpStatus } from "@/lib/security/ai-key-status"
-import { resolveImageProvider } from "@/lib/ai/key-rotary"
+import { classifyProviderFailure, toAiKeyFailureHttpStatus } from "@/lib/security/ai-key-status"
+import {
+    recordImageRoleFailure,
+    recordImageRoleSuccess,
+    resolveImageRoleModel,
+} from "@/lib/ai/task-models"
 import { generateImageWithProvider } from "@/lib/ai/provider"
 import { MAX_IMAGE_BYTES, MediaIngestError, assertAllowedImageBuffer, ingestImage } from "@/lib/media/ingest"
 import { slugifyTitle } from "@/lib/content/post-publishing"
 
+/**
+ * Generates an image on the dedicated "image" role model and stores it in Cloudinary.
+ *
+ * Alt text and caption are accepted from the caller (normally produced by the
+ * `generate_image_meta` assist action) and persisted on the Media row, so an image never
+ * lands in an article without accessible text.
+ */
+
 const generateImageSchema = z.object({
     prompt: z.string().trim().min(10, "Prompt minimal 10 karakter").max(1000),
     alt: z.string().trim().max(500).optional().nullable(),
+    caption: z.string().trim().max(500).optional().nullable(),
     filenameHint: z.string().trim().max(120).optional().nullable(),
-    providerKeyId: z.string().trim().min(1).max(60).optional(),
 })
 
 function errorJson(error: string, errorCode: string, status: number, details?: Record<string, unknown>) {
     return NextResponse.json(
-        {
-            success: false,
-            error,
-            errorCode,
-            ...(details ? { details } : {}),
-        },
+        { success: false, error, errorCode, ...(details ? { details } : {}) },
         { status }
     )
 }
@@ -47,10 +53,6 @@ function validationErrorJson(zodError: z.ZodError) {
     )
 }
 
-/**
- * Generates an image via an OpenAI-compatible image endpoint and stores it in Cloudinary.
- * Requires an active AiApiKey with capability="image".
- */
 export async function POST(request: NextRequest) {
     const adminCheck = await requireAdminMutationApi(request, { action: "ai-image:create" })
     if (!adminCheck.ok) return adminCheck.response
@@ -80,18 +82,24 @@ export async function POST(request: NextRequest) {
         return errorJson("Invalid request payload", "AI_IMAGE_INVALID_JSON", 400)
     }
 
-    const provider = await resolveImageProvider(payload.providerKeyId)
+    const provider = await resolveImageRoleModel()
     if (!provider) {
         return errorJson(
-            "Tidak ada provider gambar AI aktif. Tambahkan API key dengan capability image.",
-            "AI_IMAGE_PROVIDER_NOT_CONFIGURED",
-            400
+            "Model Generate Gambar belum dikonfigurasi. Atur di Settings > AI Models (butuh provider OpenAI-compatible dengan base URL dan model).",
+            "AI_ROLE_NOT_CONFIGURED",
+            400,
+            { role: "image" }
         )
     }
 
     try {
         const generated = await generateImageWithProvider(
-            { apiKey: provider.apiKey, baseUrl: provider.baseUrl, model: provider.model },
+            {
+                apiKey: provider.apiKey,
+                baseUrl: provider.baseUrl,
+                model: provider.model,
+                authStyle: provider.authStyle,
+            },
             payload.prompt,
             { maxBytes: MAX_IMAGE_BYTES }
         )
@@ -106,18 +114,12 @@ export async function POST(request: NextRequest) {
             filename: `${filenameBase}.${extension}`,
             source: "ai",
             alt: payload.alt ?? null,
+            caption: payload.caption ?? null,
             aiPrompt: payload.prompt,
             folder: "mumnhun/ai",
         })
 
-        await prisma.aiApiKey.update({
-            where: { id: provider.keyId },
-            data: {
-                usageCount: { increment: 1 },
-                lastUsedAt: new Date(),
-                lastError: null,
-            },
-        })
+        await recordImageRoleSuccess(provider.roleModelId)
 
         logAdminInfo({
             requestId,
@@ -126,23 +128,18 @@ export async function POST(request: NextRequest) {
             role: adminCheck.identity.role,
             roleSource: adminCheck.identity.source,
             status: 200,
-            payloadSummary: { mediaId: media.mediaId, usedKeyId: provider.keyId },
+            payloadSummary: { mediaId: media.mediaId, roleModelId: provider.roleModelId },
             validation: { ok: true },
         })
 
-        return NextResponse.json({ success: true, data: media })
+        return NextResponse.json({
+            success: true,
+            data: { ...media, alt: payload.alt ?? null, caption: payload.caption ?? null },
+        })
     } catch (error) {
-        const failure = classifyAiKeyFailure(error)
+        const failure = classifyProviderFailure(error)
 
-        await prisma.aiApiKey
-            .update({
-                where: { id: provider.keyId },
-                data: {
-                    lastUsedAt: new Date(),
-                    lastError: formatStoredAiKeyFailure(failure),
-                },
-            })
-            .catch(() => undefined)
+        await recordImageRoleFailure(provider.roleModelId, error)
 
         logAdminError({
             requestId,
@@ -150,7 +147,7 @@ export async function POST(request: NextRequest) {
             userId: adminCheck.identity.id,
             role: adminCheck.identity.role,
             roleSource: adminCheck.identity.source,
-            status: 502,
+            status: toAiKeyFailureHttpStatus(failure),
             error: summarizeUnknownError(error),
         })
 

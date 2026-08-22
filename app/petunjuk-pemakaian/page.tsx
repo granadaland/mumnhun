@@ -12,7 +12,6 @@ import {
     Droplets,
     Phone,
     CheckCircle,
-    Timer,
     PlugZap,
     Gauge,
     Shield,
@@ -20,32 +19,56 @@ import {
 } from "lucide-react"
 import { SITE_NAME, SITE_URL } from "@/lib/constants"
 
+const PETUNJUK_TITLE = "Panduan Sewa Freezer ASI: Cara Pakai & Perawatan"
+const PETUNJUK_DESCRIPTION =
+    "Panduan sewa freezer ASI Mum 'n Hun: cara pakai, penyimpanan ASI perah yang benar, defrost, dan perawatan freezer. Butuh unit sewa? Hubungi kami via WhatsApp."
+
 export const metadata: Metadata = {
-    title: "Petunjuk Penggunaan Freezer ASI",
-    description:
-        "Panduan lengkap penggunaan freezer ASI dari Mum 'n Hun. Tips penyimpanan ASI yang benar, cara defrost, dan perawatan freezer.",
+    title: PETUNJUK_TITLE,
+    description: PETUNJUK_DESCRIPTION,
     alternates: {
         canonical: `${SITE_URL}/petunjuk-pemakaian`,
     },
     openGraph: {
-        title: "Petunjuk Penggunaan Freezer ASI",
-        description:
-            "Panduan lengkap penggunaan freezer ASI dari Mum 'n Hun. Tips penyimpanan ASI yang benar, cara defrost, dan perawatan freezer.",
+        title: `${PETUNJUK_TITLE} | ${SITE_NAME}`,
+        description: PETUNJUK_DESCRIPTION,
         url: `${SITE_URL}/petunjuk-pemakaian`,
         type: "article",
         siteName: SITE_NAME,
     },
     twitter: {
         card: "summary_large_image",
-        title: "Petunjuk Penggunaan Freezer ASI",
-        description:
-            "Panduan lengkap penggunaan freezer ASI dari Mum 'n Hun. Tips penyimpanan ASI yang benar, cara defrost, dan perawatan freezer.",
+        title: `${PETUNJUK_TITLE} | ${SITE_NAME}`,
+        description: PETUNJUK_DESCRIPTION,
     },
+}
+
+const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+        {
+            "@type": "ListItem",
+            position: 1,
+            name: "Beranda",
+            item: SITE_URL,
+        },
+        {
+            "@type": "ListItem",
+            position: 2,
+            name: "Petunjuk Penggunaan Freezer ASI",
+            item: `${SITE_URL}/petunjuk-pemakaian`,
+        },
+    ],
 }
 
 export default function PetunjukPage() {
     return (
         <>
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+            />
             {/* ═══════════════════════════════════════════════════════ */}
             {/* HERO SECTION                                           */}
             {/* ═══════════════════════════════════════════════════════ */}
@@ -79,7 +102,7 @@ export default function PetunjukPage() {
 
                         {/* Title */}
                         <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-[#382821] leading-tight mb-6">
-                            Petunjuk Penggunaan{" "}
+                            Panduan Sewa &amp; Penggunaan{" "}
                             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#466A68] to-[#2F4A48]">
                                 Freezer ASI
                             </span>

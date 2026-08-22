@@ -2,46 +2,61 @@ import { MetadataRoute } from "next"
 import prisma from "@/lib/db/prisma"
 import { SITE_URL } from "@/lib/constants"
 
-const STATIC_SITEMAP_LAST_MODIFIED = {
-    home: new Date("2026-02-15T00:00:00.000Z"),
-    blog: new Date("2026-02-15T00:00:00.000Z"),
-    petunjuk: new Date("2026-02-15T00:00:00.000Z"),
-    syaratKetentuan: new Date("2026-02-15T00:00:00.000Z"),
-    kontak: new Date("2026-02-15T00:00:00.000Z"),
-}
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+    // Derive the freshest content date from the latest published post so that
+    // dynamic pages (home, blog) reflect real content changes instead of a
+    // hardcoded date. Falls back to the current date when no posts exist.
+    const latestPost = await prisma.post.findFirst({
+        where: { status: "PUBLISHED" },
+        orderBy: { updatedAt: "desc" },
+        select: { updatedAt: true },
+    })
+
+    const contentLastModified = latestPost?.updatedAt ?? new Date()
+
     // Static pages
     const staticPages = [
         {
             url: SITE_URL,
-            lastModified: STATIC_SITEMAP_LAST_MODIFIED.home,
+            lastModified: contentLastModified,
             changeFrequency: "daily" as const,
             priority: 1,
         },
         {
             url: `${SITE_URL}/blog`,
-            lastModified: STATIC_SITEMAP_LAST_MODIFIED.blog,
+            lastModified: contentLastModified,
             changeFrequency: "daily" as const,
             priority: 0.9,
         },
         {
             url: `${SITE_URL}/petunjuk-pemakaian`,
-            lastModified: STATIC_SITEMAP_LAST_MODIFIED.petunjuk,
+            lastModified: new Date(),
             changeFrequency: "monthly" as const,
             priority: 0.5,
         },
         {
             url: `${SITE_URL}/syarat-ketentuan`,
-            lastModified: STATIC_SITEMAP_LAST_MODIFIED.syaratKetentuan,
+            lastModified: new Date(),
+            changeFrequency: "yearly" as const,
+            priority: 0.3,
+        },
+        {
+            url: `${SITE_URL}/kebijakan-privasi`,
+            lastModified: new Date(),
             changeFrequency: "yearly" as const,
             priority: 0.3,
         },
         {
             url: `${SITE_URL}/kontak`,
-            lastModified: STATIC_SITEMAP_LAST_MODIFIED.kontak,
+            lastModified: new Date(),
             changeFrequency: "yearly" as const,
             priority: 0.5,
+        },
+        {
+            url: `${SITE_URL}/html-sitemap`,
+            lastModified: new Date(),
+            changeFrequency: "weekly" as const,
+            priority: 0.3,
         },
     ]
 

@@ -1,5 +1,6 @@
 import type { ApiKeyCryptoConfigErrorCode } from "@/lib/security/api-key-crypto"
-import { UrlGuardError, getAiProviderGuardOptions, safeExternalFetch } from "@/lib/security/url-guard"
+import { UrlGuardError } from "@/lib/security/url-guard"
+import { probeProvider, type AuthStyle } from "@/lib/ai/openai-compatible"
 
 export type AiKeyConnectionStatus = "connected" | "failed" | "not_tested"
 
@@ -186,6 +187,20 @@ function classifyGeminiHttpStatus(status: number): AiKeyFailure {
 }
 
 function classifyOpenAiCompatibleHttpStatus(status: number): AiKeyFailure {
+    if (status === 401 || status === 403) {
+        return {
+            code: "PROVIDER_KEY_INVALID",
+            message: "API key provider tidak valid atau tidak memiliki izin akses",
+        }
+    }
+
+    if (status === 400 || status === 422) {
+        return {
+            code: "PROVIDER_REQUEST_FAILED",
+            message: "Provider menolak permintaan (cek nama model dan format request)",
+        }
+    }
+
     if (status === 404) {
         return {
             code: "PROVIDER_MODEL_UNAVAILABLE",
@@ -193,7 +208,24 @@ function classifyOpenAiCompatibleHttpStatus(status: number): AiKeyFailure {
         }
     }
 
-    return classifyProviderHttpStatus(status, "provider AI")
+    if (status === 429) {
+        return {
+            code: "PROVIDER_RATE_LIMITED",
+            message: "Provider AI terkena rate limit",
+        }
+    }
+
+    if (status >= 500) {
+        return {
+            code: "PROVIDER_UNAVAILABLE",
+            message: "Layanan provider AI sedang tidak tersedia",
+        }
+    }
+
+    return {
+        code: "PROVIDER_REQUEST_FAILED",
+        message: `Permintaan ke provider AI gagal (HTTP ${status})`,
+    }
 }
 
 function mapCryptoConfigToFailure(code: ApiKeyCryptoConfigErrorCode): AiKeyFailure {
@@ -228,6 +260,7 @@ function mapFailureToHttpStatus(failure: AiKeyFailure): number {
     if (failure.code === "PROVIDER_KEY_INVALID") return 400
     if (failure.code === "PROVIDER_BASE_URL_INVALID") return 400
     if (failure.code === "PROVIDER_MODEL_UNAVAILABLE") return 400
+    if (failure.code === "PROVIDER_REQUEST_FAILED") return 400
     if (failure.code === "PROVIDER_RATE_LIMITED") return 429
     if (failure.code.startsWith("CRYPTO_CONFIG_")) return 500
     if (failure.code === "NETWORK_TIMEOUT") return 504
@@ -247,6 +280,44 @@ function inferGeminiHttpStatusFromMessage(message: string): number | null {
     return status
 }
 
+/** Matches the "Provider HTTP 401: ..." shape emitted by the OpenAI-compatible client. */
+function inferProviderHttpStatusFromMessage(message: string): number | null {
+    const match = message.match(/Provider(?:\s+image)?\s+HTTP\s+(\d{3})/i)
+    if (!match) return null
+
+    const status = Number(match[1])
+    if (!Number.isInteger(status) || status < 100 || status > 599) return null
+    return status
+}
+
+/**
+ * Classifies an error raised while talking to a custom (non-Gemini) provider, so the
+ * dashboard never shows a Gemini-flavoured message for an OpenAI-compatible gateway.
+ */
+export function classifyProviderFailure(error: unknown): AiKeyFailure {
+    const errorLike = toErrorLike(error)
+
+    if (errorLike.name === "OpenAiCompatibleError") {
+        const status = (error as { status?: unknown }).status
+        if (typeof status === "number") {
+            return classifyOpenAiCompatibleHttpStatus(status)
+        }
+    }
+
+    const baseFailure = classifyAiKeyFailure(error)
+
+    // classifyAiKeyFailure only knows the Gemini message shape; re-map provider messages.
+    const providerStatus = inferProviderHttpStatusFromMessage(
+        sanitizeAiKeyErrorMessage(errorLike.message || "")
+    )
+
+    if (providerStatus) {
+        return classifyOpenAiCompatibleHttpStatus(providerStatus)
+    }
+
+    return baseFailure
+}
+
 export function classifyAiKeyFailure(error: unknown): AiKeyFailure {
     const errorLike = toErrorLike(error)
 
@@ -254,6 +325,13 @@ export function classifyAiKeyFailure(error: unknown): AiKeyFailure {
         return {
             code: "PROVIDER_BASE_URL_INVALID",
             message: sanitizeAiKeyErrorMessage(error.message),
+        }
+    }
+
+    if (errorLike.name === "OpenAiCompatibleError") {
+        const status = (error as { status?: unknown }).status
+        if (typeof status === "number") {
+            return classifyOpenAiCompatibleHttpStatus(status)
         }
     }
 
@@ -281,6 +359,13 @@ export function classifyAiKeyFailure(error: unknown): AiKeyFailure {
     const message = sanitizeAiKeyErrorMessage(
         errorLike.message || (typeof error === "string" ? error : "Unknown error")
     )
+
+    // Custom-provider messages are checked first so a non-Gemini failure is never
+    // reported with a Gemini label.
+    const providerStatus = inferProviderHttpStatusFromMessage(message)
+    if (providerStatus) {
+        return classifyOpenAiCompatibleHttpStatus(providerStatus)
+    }
 
     const inferredStatus = inferGeminiHttpStatusFromMessage(message)
     if (inferredStatus) {
@@ -357,38 +442,32 @@ export { getAiProviderGuardOptions } from "@/lib/security/url-guard"
 
 export type OpenAiCompatibleModel = {
     id: string
+    ownedBy: string | null
 }
 
 export type VerifyOpenAiCompatibleResult =
-    | { ok: true; models: OpenAiCompatibleModel[] }
+    | {
+        ok: true
+        models: OpenAiCompatibleModel[]
+        authStyle: AuthStyle
+        chatVerified: boolean
+        modelsEndpointAvailable: boolean
+    }
     | { ok: false; status: number; failure: AiKeyFailure }
 
-function parseOpenAiModelList(payload: unknown): OpenAiCompatibleModel[] {
-    if (!payload || typeof payload !== "object") return []
-
-    const data = (payload as { data?: unknown }).data
-    if (!Array.isArray(data)) return []
-
-    const models: OpenAiCompatibleModel[] = []
-    for (const entry of data) {
-        if (!entry || typeof entry !== "object") continue
-        const id = (entry as { id?: unknown }).id
-        if (typeof id === "string" && id.trim()) {
-            models.push({ id: id.trim() })
-        }
-    }
-
-    return models.slice(0, 200)
-}
-
 /**
- * Verifies a custom OpenAI-compatible provider by listing its models. The base URL is
- * re-validated against the SSRF guard on every call, including redirect hops.
+ * Verifies a custom OpenAI-compatible provider.
+ *
+ * Verification is intentionally lenient about provider quirks: the auth header style is
+ * probed (Bearer / raw / x-api-key), and a real chat completion is attempted because some
+ * gateways leave /models unauthenticated or omit it entirely. The model name is only
+ * rejected when the provider actually published a model list that excludes it.
  */
 export async function verifyOpenAiCompatibleApiKey(input: {
     baseUrl: string
     apiKey: string
     model?: string | null
+    authStyle?: AuthStyle | null
 }): Promise<VerifyOpenAiCompatibleResult> {
     const normalizedKey = input.apiKey.trim()
     if (!normalizedKey) {
@@ -403,31 +482,19 @@ export async function verifyOpenAiCompatibleApiKey(input: {
     }
 
     try {
-        const response = await safeExternalFetch(`${input.baseUrl.replace(/\/+$/, "")}/models`, {
-            method: "GET",
-            headers: {
-                Accept: "application/json",
-                Authorization: `Bearer ${normalizedKey}`,
-            },
-            cache: "no-store",
-            guard: getAiProviderGuardOptions(),
-            timeoutMs: 12_000,
+        const probe = await probeProvider({
+            baseUrl: input.baseUrl,
+            apiKey: normalizedKey,
+            model: input.model,
+            authStyle: input.authStyle,
         })
 
-        if (!response.ok) {
-            const failure = classifyOpenAiCompatibleHttpStatus(response.status)
-            return {
-                ok: false,
-                status: mapFailureToHttpStatus(failure),
-                failure,
-            }
-        }
+        const requestedModel = input.model?.trim()
 
-        const models = parseOpenAiModelList(await response.json().catch(() => null))
-
-        if (input.model?.trim() && models.length > 0) {
-            const requestedModel = input.model.trim()
-            const hasModel = models.some((model) => model.id === requestedModel)
+        // Only enforce the model name when the provider published a list AND the chat
+        // probe did not already succeed with that exact model.
+        if (requestedModel && !probe.chatVerified && probe.models.length > 0) {
+            const hasModel = probe.models.some((model) => model.id === requestedModel)
 
             if (!hasModel) {
                 return {
@@ -441,9 +508,15 @@ export async function verifyOpenAiCompatibleApiKey(input: {
             }
         }
 
-        return { ok: true, models }
+        return {
+            ok: true,
+            models: probe.models,
+            authStyle: probe.authStyle,
+            chatVerified: probe.chatVerified,
+            modelsEndpointAvailable: probe.modelsEndpointAvailable,
+        }
     } catch (error) {
-        const failure = classifyAiKeyFailure(error)
+        const failure = classifyProviderFailure(error)
         return {
             ok: false,
             status: mapFailureToHttpStatus(failure),

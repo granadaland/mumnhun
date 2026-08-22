@@ -10,9 +10,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "postinstall": "prisma generate",
-    "db:push": "npx prisma db push",
-    "db:generate": "npx prisma generate",
-    "db:studio": "npx prisma studio",
+    "db:push": "prisma db push",
+    "db:generate": "prisma generate",
+    "db:studio": "prisma studio",
     "admin:create": "npx tsx scripts/create-admin.ts",
     "import:dry-run": "npx tsx scripts/import-wordpress.ts --dry-run",
     "import": "npx tsx scripts/import-wordpress.ts"

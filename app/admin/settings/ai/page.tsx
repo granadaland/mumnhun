@@ -1,7 +1,7 @@
 "use client"
 
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react"
-import { Loader2, Plus, Trash2, Key } from "lucide-react"
+import { Loader2, Plus, RefreshCw, Search, Trash2, Key } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { AdminClientError, adminDelete, adminGet, adminPost, adminPut } from "@/lib/api/admin-client"
 
@@ -22,9 +22,25 @@ type ApiKeyItem = {
     baseUrl?: string | null
     model?: string | null
     capability?: string | null
+    authStyle?: string | null
     connectionStatus: ConnectionStatus
     lastError?: string | null
     lastErrorCode?: string | null
+    availableModels?: string[]
+}
+
+type DiscoveredModelItem = {
+    id: string
+    ownedBy: string | null
+}
+
+type DiscoverModelsResponse = {
+    success: boolean
+    data: {
+        provider: string
+        models: DiscoveredModelItem[]
+        authStyle: string | null
+    }
 }
 
 type ApiKeysResponse = {
@@ -68,6 +84,18 @@ function mapApiKeyErrorCode(errorCode: string | null, reason: string | null, fal
                 : "Model tidak tersedia pada provider ini."
         case "AI_KEY_MODEL_REQUIRED":
             return "Model wajib diisi untuk custom provider."
+        case "PROVIDER_REQUEST_FAILED":
+            return reason
+                ? `Provider menolak permintaan: ${reason}`
+                : "Provider menolak permintaan. Periksa nama model dan base URL."
+        case "PROVIDER_RATE_LIMITED":
+            return "Provider sedang membatasi permintaan (rate limit). Coba lagi nanti."
+        case "PROVIDER_UNAVAILABLE":
+            return "Layanan provider sedang tidak tersedia."
+        case "NETWORK_TIMEOUT":
+            return "Koneksi ke provider timeout. Periksa base URL lalu coba lagi."
+        case "NETWORK_ERROR":
+            return "Koneksi jaringan ke provider gagal."
         case "AI_KEY_CAPABILITY_UNSUPPORTED":
             return "Provider Gemini hanya mendukung capability text."
         case "AI_KEY_BASE_URL_NOT_APPLICABLE":
@@ -251,25 +279,32 @@ function validateNewKeyForm(form: NewKeyFormState): string | null {
     if (apiKeyError) return apiKeyError
 
     if (form.provider === "openai_compatible") {
-        const baseUrl = form.baseUrl.trim()
-        if (!baseUrl) {
-            return "Base URL wajib diisi untuk custom provider."
-        }
-
-        let parsed: URL
-        try {
-            parsed = new URL(baseUrl)
-        } catch {
-            return "Base URL harus berupa URL absolut, contoh: https://api.openai.com/v1"
-        }
-
-        if (parsed.protocol !== "https:") {
-            return "Base URL harus menggunakan https."
-        }
+        const baseUrlError = validateBaseUrl(form.baseUrl)
+        if (baseUrlError) return baseUrlError
 
         if (!form.model.trim()) {
-            return "Model wajib diisi untuk custom provider."
+            return "Model wajib diisi untuk custom provider. Klik \"Deteksi model\" atau tulis manual."
         }
+    }
+
+    return null
+}
+
+function validateBaseUrl(rawBaseUrl: string): string | null {
+    const baseUrl = rawBaseUrl.trim()
+    if (!baseUrl) {
+        return "Base URL wajib diisi untuk custom provider."
+    }
+
+    let parsed: URL
+    try {
+        parsed = new URL(baseUrl)
+    } catch {
+        return "Base URL harus berupa URL absolut, contoh: https://api.openai.com/v1"
+    }
+
+    if (parsed.protocol !== "https:") {
+        return "Base URL harus menggunakan https."
     }
 
     return null
@@ -284,9 +319,21 @@ export default function AiSettingsPage() {
     const [formError, setFormError] = useState<string | null>(null)
     const [adding, setAdding] = useState(false)
     const [mutatingKeyId, setMutatingKeyId] = useState<string | null>(null)
+    const [discovering, setDiscovering] = useState(false)
+    const [discoveredModels, setDiscoveredModels] = useState<DiscoveredModelItem[]>([])
+    const [modelFilter, setModelFilter] = useState("")
 
     const trimmedApiKey = useMemo(() => newKey.apiKey.trim(), [newKey.apiKey])
     const isCustomProvider = newKey.provider === "openai_compatible"
+
+    const filteredModels = useMemo(() => {
+        const query = modelFilter.trim().toLowerCase()
+        if (!query) return discoveredModels
+        return discoveredModels.filter((model) => model.id.toLowerCase().includes(query))
+    }, [discoveredModels, modelFilter])
+
+    const canDiscover =
+        isCustomProvider && newKey.baseUrl.trim().length > 0 && trimmedApiKey.length > 0
 
     const fetchKeys = useCallback(async (mode: "initial" | "refresh" = "refresh") => {
         if (mode === "initial") {
@@ -318,6 +365,99 @@ export default function AiSettingsPage() {
     useEffect(() => {
         void fetchKeys("initial")
     }, [fetchKeys])
+
+    /**
+     * Reads the model catalogue from the provider before anything is saved, so the
+     * operator can pick a valid model instead of guessing its exact name.
+     */
+    const handleDiscoverModels = async () => {
+        const baseUrlError = validateBaseUrl(newKey.baseUrl)
+        if (baseUrlError) {
+            setFormError(baseUrlError)
+            return
+        }
+
+        const apiKeyError = validateApiKey(newKey.apiKey)
+        if (apiKeyError) {
+            setFormError(apiKeyError)
+            return
+        }
+
+        setDiscovering(true)
+        setFormError(null)
+        setFeedback(null)
+
+        try {
+            const data = await adminPost<
+                DiscoverModelsResponse,
+                { provider: AiProvider; baseUrl: string; apiKey: string }
+            >("/api/admin/ai/models", {
+                body: {
+                    provider: newKey.provider,
+                    baseUrl: newKey.baseUrl.trim(),
+                    apiKey: newKey.apiKey.trim(),
+                },
+                timeoutMs: 30000,
+            })
+
+            if (data.success) {
+                setDiscoveredModels(data.data.models)
+
+                if (data.data.models.length === 0) {
+                    setFeedback({
+                        type: "error",
+                        message:
+                            "Provider tidak mengembalikan daftar model. Tulis nama model manual (mis. \"auto\").",
+                    })
+                    return
+                }
+
+                // Preselect the first model only when the field is still empty.
+                setNewKey((prev) => ({
+                    ...prev,
+                    model: prev.model.trim() ? prev.model : data.data.models[0].id,
+                }))
+
+                setFeedback({
+                    type: "success",
+                    message: `Ditemukan ${data.data.models.length} model tersedia.`,
+                })
+            }
+        } catch (err) {
+            setFeedback({
+                type: "error",
+                message: getClientErrorMessage(err, "Gagal membaca daftar model provider"),
+            })
+        } finally {
+            setDiscovering(false)
+        }
+    }
+
+    /** Re-runs the connection test for a saved key without changing its configuration. */
+    const handleRetestKey = async (id: string) => {
+        setMutatingKeyId(id)
+        setFeedback(null)
+
+        try {
+            const data = await adminPut<ApiKeyMutationResponse, { id: string; retest: boolean }>(
+                "/api/admin/ai/keys",
+                { body: { id, retest: true }, timeoutMs: 40000 }
+            )
+
+            if (data.success) {
+                setKeys((prev) => prev.map((k) => (k.id === id ? data.data : k)))
+                setFeedback({ type: "success", message: "Koneksi provider berhasil diuji ulang." })
+            }
+        } catch (err) {
+            setFeedback({
+                type: "error",
+                message: getClientErrorMessage(err, "Gagal menguji ulang koneksi"),
+            })
+        } finally {
+            await fetchKeys()
+            setMutatingKeyId(null)
+        }
+    }
 
     const handleAddKey = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault()
@@ -351,6 +491,8 @@ export default function AiSettingsPage() {
             if (data.success) {
                 setKeys((prev) => [...prev, data.data].sort((a, b) => a.order - b.order))
                 setNewKey(EMPTY_NEW_KEY)
+                setDiscoveredModels([])
+                setModelFilter("")
                 setFeedback({
                     type: "success",
                     message: "API key berhasil disimpan dan diuji koneksi.",
@@ -550,6 +692,16 @@ export default function AiSettingsPage() {
 
                                     <div className="flex items-center gap-1">
                                         <button
+                                            onClick={() => handleRetestKey(key.id)}
+                                            disabled={disableActions}
+                                            className="p-2 text-[#8C7A6B]/30 hover:text-[#466A68] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                            title="Uji ulang koneksi"
+                                            aria-label="Uji ulang koneksi API key"
+                                        >
+                                            <RefreshCw className={`h-4 w-4 ${isMutatingThisKey ? "animate-spin" : ""}`} />
+                                        </button>
+
+                                        <button
                                             onClick={() => handleToggleKey(key.id, key.isActive)}
                                             disabled={disableActions}
                                             className={`p-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${key.isActive
@@ -655,50 +807,6 @@ export default function AiSettingsPage() {
                             />
                         </div>
 
-                        {isCustomProvider && (
-                            <>
-                                <div>
-                                    <label htmlFor="ai-key-base-url" className="block text-sm font-medium text-[#8C7A6B]/80 mb-1.5">
-                                        Base URL
-                                    </label>
-                                    <input
-                                        id="ai-key-base-url"
-                                        type="url"
-                                        value={newKey.baseUrl}
-                                        onChange={(e) => {
-                                            setNewKey({ ...newKey, baseUrl: e.target.value })
-                                            if (formError) setFormError(null)
-                                        }}
-                                        placeholder="https://api.openai.com/v1"
-                                        className="w-full px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all font-mono"
-                                    />
-                                    <p className="text-[10px] text-[#8C7A6B]/40 mt-1">
-                                        Endpoint akan dipanggil sebagai <code>{"{baseUrl}"}/chat/completions</code>. Wajib https dan tidak boleh mengarah ke jaringan internal.
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <label htmlFor="ai-key-model" className="block text-sm font-medium text-[#8C7A6B]/80 mb-1.5">
-                                        Model
-                                    </label>
-                                    <input
-                                        id="ai-key-model"
-                                        type="text"
-                                        value={newKey.model}
-                                        onChange={(e) => {
-                                            setNewKey({ ...newKey, model: e.target.value })
-                                            if (formError) setFormError(null)
-                                        }}
-                                        placeholder="gpt-4o-mini"
-                                        className="w-full px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all font-mono"
-                                    />
-                                    <p className="text-[10px] text-[#8C7A6B]/40 mt-1">
-                                        Model diverifikasi terhadap daftar <code>/models</code> provider saat disimpan.
-                                    </p>
-                                </div>
-                            </>
-                        )}
-
                         <div>
                             <label htmlFor="ai-key-value" className="block text-sm font-medium text-[#8C7A6B]/80 mb-1.5">
                                 API Key
@@ -721,8 +829,104 @@ export default function AiSettingsPage() {
                                     : "border-[#D4BCAA]/20 focus:ring-[#466A68]/30"
                                     }`}
                             />
-                            {formError && <p className="text-xs text-red-700 mt-1.5">{formError}</p>}
                         </div>
+
+                        {isCustomProvider && (
+                            <>
+                                <div>
+                                    <label htmlFor="ai-key-base-url" className="block text-sm font-medium text-[#8C7A6B]/80 mb-1.5">
+                                        Base URL
+                                    </label>
+                                    <input
+                                        id="ai-key-base-url"
+                                        type="url"
+                                        value={newKey.baseUrl}
+                                        onChange={(e) => {
+                                            setNewKey({ ...newKey, baseUrl: e.target.value })
+                                            setDiscoveredModels([])
+                                            if (formError) setFormError(null)
+                                        }}
+                                        placeholder="https://api.openai.com/v1"
+                                        className="w-full px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all font-mono"
+                                    />
+                                    <p className="text-[10px] text-[#8C7A6B]/40 mt-1">
+                                        Endpoint dipanggil sebagai <code>{"{baseUrl}"}/chat/completions</code>. Wajib https dan tidak boleh mengarah ke jaringan internal.
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                                        <label htmlFor="ai-key-model" className="block text-sm font-medium text-[#8C7A6B]/80">
+                                            Model
+                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={handleDiscoverModels}
+                                            disabled={!canDiscover || discovering || adding}
+                                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs border border-[#466A68]/30 text-[#466A68] rounded-md hover:bg-[#466A68]/5 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            {discovering ? (
+                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                            ) : (
+                                                <Search className="h-3 w-3" />
+                                            )}
+                                            Deteksi model
+                                        </button>
+                                    </div>
+
+                                    {discoveredModels.length > 0 && (
+                                        <div className="mb-2 space-y-2">
+                                            <input
+                                                type="search"
+                                                value={modelFilter}
+                                                onChange={(e) => setModelFilter(e.target.value)}
+                                                placeholder={`Cari di ${discoveredModels.length} model...`}
+                                                className="w-full px-3 py-2 bg-[#F9F6F0] border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-xs placeholder-[#8C7A6B]/50 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30"
+                                            />
+                                            <select
+                                                value={discoveredModels.some((m) => m.id === newKey.model) ? newKey.model : ""}
+                                                onChange={(e) => {
+                                                    if (!e.target.value) return
+                                                    setNewKey((prev) => ({ ...prev, model: e.target.value }))
+                                                    if (formError) setFormError(null)
+                                                }}
+                                                size={Math.min(8, Math.max(3, filteredModels.length))}
+                                                className="w-full px-3 py-2 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[#466A68]/30"
+                                            >
+                                                {filteredModels.length === 0 ? (
+                                                    <option value="">Tidak ada model yang cocok</option>
+                                                ) : (
+                                                    filteredModels.map((model) => (
+                                                        <option key={model.id} value={model.id}>
+                                                            {model.id}
+                                                            {model.ownedBy ? ` — ${model.ownedBy}` : ""}
+                                                        </option>
+                                                    ))
+                                                )}
+                                            </select>
+                                        </div>
+                                    )}
+
+                                    <input
+                                        id="ai-key-model"
+                                        type="text"
+                                        value={newKey.model}
+                                        onChange={(e) => {
+                                            setNewKey({ ...newKey, model: e.target.value })
+                                            if (formError) setFormError(null)
+                                        }}
+                                        placeholder="gpt-4o-mini"
+                                        className="w-full px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all font-mono"
+                                    />
+                                    <p className="text-[10px] text-[#8C7A6B]/40 mt-1">
+                                        Isi Base URL dan API Key lalu klik &quot;Deteksi model&quot;. Jika provider tidak menyediakan daftar model, tulis manual (mis. <code>auto</code>).
+                                    </p>
+                                </div>
+                            </>
+                        )}
+
+                        {formError && <p className="text-xs text-red-700">{formError}</p>}
+
                         <button
                             type="submit"
                             disabled={adding || refreshing || trimmedApiKey.length === 0}

@@ -3,10 +3,18 @@
 import Link from "next/link"
 import {
     Bot, Sparkles, FileText, Link as LinkIcon, Globe, MessageSquare,
-    ArrowRight, CheckCircle2, Key,
+    ArrowRight, CheckCircle2, Cpu, CalendarDays,
 } from "lucide-react"
 
 const aiFeatures = [
+    {
+        href: "/admin/ai/content-audit",
+        icon: <CalendarDays className="h-6 w-6" />,
+        title: "Audit Konten & Kalender",
+        description: "Scan semua artikel publish, hasilkan ide konten berjadwal 30 hari, dan saran internal link.",
+        color: "from-teal-500 to-emerald-600",
+        badge: "active",
+    },
     {
         href: "/admin/ai/generate",
         icon: <Sparkles className="h-6 w-6" />,
@@ -61,7 +69,7 @@ export default function AiDashboardPage() {
                         </div>
                         <div>
                             <h1 className="text-2xl font-bold text-[#0F0A09]">AI Tools</h1>
-                            <p className="text-[#8C7A6B]/50 text-sm">Powered by Google Gemini</p>
+                            <p className="text-[#8C7A6B]/50 text-sm">Tiga model terpisah per tugas</p>
                         </div>
                     </div>
                     <p className="text-[#8C7A6B]/60 text-sm max-w-xl mt-2">
@@ -72,15 +80,18 @@ export default function AiDashboardPage() {
 
             {/* Setup Reminder */}
             <Link
-                href="/admin/settings/ai"
+                href="/admin/settings/ai/models"
                 className="flex items-center gap-4 bg-white border border-[#D4BCAA]/20 rounded-xl p-5 hover:border-[#466A68]/30 transition-all group"
             >
                 <div className="w-10 h-10 bg-[#466A68]/15 rounded-lg flex items-center justify-center text-[#466A68]">
-                    <Key className="h-5 w-5" />
+                    <Cpu className="h-5 w-5" />
                 </div>
                 <div className="flex-1">
-                    <p className="text-sm font-medium text-[#0F0A09]">Konfigurasi API Key</p>
-                    <p className="text-xs text-[#8C7A6B]/40 mt-0.5">Pastikan API key Gemini sudah dikonfigurasi sebelum menggunakan fitur AI</p>
+                    <p className="text-sm font-medium text-[#0F0A09]">Konfigurasi Model per Tugas</p>
+                    <p className="text-xs text-[#8C7A6B]/40 mt-0.5">
+                        Atur Model A (Scanning), Model B (Generate Teks), dan Model C (Generate Gambar) — masing-masing
+                        dengan API key dan base URL sendiri, tanpa rotasi.
+                    </p>
                 </div>
                 <ArrowRight className="h-4 w-4 text-[#8C7A6B]/30 group-hover:text-[#466A68] transition-colors" />
             </Link>

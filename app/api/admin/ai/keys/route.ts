@@ -9,6 +9,7 @@ import {
 } from "@/lib/security/api-key-crypto"
 import {
     classifyAiKeyFailure,
+    classifyProviderFailure,
     deriveAiKeyConnectionState,
     formatStoredAiKeyFailure,
     toAiKeyFailureHttpStatus,
@@ -28,6 +29,7 @@ import {
     AI_PROVIDER_GEMINI,
     AI_PROVIDER_OPENAI_COMPATIBLE,
 } from "@/lib/ai/provider"
+import { isAuthStyle, type AuthStyle, type DiscoveredModel } from "@/lib/ai/openai-compatible"
 
 const MAX_API_KEYS = 5
 
@@ -46,7 +48,6 @@ const createKeySchema = z.object({
     model: z.string().trim().max(200).optional().nullable(),
     capability: z.enum(AI_CAPABILITIES).optional(),
 })
-
 const updateKeySchema = z.object({
     id: z.string().trim().min(1, "Key ID is required"),
     isActive: z.boolean().optional(),
@@ -55,6 +56,8 @@ const updateKeySchema = z.object({
     baseUrl: z.string().trim().max(2000).optional().nullable(),
     model: z.string().trim().max(200).optional().nullable(),
     capability: z.enum(AI_CAPABILITIES).optional(),
+    /** Force a fresh connection test without changing anything else. */
+    retest: z.boolean().optional(),
 })
 
 const deleteKeySchema = z.object({
@@ -88,6 +91,7 @@ function sanitizeKeyRecord(key: {
     baseUrl?: string | null
     model?: string | null
     capability?: string | null
+    authStyle?: string | null
 }) {
     const connectionState = deriveAiKeyConnectionState({
         lastError: key.lastError,
@@ -105,6 +109,7 @@ function sanitizeKeyRecord(key: {
         baseUrl: key.baseUrl ?? null,
         model: key.model ?? null,
         capability: key.capability ?? "text",
+        authStyle: key.authStyle ?? null,
         connectionStatus: connectionState.connectionStatus,
         lastError: connectionState.lastError,
         lastErrorCode: connectionState.lastErrorCode,
@@ -154,11 +159,15 @@ function getVerificationFailureMessage(errorCode: string): string {
         return "Model tidak tersedia pada provider ini"
     }
 
+    if (errorCode === "PROVIDER_REQUEST_FAILED") {
+        return "Provider menolak permintaan verifikasi"
+    }
+
     return "Gagal memverifikasi API key"
 }
 
 type VerificationOutcome =
-    | { ok: true }
+    | { ok: true; authStyle?: AuthStyle; models?: DiscoveredModel[]; chatVerified?: boolean }
     | { ok: false; status: number; failure: AiKeyFailure }
 
 async function verifyProviderCredentials(input: {
@@ -166,6 +175,7 @@ async function verifyProviderCredentials(input: {
     apiKey: string
     baseUrl?: string | null
     model?: string | null
+    authStyle?: AuthStyle | null
 }): Promise<VerificationOutcome> {
     if (input.provider === AI_PROVIDER_OPENAI_COMPATIBLE) {
         const baseUrl = input.baseUrl?.trim()
@@ -184,9 +194,18 @@ async function verifyProviderCredentials(input: {
             baseUrl,
             apiKey: input.apiKey,
             model: input.model,
+            authStyle: input.authStyle,
         })
 
-        if (result.ok) return { ok: true }
+        if (result.ok) {
+            return {
+                ok: true,
+                authStyle: result.authStyle,
+                models: result.models,
+                chatVerified: result.chatVerified,
+            }
+        }
+
         return { ok: false, status: result.status, failure: result.failure }
     }
 
@@ -213,7 +232,7 @@ async function normalizeCustomBaseUrl(rawBaseUrl: string): Promise<
             }
         }
 
-        return { ok: false, failure: classifyAiKeyFailure(error) }
+        return { ok: false, failure: classifyProviderFailure(error) }
     }
 }
 
@@ -380,6 +399,8 @@ export async function POST(request: NextRequest) {
                 capability,
                 baseUrl: normalizedBaseUrl,
                 model: normalizedModel,
+                // Cache the auth header style that verification proved works.
+                authStyle: verification.ok && verification.authStyle ? verification.authStyle : null,
                 label: payload.label?.trim() ? payload.label.trim() : null,
                 apiKey: encryptApiKey(normalizedApiKey),
                 order: count,
@@ -395,11 +416,24 @@ export async function POST(request: NextRequest) {
             role: adminCheck.identity.role,
             roleSource: adminCheck.identity.source,
             status: 200,
-            payloadSummary: { createdId: newKey.id, provider, capability },
+            payloadSummary: {
+                createdId: newKey.id,
+                provider,
+                capability,
+                chatVerified: verification.ok ? Boolean(verification.chatVerified) : false,
+            },
             validation: { ok: true },
         })
 
-        return NextResponse.json({ success: true, data: sanitizeKeyRecord(newKey) })
+        return NextResponse.json({
+            success: true,
+            data: {
+                ...sanitizeKeyRecord(newKey),
+                ...(verification.ok && verification.models?.length
+                    ? { availableModels: verification.models.map((model) => model.id) }
+                    : {}),
+            },
+        })
     } catch (error) {
         if (error instanceof ApiKeyCryptoConfigError) {
             const failure = classifyAiKeyFailure(error)
@@ -418,7 +452,7 @@ export async function POST(request: NextRequest) {
             })
         }
 
-        const failure = classifyAiKeyFailure(error)
+        const failure = classifyProviderFailure(error)
         logAdminError({
             requestId,
             action: "ai-keys:create",
@@ -469,6 +503,7 @@ export async function PUT(request: NextRequest) {
             baseUrl?: string | null
             model?: string | null
             capability?: string
+            authStyle?: string | null
             lastUsedAt?: Date | null
             lastError?: string | null
         } = {}
@@ -538,13 +573,16 @@ export async function PUT(request: NextRequest) {
 
         const effectiveBaseUrl = updateData.baseUrl ?? existingKey.baseUrl
         const effectiveModel = updateData.model ?? existingKey.model
+        const effectiveAuthStyle = isAuthStyle(existingKey.authStyle) ? existingKey.authStyle : null
 
         const isRotatingKey = typeof payload.apiKey === "string"
         const isActivatingExistingKey =
             payload.isActive === true && !isRotatingKey && !existingKey.isActive
         const isChangingProviderConfig = updateData.baseUrl !== undefined || updateData.model !== undefined
+        const isRetestRequested = payload.retest === true
 
-        const shouldVerifyWithExistingKey = isActivatingExistingKey || (isChangingProviderConfig && !isRotatingKey)
+        const shouldVerifyWithExistingKey =
+            isRetestRequested || isActivatingExistingKey || (isChangingProviderConfig && !isRotatingKey)
 
         if (shouldVerifyWithExistingKey) {
             try {
@@ -554,6 +592,7 @@ export async function PUT(request: NextRequest) {
                     apiKey: decryptedExistingKey,
                     baseUrl: effectiveBaseUrl,
                     model: effectiveModel,
+                    authStyle: effectiveAuthStyle,
                 })
 
                 if (!verification.ok) {
@@ -586,10 +625,14 @@ export async function PUT(request: NextRequest) {
                     )
                 }
 
+                if (verification.authStyle) {
+                    updateData.authStyle = verification.authStyle
+                }
+
                 updateData.lastError = null
                 updateData.lastUsedAt = new Date()
             } catch (error) {
-                const failure = classifyAiKeyFailure(error)
+                const failure = classifyProviderFailure(error)
 
                 await prisma.aiApiKey.update({
                     where: { id },
@@ -623,6 +666,7 @@ export async function PUT(request: NextRequest) {
                 apiKey: normalizedApiKey,
                 baseUrl: effectiveBaseUrl,
                 model: effectiveModel,
+                authStyle: effectiveAuthStyle,
             })
 
             if (!verification.ok) {
@@ -653,6 +697,10 @@ export async function PUT(request: NextRequest) {
                         reason: verification.failure.message,
                     }
                 )
+            }
+
+            if (verification.ok && verification.authStyle) {
+                updateData.authStyle = verification.authStyle
             }
 
             updateData.apiKey = encryptApiKey(normalizedApiKey)
@@ -702,7 +750,7 @@ export async function PUT(request: NextRequest) {
             })
         }
 
-        const failure = classifyAiKeyFailure(error)
+        const failure = classifyProviderFailure(error)
         logAdminError({
             requestId,
             action: "ai-keys:update",

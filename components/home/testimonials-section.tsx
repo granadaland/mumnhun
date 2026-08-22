@@ -1,11 +1,11 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { ChevronLeft, ChevronRight, Star, Quote } from "lucide-react"
+import { ChevronLeft, ChevronRight, Star, Quote, CheckCircle2 } from "lucide-react"
 import { TESTIMONIALS } from "@/lib/constants"
 import { Container } from "@/components/layout/container"
 
-const AUTO_SLIDE_INTERVAL = 5000 // 5 seconds
+const AUTO_SLIDE_INTERVAL = 6000
 
 export function TestimonialsSection() {
     const [currentIndex, setCurrentIndex] = useState(0)
@@ -17,7 +17,7 @@ export function TestimonialsSection() {
         setTimeout(() => {
             setCurrentIndex(newIndex)
             setIsVisible(true)
-        }, 300)
+        }, 200)
     }, [])
 
     const handleNext = useCallback(() => {
@@ -30,14 +30,10 @@ export function TestimonialsSection() {
         changeSlide(prevIndex)
     }, [currentIndex, changeSlide])
 
-    // Auto-slide effect
+    // Auto-slide
     useEffect(() => {
         if (isPaused) return
-
-        const intervalId = setInterval(() => {
-            handleNext()
-        }, AUTO_SLIDE_INTERVAL)
-
+        const intervalId = setInterval(handleNext, AUTO_SLIDE_INTERVAL)
         return () => clearInterval(intervalId)
     }, [isPaused, handleNext])
 
@@ -45,146 +41,133 @@ export function TestimonialsSection() {
 
     return (
         <section
-            className="py-20 md:py-24 px-6 relative overflow-hidden bg-[#F0E7DB]"
+            className="py-20 md:py-28 px-4 sm:px-6 relative overflow-hidden bg-[#F7F3EE]"
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
+            aria-labelledby="testimonials-heading"
         >
-            {/* Background blobs */}
-            <div className="absolute top-0 left-0 w-64 h-64 bg-[#C48B77]/5 rounded-full blur-3xl -translate-y-1/2" />
-            <div className="absolute bottom-0 right-0 w-80 h-80 bg-[#466A68]/5 rounded-full blur-3xl translate-y-1/3" />
-
             <Container>
-                <div className="flex flex-col md:flex-row items-end justify-between mb-16 gap-6">
-                    <div className="text-center md:text-left">
-                        <div className="inline-block px-4 py-1.5 rounded-full bg-[#466A68]/10 text-[#466A68] font-semibold text-sm mb-4">
-                            Mum &apos;N Hun Review
+                {/* Header */}
+                <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 sm:mb-16 gap-6">
+                    <div>
+                        <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#2E5650]/10 text-[#2E5650] text-xs font-bold uppercase tracking-wider mb-3">
+                            <Star className="w-3.5 h-3.5 fill-[#2E5650]" />
+                            Pengalaman Nyata Ibu
                         </div>
-                        <h2 className="text-3xl md:text-5xl font-bold text-[#382821] tracking-tight mb-4">
-                            Kata Mereka
+                        <h2 id="testimonials-heading" className="text-3xl md:text-5xl font-bold text-[#281E19] tracking-tight">
+                            Cerita Bahagia Mums
                         </h2>
-                        <p className="text-lg text-[#382821]/60 max-w-md">
-                            Cerita kebahagiaan dari para ibu hebat yang telah terbantu layanan rental freezer asi.
+                        <p className="text-sm md:text-base text-[#382821]/70 mt-2 max-w-lg">
+                            Kepercayaan lebih dari 5.000+ ibu menyusui di Jabodetabek yang telah merasakan kemudahan sewa freezer ASI kami.
                         </p>
                     </div>
 
-                    {/* Desktop Nav + Progress Dots */}
-                    <div className="hidden md:flex items-center gap-6">
-                        {/* Progress Dots */}
-                        <div className="flex gap-2">
+                    {/* Desktop Navigation & Dots */}
+                    <div className="hidden md:flex items-center gap-5">
+                        <div className="flex gap-1.5">
                             {TESTIMONIALS.map((_, idx) => (
                                 <button
                                     key={idx}
                                     onClick={() => changeSlide(idx)}
-                                    className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${idx === currentIndex
-                                        ? "bg-[#466A68] w-8"
-                                        : "bg-[#382821]/20 hover:bg-[#382821]/40"
+                                    className={`h-2 rounded-full transition-all duration-300 ${idx === currentIndex
+                                        ? "bg-[#2E5650] w-7"
+                                        : "bg-stone-300 hover:bg-stone-400 w-2"
                                         }`}
-                                    aria-label={`Go to testimonial ${idx + 1}`}
+                                    aria-label={`Lihat testimoni ke-${idx + 1}`}
                                 />
                             ))}
                         </div>
 
-                        {/* Nav Buttons */}
-                        <div className="flex gap-3">
+                        <div className="flex gap-2">
                             <button
                                 onClick={handlePrev}
-                                className="w-14 h-14 rounded-full border border-[#382821]/10 hover:bg-[#466A68] hover:text-white hover:border-[#466A68] transition-all flex items-center justify-center text-[#382821]/60"
-                                aria-label="Lihat testimoni sebelumnya"
+                                className="w-11 h-11 rounded-full bg-white border border-stone-200 text-[#281E19] hover:bg-[#2E5650] hover:text-white hover:border-[#2E5650] active:scale-95 transition-all flex items-center justify-center shadow-xs"
+                                aria-label="Testimoni sebelumnya"
                             >
-                                <ChevronLeft size={24} />
+                                <ChevronLeft className="w-5 h-5" />
                             </button>
                             <button
                                 onClick={handleNext}
-                                className="w-14 h-14 rounded-full border border-[#382821]/10 hover:bg-[#466A68] hover:text-white hover:border-[#466A68] transition-all flex items-center justify-center text-[#382821]/60"
-                                aria-label="Lihat testimoni berikutnya"
+                                className="w-11 h-11 rounded-full bg-white border border-stone-200 text-[#281E19] hover:bg-[#2E5650] hover:text-white hover:border-[#2E5650] active:scale-95 transition-all flex items-center justify-center shadow-xs"
+                                aria-label="Testimoni berikutnya"
                             >
-                                <ChevronRight size={24} />
+                                <ChevronRight className="w-5 h-5" />
                             </button>
                         </div>
                     </div>
                 </div>
 
+                {/* Testimonial Card */}
                 <div className="relative">
-                    {/* Glass Card */}
-                    <div className="bg-white/60 backdrop-blur-2xl rounded-[3rem] p-8 md:p-16 shadow-soft border border-white/60 relative z-10 min-h-[600px] md:min-h-[500px] flex items-center">
+                    <div className="bg-white rounded-3xl md:rounded-[2.5rem] p-6 sm:p-10 md:p-14 shadow-[0_12px_40px_-12px_rgba(56,40,33,0.06)] border border-stone-200/80 min-h-[320px] md:min-h-[260px] flex items-center">
                         <div
-                            className={`flex flex-col md:flex-row gap-10 lg:gap-20 items-center w-full transition-all duration-300 ease-in-out ${isVisible
+                            className={`flex flex-col md:flex-row gap-6 md:gap-12 items-center md:items-start w-full transition-all duration-300 ${isVisible
                                 ? "opacity-100 translate-y-0"
-                                : "opacity-0 translate-y-4"
+                                : "opacity-0 translate-y-2"
                                 }`}
                         >
-                            {/* Avatar Section - CSS Initials */}
-                            <div className="shrink-0 relative group">
-                                <div className="absolute inset-0 bg-gradient-to-tr from-[#466A68] to-[#C48B77] rounded-[2rem] blur-lg opacity-40 group-hover:opacity-60 transition-opacity" />
-                                <div className="w-40 h-40 md:w-56 md:h-56 rounded-[2rem] bg-gradient-to-br from-[#466A68] to-[#2F4A48] shadow-lg border-4 border-white relative z-10 rotate-3 group-hover:rotate-0 transition-transform duration-500 flex items-center justify-center">
-                                    <span className="text-white text-5xl md:text-7xl font-bold">
-                                        {testimonial.initials}
-                                    </span>
+                            {/* Avatar / Initial Badge */}
+                            <div className="shrink-0 flex flex-col items-center">
+                                <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl md:rounded-3xl bg-gradient-to-br from-[#2E5650] to-[#1F3E3A] text-white flex items-center justify-center shadow-md border-2 border-white text-2xl md:text-3xl font-bold">
+                                    {testimonial.initials}
                                 </div>
-                                <div className="absolute -bottom-5 right-0 bg-white px-4 py-2 rounded-full shadow-lg flex items-center gap-1.5 z-20 whitespace-nowrap border border-gray-100">
-                                    <div className="flex text-yellow-400">
-                                        {[...Array(5)].map((_, i) => (
-                                            <Star key={i} size={12} fill="currentColor" />
-                                        ))}
-                                    </div>
+                                <div className="flex text-amber-400 mt-3 gap-0.5">
+                                    {[...Array(5)].map((_, i) => (
+                                        <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                                    ))}
                                 </div>
                             </div>
 
-                            {/* Content Section */}
-                            <div className="flex-1 text-center md:text-left relative">
-                                <Quote className="hidden md:block absolute -top-10 -left-6 text-[#466A68]/10 w-24 h-24 rotate-180" />
-
-                                <p className={`text-[#382821] font-medium leading-relaxed mb-8 relative z-10 tracking-tight transition-all duration-300 ${testimonial.content.length > 200
-                                        ? "text-base md:text-xl"
-                                        : "text-xl md:text-3xl"
-                                    }`}>
+                            {/* Content */}
+                            <div className="flex-1 text-center md:text-left">
+                                <p className="text-[#281E19] text-base md:text-xl lg:text-2xl font-medium leading-relaxed mb-6 italic tracking-tight">
                                     &ldquo;{testimonial.content}&rdquo;
                                 </p>
 
-                                <div className="border-l-4 border-[#C48B77] pl-5 text-left inline-block">
-                                    <h4 className="text-xl font-bold text-[#382821]">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-center md:justify-start gap-2 pt-2 border-t border-stone-100">
+                                    <h3 className="text-base font-bold text-[#281E19]">
                                         {testimonial.name}
-                                    </h4>
-                                    <p className="text-[#382821]/50 text-sm font-medium uppercase tracking-wider mt-1">
-                                        {testimonial.role}
+                                    </h3>
+                                    <span className="hidden sm:inline text-stone-300">•</span>
+                                    <p className="text-xs text-[#2E5650] font-semibold flex items-center justify-center md:justify-start gap-1">
+                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                        {testimonial.role} (Penyewa Terverifikasi)
                                     </p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Mobile Nav + Progress Dots */}
-                    <div className="flex flex-col items-center gap-4 mt-8 md:hidden">
-                        {/* Progress Dots */}
-                        <div className="flex gap-2">
+                    {/* Mobile Navigation Controls */}
+                    <div className="flex items-center justify-between mt-6 md:hidden">
+                        <div className="flex gap-1.5">
                             {TESTIMONIALS.map((_, idx) => (
                                 <button
                                     key={idx}
                                     onClick={() => changeSlide(idx)}
-                                    className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${idx === currentIndex
-                                        ? "bg-[#466A68] w-6"
-                                        : "bg-[#382821]/20"
+                                    className={`h-2 rounded-full transition-all duration-300 ${idx === currentIndex
+                                        ? "bg-[#2E5650] w-6"
+                                        : "bg-stone-300 w-2"
                                         }`}
-                                    aria-label={`Go to testimonial ${idx + 1}`}
+                                    aria-label={`Testimoni ke-${idx + 1}`}
                                 />
                             ))}
                         </div>
 
-                        {/* Nav Buttons */}
-                        <div className="flex gap-4">
+                        <div className="flex gap-2">
                             <button
                                 onClick={handlePrev}
-                                className="w-12 h-12 bg-white rounded-full shadow-md flex items-center justify-center text-[#382821] active:scale-95"
-                                aria-label="Lihat testimoni sebelumnya"
+                                className="w-10 h-10 bg-white rounded-full border border-stone-200 shadow-xs flex items-center justify-center text-[#281E19] active:scale-95"
+                                aria-label="Sebelumnya"
                             >
-                                <ChevronLeft size={20} />
+                                <ChevronLeft className="w-4 h-4" />
                             </button>
                             <button
                                 onClick={handleNext}
-                                className="w-12 h-12 bg-white rounded-full shadow-md flex items-center justify-center text-[#382821] active:scale-95"
-                                aria-label="Lihat testimoni berikutnya"
+                                className="w-10 h-10 bg-white rounded-full border border-stone-200 shadow-xs flex items-center justify-center text-[#281E19] active:scale-95"
+                                aria-label="Berikutnya"
                             >
-                                <ChevronRight size={20} />
+                                <ChevronRight className="w-4 h-4" />
                             </button>
                         </div>
                     </div>
@@ -193,3 +176,4 @@ export function TestimonialsSection() {
         </section>
     )
 }
+

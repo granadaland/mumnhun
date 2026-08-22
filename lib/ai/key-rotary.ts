@@ -8,11 +8,13 @@ import {
 import {
     AI_PROVIDER_OPENAI_COMPATIBLE,
     generateArticleWithProvider,
+    isCustomProvider,
     type AiArticleOutput,
     type AiCapability,
     type GenerateArticleInput,
     type ResolvedAiProvider,
 } from "@/lib/ai/provider"
+import { isAuthStyle, type AuthStyle } from "@/lib/ai/openai-compatible"
 
 const MAX_KEY_ATTEMPTS = 3
 
@@ -23,12 +25,7 @@ export type AiKeyRecord = {
     baseUrl: string | null
     model: string | null
     capability: string
-}
-
-export type ArticleGenerationResult = {
-    article: AiArticleOutput
-    usedKeyId: string
-    attemptedKeyIds: string[]
+    authStyle: string | null
 }
 
 export class NoActiveAiKeyError extends Error {
@@ -51,14 +48,14 @@ export class AllAiKeysFailedError extends Error {
 }
 
 /**
- * Loads active keys for a capability, ordered by the existing rotary strategy
- * (lowest usage first). An explicit keyId pins the selection to one provider.
+ * Loads active keys for a capability, ordered by the rotary strategy (lowest usage
+ * first). An explicit keyId pins the selection to one provider.
  */
 export async function loadActiveAiKeys(options: {
     capability: AiCapability
     keyId?: string | null
 }): Promise<AiKeyRecord[]> {
-    const keys = await prisma.aiApiKey.findMany({
+    return prisma.aiApiKey.findMany({
         where: {
             isActive: true,
             capability: options.capability,
@@ -72,10 +69,9 @@ export async function loadActiveAiKeys(options: {
             baseUrl: true,
             model: true,
             capability: true,
+            authStyle: true,
         },
     })
-
-    return keys
 }
 
 export function toResolvedProvider(record: AiKeyRecord): ResolvedAiProvider {
@@ -84,16 +80,25 @@ export function toResolvedProvider(record: AiKeyRecord): ResolvedAiProvider {
         apiKey: decryptStoredApiKey(record.apiKey),
         baseUrl: record.baseUrl,
         model: record.model,
+        authStyle: isAuthStyle(record.authStyle) ? record.authStyle : null,
     }
 }
 
-async function markKeySuccess(keyId: string): Promise<void> {
+async function markKeySuccess(
+    keyId: string,
+    options: { authStyle?: AuthStyle | null; currentAuthStyle?: string | null } = {}
+): Promise<void> {
+    // Persist a newly discovered auth style so later calls skip the probing.
+    const shouldUpdateAuthStyle =
+        Boolean(options.authStyle) && options.authStyle !== options.currentAuthStyle
+
     await prisma.aiApiKey.update({
         where: { id: keyId },
         data: {
             usageCount: { increment: 1 },
             lastUsedAt: new Date(),
             lastError: null,
+            ...(shouldUpdateAuthStyle ? { authStyle: options.authStyle } : {}),
         },
     })
 }
@@ -108,55 +113,114 @@ async function markKeyFailure(keyId: string, failure: AiKeyFailure): Promise<voi
     })
 }
 
+export type RotaryResult<T> = {
+    value: T
+    usedKeyId: string
+    usedProvider: string
+    usedModel: string | null
+    attemptedKeyIds: string[]
+}
+
 /**
- * Runs article generation across the rotary key set, recording per-key outcomes so the
- * dashboard can surface which provider failed and why.
+ * Runs an AI operation across the rotary key set for a capability.
+ *
+ * Each key is tried in order; per-key outcomes are recorded so the dashboard can show
+ * which provider failed and why. The task callback receives the resolved provider so
+ * it can pick the right prompt shape without knowing about key storage.
  */
-export async function generateArticleWithRotary(input: {
-    keys: AiKeyRecord[]
-    payload: GenerateArticleInput
+export async function runWithAiRotary<T>(input: {
+    capability?: AiCapability
+    keyId?: string | null
+    keys?: AiKeyRecord[]
+    run: (provider: ResolvedAiProvider, record: AiKeyRecord) => Promise<{ value: T; authStyle?: AuthStyle }>
     onAttempt?: (attemptIndex: number, attemptedKeyIds: string[]) => Promise<void> | void
-}): Promise<ArticleGenerationResult> {
-    if (input.keys.length === 0) {
+}): Promise<RotaryResult<T>> {
+    const keys =
+        input.keys ??
+        (await loadActiveAiKeys({ capability: input.capability ?? "text", keyId: input.keyId }))
+
+    if (keys.length === 0) {
         throw new NoActiveAiKeyError("Tidak ada API key AI aktif")
     }
 
     const attemptedKeyIds: string[] = []
-    const maxAttempts = Math.min(input.keys.length, MAX_KEY_ATTEMPTS)
-    let lastFailure: AiKeyFailure = { code: "UNKNOWN_ERROR", message: "AI generation failed" }
+    const maxAttempts = Math.min(keys.length, MAX_KEY_ATTEMPTS)
+    let lastFailure: AiKeyFailure = { code: "UNKNOWN_ERROR", message: "AI request failed" }
 
     for (let index = 0; index < maxAttempts; index += 1) {
-        const keyRecord = input.keys[index]
-        attemptedKeyIds.push(keyRecord.id)
+        const record = keys[index]
+        attemptedKeyIds.push(record.id)
 
         await input.onAttempt?.(index, [...attemptedKeyIds])
 
         try {
-            const resolved = toResolvedProvider(keyRecord)
-            const article = await generateArticleWithProvider(resolved, input.payload)
+            const resolved = toResolvedProvider(record)
+            const outcome = await input.run(resolved, record)
 
-            await markKeySuccess(keyRecord.id)
+            await markKeySuccess(record.id, {
+                authStyle: outcome.authStyle,
+                currentAuthStyle: record.authStyle,
+            })
 
-            return { article, usedKeyId: keyRecord.id, attemptedKeyIds }
+            return {
+                value: outcome.value,
+                usedKeyId: record.id,
+                usedProvider: record.provider,
+                usedModel: record.model,
+                attemptedKeyIds,
+            }
         } catch (error) {
             const failure = classifyAiKeyFailure(error)
             lastFailure = failure
-            await markKeyFailure(keyRecord.id, failure)
+            await markKeyFailure(record.id, failure)
         }
     }
 
     throw new AllAiKeysFailedError(lastFailure, attemptedKeyIds)
 }
 
+export type ArticleGenerationResult = {
+    article: AiArticleOutput
+    usedKeyId: string
+    attemptedKeyIds: string[]
+}
+
+/** Article generation on top of the generic rotary runner. */
+export async function generateArticleWithRotary(input: {
+    keys?: AiKeyRecord[]
+    keyId?: string | null
+    payload: GenerateArticleInput
+    onAttempt?: (attemptIndex: number, attemptedKeyIds: string[]) => Promise<void> | void
+}): Promise<ArticleGenerationResult> {
+    const result = await runWithAiRotary<AiArticleOutput>({
+        capability: "text",
+        keyId: input.keyId,
+        keys: input.keys,
+        onAttempt: input.onAttempt,
+        run: async (provider) => {
+            const article = await generateArticleWithProvider(provider, input.payload)
+            const { usedAuthStyle, ...rest } = article
+            return { value: rest, authStyle: usedAuthStyle }
+        },
+    })
+
+    return {
+        article: result.value,
+        usedKeyId: result.usedKeyId,
+        attemptedKeyIds: result.attemptedKeyIds,
+    }
+}
+
 /**
- * Picks an image-capable OpenAI-compatible provider. Gemini image generation is not
- * wired up, so image keys must be OpenAI-compatible.
+ * Picks an image-capable provider. Image generation uses the OpenAI images API shape,
+ * so Gemini keys are not eligible.
  */
 export async function resolveImageProvider(keyId?: string | null): Promise<{
     keyId: string
     apiKey: string
     baseUrl: string
     model: string
+    authStyle: AuthStyle | null
 } | null> {
     const keys = await loadActiveAiKeys({ capability: "image", keyId })
 
@@ -172,8 +236,11 @@ export async function resolveImageProvider(keyId?: string | null): Promise<{
             apiKey: decryptStoredApiKey(record.apiKey),
             baseUrl,
             model,
+            authStyle: isAuthStyle(record.authStyle) ? record.authStyle : null,
         }
     }
 
     return null
 }
+
+export { isCustomProvider }

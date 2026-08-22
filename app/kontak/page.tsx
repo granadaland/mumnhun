@@ -6,29 +6,56 @@ import { Input } from "@/components/ui/input"
 import { SITE_NAME, SITE_URL, CONTACT_INFO, SOCIAL_URLS } from "@/lib/constants"
 import Link from "next/link"
 
+const KONTAK_TITLE = "Hubungi Kami – Sewa Freezer ASI & Rental Kulkas ASI"
+const KONTAK_DESCRIPTION =
+    "Hubungi Mum 'n Hun untuk konsultasi sewa freezer ASI dan rental kulkas ASI di Jabodetabek. Respon WhatsApp ±5 menit, tersedia setiap hari kecuali Jumat."
+
 export const metadata: Metadata = {
-    title: "Kontak",
-    description: `Hubungi tim ${SITE_NAME}. Kami siap membantu Anda.`,
+    title: KONTAK_TITLE,
+    description: KONTAK_DESCRIPTION,
     alternates: {
         canonical: `${SITE_URL}/kontak`,
     },
     openGraph: {
-        title: "Kontak",
-        description: `Hubungi tim ${SITE_NAME}. Kami siap membantu Anda.`,
+        title: `${KONTAK_TITLE} | ${SITE_NAME}`,
+        description: KONTAK_DESCRIPTION,
         url: `${SITE_URL}/kontak`,
         type: "website",
         siteName: SITE_NAME,
     },
     twitter: {
         card: "summary_large_image",
-        title: "Kontak",
-        description: `Hubungi tim ${SITE_NAME}. Kami siap membantu Anda.`,
+        title: `${KONTAK_TITLE} | ${SITE_NAME}`,
+        description: KONTAK_DESCRIPTION,
     },
+}
+
+const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+        {
+            "@type": "ListItem",
+            position: 1,
+            name: "Beranda",
+            item: SITE_URL,
+        },
+        {
+            "@type": "ListItem",
+            position: 2,
+            name: "Kontak",
+            item: `${SITE_URL}/kontak`,
+        },
+    ],
 }
 
 export default function KontakPage() {
     return (
         <div className="min-h-screen bg-gradient-to-b from-[#FFFBF7] to-white">
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+            />
             {/* Hero Section */}
             <section className="pt-32 pb-12 px-6">
                 <Container>
@@ -176,8 +203,8 @@ export default function KontakPage() {
                             <p className="text-[#382821]/70 mb-8 text-lg">
                                 Cek halaman Petunjuk kami untuk melihat jawaban dari pertanyaan yang sering diajukan oleh para Moms.
                             </p>
-                            <Link href="/petunjuk">
-                                <Button variant="outline" className="h-12 px-8 rounded-full border-2 border-[#466A68] text-[#466A68] hover:bg-[#466A68] hover:text-white font-bold transition-all">
+                            <Link href="/petunjuk-pemakaian">
+                                <Button variant="outline" className="h-12 px-8 rounded-full border-2 border-[#2E5650] text-[#2E5650] hover:bg-[#2E5650] hover:text-white font-bold transition-all">
                                     Lihat Petunjuk & FAQ
                                 </Button>
                             </Link>

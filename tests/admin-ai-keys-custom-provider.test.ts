@@ -61,13 +61,25 @@ vi.mock("@/lib/security/ai-key-status", () => ({
         }
         return { code: "UNKNOWN_ERROR", message: "error" }
     }),
+    classifyProviderFailure: vi.fn((error: unknown) => {
+        if (error instanceof FakeUrlGuardError) {
+            return { code: "PROVIDER_BASE_URL_INVALID", message: error.message }
+        }
+        return { code: "UNKNOWN_ERROR", message: "error" }
+    }),
     formatStoredAiKeyFailure: vi.fn(({ code, message }: { code: string; message: string }) => `${code}::${message}`),
     toAiKeyFailureHttpStatus: vi.fn((failure: { code: string }) => {
         if (failure.code === "PROVIDER_BASE_URL_INVALID") return 400
         if (failure.code === "PROVIDER_KEY_INVALID") return 400
         if (failure.code === "PROVIDER_MODEL_UNAVAILABLE") return 400
+        if (failure.code === "PROVIDER_REQUEST_FAILED") return 400
         return 502
     }),
+}))
+
+vi.mock("@/lib/ai/openai-compatible", () => ({
+    isAuthStyle: (value: unknown) =>
+        typeof value === "string" && ["bearer", "raw", "x-api-key"].includes(value),
 }))
 
 vi.mock("@/lib/observability/admin-log", () => ({
@@ -102,7 +114,13 @@ describe("POST /api/admin/ai/keys: custom OpenAI-compatible provider", () => {
         mockRequireAdminMutationApi.mockResolvedValue({ ok: true, identity: adminIdentity })
         mockPrisma.aiApiKey.count.mockResolvedValue(0)
         mockVerifyGeminiApiKey.mockResolvedValue({ ok: true })
-        mockVerifyOpenAiCompatibleApiKey.mockResolvedValue({ ok: true, models: [{ id: "gpt-4o-mini" }] })
+        mockVerifyOpenAiCompatibleApiKey.mockResolvedValue({
+            ok: true,
+            models: [{ id: "gpt-4o-mini", ownedBy: null }],
+            authStyle: "bearer",
+            chatVerified: true,
+            modelsEndpointAvailable: true,
+        })
         mockAssertSafeProviderBaseUrl.mockImplementation(async (raw: string) => raw.replace(/\/+$/, ""))
     })
 
@@ -191,6 +209,7 @@ describe("POST /api/admin/ai/keys: custom OpenAI-compatible provider", () => {
             capability: data.capability,
             baseUrl: data.baseUrl,
             model: data.model,
+            authStyle: data.authStyle,
             label: data.label,
             isActive: true,
             usageCount: 0,
@@ -228,6 +247,48 @@ describe("POST /api/admin/ai/keys: custom OpenAI-compatible provider", () => {
         expect(createArg.data.apiKey).toMatch(/^enc:v1:/)
         expect(createArg.data.apiKey).not.toContain("sk-secret-value-1234567890")
         expect(createArg.data.label).toBe("Router")
+        // The verified auth style is cached so later calls skip the probing.
+        expect(createArg.data.authStyle).toBe("bearer")
+    })
+
+    it("accepts a model that the provider does not list when chat verification succeeded", async () => {
+        // Some gateways expose /models without the model actually used (e.g. "auto" routers).
+        mockVerifyOpenAiCompatibleApiKey.mockResolvedValueOnce({
+            ok: true,
+            models: [{ id: "some-other-model", ownedBy: null }],
+            authStyle: "raw",
+            chatVerified: true,
+            modelsEndpointAvailable: true,
+        })
+        mockPrisma.aiApiKey.create.mockImplementationOnce(async ({ data }: { data: Record<string, unknown> }) => ({
+            id: "key-auto",
+            provider: data.provider,
+            capability: data.capability,
+            baseUrl: data.baseUrl,
+            model: data.model,
+            authStyle: data.authStyle,
+            label: null,
+            isActive: true,
+            usageCount: 0,
+            order: 0,
+            lastUsedAt: new Date(),
+            lastError: null,
+            apiKey: data.apiKey,
+        }))
+
+        const response = await createAiKey(
+            buildRequest("POST", {
+                provider: "openai_compatible",
+                apiKey: "sk-test-1234567890abcdef",
+                baseUrl: "https://ai.tioo.example/v1",
+                model: "auto",
+            })
+        )
+
+        expect(response.status).toBe(200)
+        await expect(response.json()).resolves.toMatchObject({
+            data: { model: "auto", authStyle: "raw" },
+        })
     })
 
     it("keeps the Gemini path working without baseUrl/model", async () => {
@@ -277,7 +338,13 @@ describe("PUT /api/admin/ai/keys: provider config updates", () => {
 
         mockRequireAdminMutationApi.mockResolvedValue({ ok: true, identity: adminIdentity })
         mockVerifyGeminiApiKey.mockResolvedValue({ ok: true })
-        mockVerifyOpenAiCompatibleApiKey.mockResolvedValue({ ok: true, models: [] })
+        mockVerifyOpenAiCompatibleApiKey.mockResolvedValue({
+            ok: true,
+            models: [],
+            authStyle: "bearer",
+            chatVerified: true,
+            modelsEndpointAvailable: false,
+        })
         mockAssertSafeProviderBaseUrl.mockImplementation(async (raw: string) => raw.replace(/\/+$/, ""))
     })
 
@@ -309,6 +376,7 @@ describe("PUT /api/admin/ai/keys: provider config updates", () => {
             apiKey: "sk-existing-plaintext-for-test",
             baseUrl: "https://old.example.com/v1",
             model: "gpt-4o-mini",
+            authStyle: "bearer",
         })
         mockAssertSafeProviderBaseUrl.mockResolvedValueOnce("https://new.example.com/v1")
         mockPrisma.aiApiKey.update.mockResolvedValueOnce({
@@ -317,6 +385,7 @@ describe("PUT /api/admin/ai/keys: provider config updates", () => {
             capability: "text",
             baseUrl: "https://new.example.com/v1",
             model: "gpt-4o-mini",
+            authStyle: "bearer",
             label: null,
             isActive: true,
             usageCount: 1,
@@ -335,8 +404,52 @@ describe("PUT /api/admin/ai/keys: provider config updates", () => {
             expect.objectContaining({
                 baseUrl: "https://new.example.com/v1",
                 model: "gpt-4o-mini",
+                authStyle: "bearer",
             })
         )
+    })
+
+    it("re-tests the connection on demand without changing configuration", async () => {
+        mockPrisma.aiApiKey.findUnique.mockResolvedValueOnce({
+            id: "key-retest",
+            provider: "openai_compatible",
+            isActive: true,
+            apiKey: "sk-existing-plaintext-for-test",
+            baseUrl: "https://ai.example.com/v1",
+            model: "auto",
+            authStyle: null,
+        })
+        mockVerifyOpenAiCompatibleApiKey.mockResolvedValueOnce({
+            ok: true,
+            models: [],
+            authStyle: "x-api-key",
+            chatVerified: true,
+            modelsEndpointAvailable: false,
+        })
+        mockPrisma.aiApiKey.update.mockResolvedValueOnce({
+            id: "key-retest",
+            provider: "openai_compatible",
+            capability: "text",
+            baseUrl: "https://ai.example.com/v1",
+            model: "auto",
+            authStyle: "x-api-key",
+            label: null,
+            isActive: true,
+            usageCount: 0,
+            order: 0,
+            lastUsedAt: new Date(),
+            lastError: null,
+            apiKey: "sk-existing-plaintext-for-test",
+        })
+
+        const response = await updateAiKey(buildRequest("PUT", { id: "key-retest", retest: true }))
+
+        expect(response.status).toBe(200)
+        expect(mockVerifyOpenAiCompatibleApiKey).toHaveBeenCalledTimes(1)
+
+        // The freshly detected auth style must be persisted.
+        const updateArg = mockPrisma.aiApiKey.update.mock.calls.at(-1)?.[0]
+        expect(updateArg?.data).toMatchObject({ authStyle: "x-api-key", lastError: null })
     })
 
     it("blocks activation when the custom provider fails verification", async () => {

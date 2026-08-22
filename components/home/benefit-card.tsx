@@ -8,12 +8,13 @@ import {
     Snowflake,
     Wallet,
     Clock,
+    Sparkles,
     type LucideIcon,
     BadgeDollarSign,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-// Icon mapping - extended to match mockup features
+// Icon mapping
 const iconMap: Record<string, LucideIcon> = {
     "BadgeDollarSign": BadgeDollarSign,
     "calendar": Calendar,
@@ -24,6 +25,7 @@ const iconMap: Record<string, LucideIcon> = {
     "snowflake": Snowflake,
     "wallet": Wallet,
     "clock": Clock,
+    "sparkles": Sparkles,
 }
 
 interface BenefitCardProps {
@@ -39,37 +41,34 @@ export function BenefitCard({
     description,
     className,
 }: BenefitCardProps) {
-    const IconComponent = iconMap[icon] || Star
+    const IconComponent = iconMap[icon] || Sparkles
 
     return (
         <div
             className={cn(
-                "group relative bg-white/40 hover:bg-white border border-white/60 hover:border-white p-8 rounded-[2rem] transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-stone-200/50 flex flex-col items-start backdrop-blur-sm",
+                "group relative bg-white/90 backdrop-blur-sm border border-stone-200/80 hover:border-[#2E5650]/30 p-7 sm:p-8 rounded-3xl transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_16px_36px_-8px_rgba(56,40,33,0.08)] flex flex-col items-start",
                 className
             )}
         >
-            {/* Icon Box - Gradient with hover effects */}
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-white to-gray-50 border border-white shadow-sm flex items-center justify-center text-[#C48B77] mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+            {/* Icon Box */}
+            <div className="w-14 h-14 rounded-2xl bg-[#2E5650]/10 border border-[#2E5650]/15 flex items-center justify-center text-[#2E5650] mb-5 group-hover:scale-110 group-hover:bg-[#2E5650] group-hover:text-white transition-all duration-300">
                 <IconComponent
-                    size={28}
-                    strokeWidth={1.5}
-                    className="group-hover:text-[#466A68] transition-colors"
+                    size={24}
+                    strokeWidth={2}
                 />
             </div>
 
             {/* Title */}
-            <h3 className="text-xl font-bold text-[#382821] mb-3 group-hover:text-[#466A68] transition-colors">
+            <h3 className="text-lg font-bold text-[#281E19] mb-2.5 group-hover:text-[#2E5650] transition-colors leading-snug">
                 {title}
             </h3>
 
             {/* Description */}
-            <p className="text-[#382821]/70 leading-relaxed text-sm mb-4">
+            <p className="text-[#382821]/70 leading-relaxed text-sm">
                 {description}
             </p>
-
-            {/* Decorative line - expands on hover */}
-            <div className="w-12 h-1 bg-gray-200 rounded-full mt-auto group-hover:w-full group-hover:bg-[#466A68]/20 transition-all duration-500" />
         </div>
     )
 }
+
 

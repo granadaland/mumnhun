@@ -80,7 +80,13 @@ Optional variables:
 
 ### 2b. AI Providers, Images, and Agent Tokens
 
-**Custom OpenAI-compatible providers.** In `/admin/settings/ai` you can register a provider by supplying a base URL (e.g. `https://api.openai.com/v1`), an API key, and a model. The server calls `{baseUrl}/chat/completions` for articles and `{baseUrl}/images/generations` for images. Base URLs are validated against an SSRF guard (https only, no embedded credentials, DNS resolved and checked against private/reserved ranges, redirects re-validated on every hop) before any outbound request. API keys are encrypted at rest with AES-256-GCM and never returned to the browser in plaintext.
+**Custom OpenAI-compatible providers.** In `/admin/settings/ai` you can register a provider by supplying a base URL (e.g. `https://api.openai.com/v1`), an API key, and a model. Click **Deteksi model** to read the provider's `/models` catalogue and pick from a searchable list; if the provider does not publish a catalogue, type the model name manually (e.g. `auto`). The server calls `{baseUrl}/chat/completions` for text and `{baseUrl}/images/generations` for images.
+
+Verification is tolerant of gateway quirks: the auth header style is probed automatically (`Authorization: Bearer <key>`, then raw `Authorization: <key>`, then `x-api-key`), the working style is cached on the key record, and a real chat completion is attempted because some gateways leave `/models` unauthenticated or omit it. JSON mode (`response_format`) is retried without it when the gateway rejects it. Use the refresh icon on a saved key to re-test its connection at any time.
+
+Every AI feature — article generation, rewrite, internal links, the editor assistant, and admin chat — runs through the same provider abstraction, so a custom provider works everywhere Gemini does. Keys rotate automatically by lowest usage count, and a failure on one key falls through to the next.
+
+Base URLs are validated against an SSRF guard (https only, no embedded credentials, DNS resolved and checked against private/reserved ranges, redirects re-validated on every hop with `Authorization` stripped on cross-origin redirects). API keys are encrypted at rest with AES-256-GCM and never returned to the browser in plaintext.
 
 **Images.** Featured images come from either a free stock provider (searched via `/api/admin/media/free-image`, then re-hosted into Cloudinary with attribution recorded) or AI generation (`/api/admin/ai/image`, requires an active key with `capability = "image"`). All ingested images are validated by magic bytes, capped at 10MB, and restricted to JPEG/PNG/WebP/GIF/AVIF — SVG is intentionally excluded.
 

@@ -21,18 +21,18 @@ export function FaqAccordion({ faqs, className }: FaqAccordionProps) {
         <Accordion
             type="single"
             collapsible
-            className={cn("w-full space-y-4", className)}
+            className={cn("w-full space-y-3", className)}
         >
             {faqs.map((faq, index) => (
                 <AccordionItem
                     key={index}
                     value={`item-${index}`}
-                    className="border rounded-2xl bg-white/50 backdrop-blur-sm border-white/60 data-[state=open]:border-[#466A68]/50 data-[state=open]:shadow-lg data-[state=open]:shadow-[#466A68]/5 hover:border-[#466A68]/30 transition-all duration-300 overflow-hidden"
+                    className="border rounded-2xl bg-white/90 border-stone-200/80 data-[state=open]:border-[#2E5650]/40 data-[state=open]:shadow-md data-[state=open]:shadow-[#2E5650]/5 hover:border-stone-300 transition-all duration-200 overflow-hidden"
                 >
-                    <AccordionTrigger className="text-left font-semibold hover:no-underline px-5 py-4 text-[#382821] data-[state=open]:text-[#466A68] [&[data-state=open]>svg]:text-white [&[data-state=open]>svg]:bg-[#466A68] [&>svg]:p-1 [&>svg]:rounded-full [&>svg]:bg-gray-100 [&>svg]:text-gray-500 [&>svg]:transition-all">
+                    <AccordionTrigger className="text-left font-bold text-sm sm:text-base hover:no-underline px-5 py-4 text-[#281E19] data-[state=open]:text-[#2E5650] [&[data-state=open]>svg]:text-[#2E5650] [&[data-state=open]>svg]:rotate-180 [&>svg]:transition-transform [&>svg]:duration-200">
                         {faq.question}
                     </AccordionTrigger>
-                    <AccordionContent className="px-5 pb-5 pt-0 text-[#382821]/70 leading-relaxed">
+                    <AccordionContent className="px-5 pb-5 pt-0 text-[#382821]/75 leading-relaxed text-sm">
                         {faq.answer}
                     </AccordionContent>
                 </AccordionItem>
@@ -40,4 +40,5 @@ export function FaqAccordion({ faqs, className }: FaqAccordionProps) {
         </Accordion>
     )
 }
+
 

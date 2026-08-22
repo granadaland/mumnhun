@@ -76,6 +76,9 @@ model Post {
   author          User?       @relation(fields: [authorId], references: [id])
   categories      CategoriesOnPosts[]
   tags            TagsOnPosts[]
+  contentIdeas    ContentIdea[]
+  outgoingLinkSuggestions InternalLinkSuggestion[] @relation("LinkSuggestionSource")
+  incomingLinkSuggestions InternalLinkSuggestion[] @relation("LinkSuggestionTarget")
 
   @@index([slug])
   @@index([status])
@@ -201,6 +204,7 @@ model Media {
   width           Int?
   height          Int?
   alt             String?
+  caption         String?
   
   // URLs
   url             String
@@ -279,6 +283,7 @@ model AiApiKey {
   baseUrl     String?   @map("base_url")
   model       String?   @map("model")
   capability  String    @default("text") @map("capability")
+  authStyle   String?   @map("auth_style")
   
   isActive    Boolean   @default(true) @map("is_active")
   usageCount  Int       @default(0) @map("usage_count")
@@ -367,4 +372,121 @@ model SeoSchema {
 
   @@index([entityType, entityId])
   @@map("seo_schemas")
+}
+
+// =============================================================================
+// AI ROLE MODELS (per-task dedicated credentials, NO rotation)
+//
+// Distinct from AiApiKey (the rotary pool). Exactly one active credential per
+// role, so each task type has a predictable model:
+//   scanning -> audits published posts and proposes internal links
+//   text     -> title ideas, outline, full article, SEO metadata
+//   image    -> featured image + in-article images, alt text, caption
+// =============================================================================
+model AiRoleModel {
+  id          String    @id @default(cuid())
+  role        String    @unique // "scanning" | "text" | "image"
+  provider    String    @default("openai_compatible")
+  apiKey      String    @map("api_key") // encrypted at rest
+  baseUrl     String?   @map("base_url")
+  model       String?   @map("model")
+  authStyle   String?   @map("auth_style")
+  label       String?
+  isActive    Boolean   @default(true) @map("is_active")
+  usageCount  Int       @default(0) @map("usage_count")
+  lastUsedAt  DateTime? @map("last_used_at")
+  lastError   String?   @map("last_error")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([role, isActive])
+  @@map("ai_role_models")
+}
+
+// =============================================================================
+// CONTENT AUDIT (one scan run over all published posts)
+// =============================================================================
+model ContentAudit {
+  id             String    @id @default(cuid())
+  status         String    @default("pending") // pending, processing, completed, failed
+  scannedPosts   Int       @default(0) @map("scanned_posts")
+  ideaCount      Int       @default(0) @map("idea_count")
+  linkCount      Int       @default(0) @map("link_count")
+  gapSummary     String?   @map("gap_summary") // JSON: coverage gaps + reasoning
+  error          String?
+  usedRoleModelId String?  @map("used_role_model_id")
+  userId         String    @map("user_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  completedAt    DateTime? @map("completed_at")
+
+  ideas          ContentIdea[]
+  linkSuggestions InternalLinkSuggestion[]
+
+  @@index([status])
+  @@index([userId])
+  @@map("content_audits")
+}
+
+// =============================================================================
+// CONTENT IDEA (a single calendar entry produced by an audit)
+// =============================================================================
+model ContentIdea {
+  id                String    @id @default(cuid())
+  title             String
+  angle             String?
+  outlineHtml       String?   @map("outline_html")
+  focusKeyword      String?   @map("focus_keyword")
+  secondaryKeywords String?   @map("secondary_keywords") // comma separated
+  categorySlug      String?   @map("category_slug")
+  rationale         String?
+  /// Planned publish moment. Drives the 30-day calendar.
+  scheduledFor      DateTime? @map("scheduled_for")
+  /// pending, scheduled, drafted, published, dismissed
+  status            String    @default("pending")
+  order             Int       @default(0)
+
+  auditId           String?   @map("audit_id")
+  audit             ContentAudit? @relation(fields: [auditId], references: [id], onDelete: SetNull)
+  /// Set once the idea has been turned into a real Post.
+  postId            String?   @map("post_id")
+  post              Post?     @relation(fields: [postId], references: [id], onDelete: SetNull)
+
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([scheduledFor])
+  @@index([auditId])
+  @@map("content_ideas")
+}
+
+// =============================================================================
+// INTERNAL LINK SUGGESTION (persisted output of the scanning model)
+// =============================================================================
+model InternalLinkSuggestion {
+  id              String    @id @default(cuid())
+  exactPhrase     String    @map("exact_phrase")
+  replacementHtml String    @map("replacement_html")
+  targetUrl       String    @map("target_url")
+  targetTitle     String?   @map("target_title")
+  rationale       String?
+  /// pending, applied, dismissed
+  status          String    @default("pending")
+  appliedAt       DateTime? @map("applied_at")
+
+  sourcePostId    String    @map("source_post_id")
+  sourcePost      Post      @relation("LinkSuggestionSource", fields: [sourcePostId], references: [id], onDelete: Cascade)
+  targetPostId    String?   @map("target_post_id")
+  targetPost      Post?     @relation("LinkSuggestionTarget", fields: [targetPostId], references: [id], onDelete: SetNull)
+
+  auditId         String?   @map("audit_id")
+  audit           ContentAudit? @relation(fields: [auditId], references: [id], onDelete: SetNull)
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([sourcePostId, status])
+  @@index([auditId])
+  @@map("internal_link_suggestions")
 }

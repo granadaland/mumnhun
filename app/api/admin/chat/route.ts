@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import prisma from "@/lib/db/prisma"
 import { requireAdminApi, requireAdminMutationApi } from "@/lib/security/admin"
-import { decryptStoredApiKey } from "@/lib/security/api-key-crypto"
 import {
-    classifyAiKeyFailure,
-    formatStoredAiKeyFailure,
+    classifyProviderFailure,
     toAiKeyFailureHttpStatus,
 } from "@/lib/security/ai-key-status"
 import { logAdminError, logAdminInfo, logAdminWarn } from "@/lib/observability/admin-log"
 import { summarizeUnknownError } from "@/lib/security/admin-helpers"
+import { AllAiKeysFailedError, NoActiveAiKeyError, runWithAiRotary } from "@/lib/ai/key-rotary"
+import { generateConversation, type ConversationTurn } from "@/lib/ai/provider"
 
 const sendMessageSchema = z.object({
     message: z.string().trim().min(1, "Pesan tidak boleh kosong").max(4000),
@@ -28,76 +28,6 @@ const SYSTEM_PROMPT = [
     "Jawab dalam Bahasa Indonesia yang natural dan ramah. Gunakan format markdown jika perlu (heading, list, bold).",
     "Jika ditanya hal di luar topik blog/CMS, tetap jawab dengan helpful tapi arahkan kembali ke konteks blog.",
 ].join("\n")
-
-type GeminiMessage = { role: "user" | "model"; parts: Array<{ text: string }> }
-type GeminiResponse = {
-    candidates?: Array<{
-        content?: {
-            parts?: Array<{ text?: string }>
-        }
-    }>
-}
-
-const GEMINI_MODEL_CANDIDATES = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-flash-001"]
-
-async function callGeminiChat(apiKey: string, history: GeminiMessage[], userMessage: string): Promise<string> {
-    const contents: GeminiMessage[] = [
-        ...history,
-        { role: "user", parts: [{ text: userMessage }] },
-    ]
-
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 60000)
-
-    try {
-        let lastModelError: Error | null = null
-
-        for (let index = 0; index < GEMINI_MODEL_CANDIDATES.length; index += 1) {
-            const model = GEMINI_MODEL_CANDIDATES[index]
-            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`
-
-            const response = await fetch(endpoint, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-                    contents,
-                    generationConfig: {
-                        temperature: 0.8,
-                        topP: 0.95,
-                        maxOutputTokens: 2048,
-                    },
-                }),
-                signal: controller.signal,
-            })
-
-            if (!response.ok) {
-                const text = await response.text()
-                const isNotFound = response.status === 404
-                lastModelError = new Error(`Gemini HTTP ${response.status} (${model}): ${text.slice(0, 200)}`)
-
-                if (isNotFound && index < GEMINI_MODEL_CANDIDATES.length - 1) {
-                    continue
-                }
-
-                throw lastModelError
-            }
-
-            const payload = (await response.json()) as GeminiResponse
-            const text = payload.candidates?.[0]?.content?.parts
-                ?.map((p) => p.text || "")
-                .join("")
-                .trim()
-
-            if (!text) throw new Error("Gemini tidak mengembalikan respons")
-            return text
-        }
-
-        throw lastModelError ?? new Error("Semua model Gemini gagal diakses")
-    } finally {
-        clearTimeout(timeout)
-    }
-}
 
 // GET: Load chat history for a session
 export async function GET(request: NextRequest) {
@@ -153,23 +83,6 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-        // Get active API keys
-        const activeKeys = await prisma.aiApiKey.findMany({
-            where: { isActive: true },
-            orderBy: [{ usageCount: "asc" }, { order: "asc" }],
-        })
-
-        if (activeKeys.length === 0) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: "Tidak ada API key AI yang aktif. Tambahkan key di Settings.",
-                    errorCode: "AI_KEY_NOT_AVAILABLE",
-                },
-                { status: 503 }
-            )
-        }
-
         // Save user message
         await prisma.aiChatMessage.create({
             data: {
@@ -188,67 +101,33 @@ export async function POST(request: NextRequest) {
             select: { role: true, content: true },
         })
 
-        // Build Gemini history (exclude the last user message, it's sent separately)
-        const history: GeminiMessage[] = recentMessages
-            .slice(0, -1)
-            .map((m) => ({
-                role: (m.role === "assistant" ? "model" : "user") as "user" | "model",
-                parts: [{ text: m.content }],
-            }))
+        // Exclude the message just saved; it is sent as the current turn.
+        const history: ConversationTurn[] = recentMessages.slice(0, -1).map((message) => ({
+            role: message.role === "assistant" ? "assistant" : "user",
+            content: message.content,
+        }))
 
-        // Try keys with round-robin
-        let aiResponse: string | null = null
-        let lastFailure: ReturnType<typeof classifyAiKeyFailure> | null = null
-        const maxAttempts = Math.min(activeKeys.length, 3)
-
-        for (let i = 0; i < maxAttempts; i++) {
-            const keyRecord = activeKeys[i]
-            try {
-                const decryptedKey = decryptStoredApiKey(keyRecord.apiKey)
-                aiResponse = await callGeminiChat(decryptedKey, history, payload.message)
-
-                await prisma.aiApiKey.update({
-                    where: { id: keyRecord.id },
-                    data: {
-                        usageCount: { increment: 1 },
-                        lastUsedAt: new Date(),
-                        lastError: null,
-                    },
+        const result = await runWithAiRotary({
+            capability: "text",
+            run: async (provider) => {
+                const generated = await generateConversation(provider, {
+                    system: SYSTEM_PROMPT,
+                    history,
+                    message: payload.message,
+                    temperature: 0.8,
+                    topP: 0.95,
+                    maxTokens: 2048,
                 })
-                break
-            } catch (error) {
-                const failure = classifyAiKeyFailure(error)
-                lastFailure = failure
 
-                await prisma.aiApiKey.update({
-                    where: { id: keyRecord.id },
-                    data: {
-                        lastUsedAt: new Date(),
-                        lastError: formatStoredAiKeyFailure(failure),
-                    },
-                })
-            }
-        }
-
-        if (!aiResponse) {
-            const errorCode = lastFailure?.code ?? "UNKNOWN_ERROR"
-            const errorMessage = lastFailure?.message ?? "Semua API key AI gagal merespons"
-
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: `AI gagal merespons: ${errorMessage}`,
-                    errorCode,
-                },
-                { status: lastFailure ? toAiKeyFailureHttpStatus(lastFailure) : 502 }
-            )
-        }
+                return { value: generated.text, authStyle: generated.authStyle }
+            },
+        })
 
         // Save assistant message
         const assistantMessage = await prisma.aiChatMessage.create({
             data: {
                 role: "assistant",
-                content: aiResponse,
+                content: result.value,
                 sessionId: payload.sessionId,
                 userId: adminCheck.identity.id,
             },
@@ -262,13 +141,24 @@ export async function POST(request: NextRequest) {
             role: adminCheck.identity.role,
             roleSource: adminCheck.identity.source,
             status: 200,
-            payloadSummary: { sessionId: payload.sessionId },
+            payloadSummary: { sessionId: payload.sessionId, usedKeyId: result.usedKeyId },
             validation: { ok: true },
         })
 
         return NextResponse.json({ success: true, data: assistantMessage })
     } catch (error) {
-        const failure = classifyAiKeyFailure(error)
+        if (error instanceof NoActiveAiKeyError) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: "Tidak ada API key AI yang aktif. Tambahkan key di Settings.",
+                    errorCode: "AI_KEY_NOT_AVAILABLE",
+                },
+                { status: 503 }
+            )
+        }
+
+        const failure = error instanceof AllAiKeysFailedError ? error.failure : classifyProviderFailure(error)
 
         logAdminError({
             requestId,
@@ -276,17 +166,17 @@ export async function POST(request: NextRequest) {
             userId: adminCheck.identity.id,
             role: adminCheck.identity.role,
             roleSource: adminCheck.identity.source,
-            status: 500,
+            status: toAiKeyFailureHttpStatus(failure),
             error: summarizeUnknownError(error),
         })
 
         return NextResponse.json(
             {
                 success: false,
-                error: "Gagal mengirim pesan",
+                error: `AI gagal merespons: ${failure.message}`,
                 errorCode: failure.code,
             },
-            { status: 500 }
+            { status: toAiKeyFailureHttpStatus(failure) }
         )
     }
 }

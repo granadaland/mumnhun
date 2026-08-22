@@ -14,7 +14,7 @@ import {
 } from "@/lib/ai/key-rotary"
 import { buildImagePrompt, generateImageWithProvider } from "@/lib/ai/provider"
 import { MAX_IMAGE_BYTES, assertAllowedImageBuffer, ingestImage } from "@/lib/media/ingest"
-import { classifyAiKeyFailure, formatStoredAiKeyFailure, toAiKeyFailureHttpStatus } from "@/lib/security/ai-key-status"
+import { classifyProviderFailure, formatStoredAiKeyFailure, toAiKeyFailureHttpStatus } from "@/lib/security/ai-key-status"
 import {
     ensureUniquePostSlug,
     estimateReadingTime,
@@ -148,7 +148,12 @@ async function tryGenerateFeaturedImage(input: {
 
     try {
         const generated = await generateImageWithProvider(
-            { apiKey: provider.apiKey, baseUrl: provider.baseUrl, model: provider.model },
+            {
+                apiKey: provider.apiKey,
+                baseUrl: provider.baseUrl,
+                model: provider.model,
+                authStyle: provider.authStyle,
+            },
             prompt,
             { maxBytes: MAX_IMAGE_BYTES }
         )
@@ -176,7 +181,7 @@ async function tryGenerateFeaturedImage(input: {
 
         return { url: media.url, mediaId: media.mediaId }
     } catch (error) {
-        const failure = classifyAiKeyFailure(error)
+        const failure = classifyProviderFailure(error)
 
         await prisma.aiApiKey
             .update({
@@ -590,7 +595,7 @@ export async function POST(request: NextRequest) {
                 })
             }
 
-            const failure = error instanceof AllAiKeysFailedError ? error.failure : classifyAiKeyFailure(error)
+            const failure = error instanceof AllAiKeysFailedError ? error.failure : classifyProviderFailure(error)
 
             return agentErrorJson(
                 "Gagal generate artikel AI",

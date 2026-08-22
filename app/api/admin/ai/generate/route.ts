@@ -4,7 +4,7 @@ import { z } from "zod"
 import prisma from "@/lib/db/prisma"
 import { requireAdminMutationApi } from "@/lib/security/admin"
 import {
-    classifyAiKeyFailure,
+    classifyProviderFailure,
     formatStoredAiKeyFailure,
     toAiKeyFailureHttpStatus,
 } from "@/lib/security/ai-key-status"
@@ -106,7 +106,12 @@ async function tryGenerateFeaturedImage(input: {
 
     try {
         const generated = await generateImageWithProvider(
-            { apiKey: provider.apiKey, baseUrl: provider.baseUrl, model: provider.model },
+            {
+                apiKey: provider.apiKey,
+                baseUrl: provider.baseUrl,
+                model: provider.model,
+                authStyle: provider.authStyle,
+            },
             prompt,
             { maxBytes: MAX_IMAGE_BYTES }
         )
@@ -134,7 +139,7 @@ async function tryGenerateFeaturedImage(input: {
 
         return { image: { url: media.url, mediaId: media.mediaId, keyId: provider.keyId } }
     } catch (error) {
-        const failure = classifyAiKeyFailure(error)
+        const failure = classifyProviderFailure(error)
 
         await prisma.aiApiKey
             .update({
@@ -369,7 +374,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         const summarizedError = summarizeUnknownError(error).slice(0, 800)
         const failure =
-            error instanceof AllAiKeysFailedError ? error.failure : classifyAiKeyFailure(error)
+            error instanceof AllAiKeysFailedError ? error.failure : classifyProviderFailure(error)
 
         await prisma.aiTask.update({
             where: { id: task.id },
