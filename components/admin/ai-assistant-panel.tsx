@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Sparkles, X, Loader2, Type, AlignLeft, ListTree, FileText, Search, Check } from "lucide-react"
 import { AdminClientError, adminPost } from "@/lib/api/admin-client"
+import "./wysiwyg-content.css"
 
 /**
  * In-editor AI assistant.
@@ -396,7 +397,7 @@ export function AiAssistantPanel({
                                         Outline
                                     </h4>
                                     <div
-                                        className="prose prose-sm max-w-none bg-[#FAF9F7] p-4 rounded-lg border border-[#D4BCAA]/20 max-h-72 overflow-y-auto"
+                                        className="wysiwyg-content wysiwyg-compact bg-[#FAF9F7] p-4 rounded-lg border border-[#D4BCAA]/20 max-h-72 overflow-y-auto"
                                         dangerouslySetInnerHTML={{ __html: outlineHtml }}
                                     />
                                     <button
@@ -461,7 +462,7 @@ export function AiAssistantPanel({
                                         Pratinjau Artikel
                                     </h4>
                                     <div
-                                        className="prose prose-sm max-w-none bg-[#FAF9F7] p-4 rounded-lg border border-[#D4BCAA]/20 max-h-80 overflow-y-auto"
+                                        className="wysiwyg-content wysiwyg-compact bg-[#FAF9F7] p-4 rounded-lg border border-[#D4BCAA]/20 max-h-80 overflow-y-auto"
                                         dangerouslySetInnerHTML={{ __html: generatedContent }}
                                     />
                                     <button

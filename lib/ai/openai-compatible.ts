@@ -50,6 +50,22 @@ export class OpenAiCompatibleError extends Error {
     }
 }
 
+/**
+ * Raised when the gateway exposes no usable image-generation surface.
+ *
+ * Distinct from a generic 404 because the remedy is different: the operator must point the
+ * image role at a provider/model that actually generates images, not fix a URL typo.
+ */
+export class ImageGenerationUnsupportedError extends Error {
+    detail: string
+
+    constructor(message: string, detail: string) {
+        super(message)
+        this.name = "ImageGenerationUnsupportedError"
+        this.detail = detail
+    }
+}
+
 /** True when the status suggests the credential was rejected, so another auth style is worth trying. */
 function isAuthRejection(status: number): boolean {
     return status === 401 || status === 403

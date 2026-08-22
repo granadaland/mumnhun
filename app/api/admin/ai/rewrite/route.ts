@@ -11,6 +11,9 @@ import { summarizeUnknownError, adminJsonValidationError } from "@/lib/security/
 import { AllAiKeysFailedError, NoActiveAiKeyError, runWithAiRotary } from "@/lib/ai/key-rotary"
 import { generateJson } from "@/lib/ai/provider"
 
+// Rewriting a long article is a multi-minute model call; extend the platform timeout.
+export const maxDuration = 300
+
 const rewriteRequestSchema = z.object({
     postId: z.string().cuid(),
     tone: z.string().trim().max(80).optional(),

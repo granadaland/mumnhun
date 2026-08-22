@@ -16,9 +16,13 @@ import {
     HAIBUNDA_VOICE,
     buildFullContentPrompt,
     buildOutlinePrompt,
-    fullContentOutputSchema,
-    outlineOutputSchema,
+    fullContentStructuredSchema,
+    outlineStructuredSchema,
 } from "@/lib/ai/prompts"
+import { renderArticleHtml, renderOutlineHtml } from "@/lib/ai/article-format"
+
+// Generating a full article from an idea (outline + content) is a multi-minute call.
+export const maxDuration = 300
 
 /**
  * Content calendar operations over ContentIdea rows.
@@ -256,9 +260,9 @@ export async function POST(request: NextRequest) {
                     maxTokens: 2048,
                     timeoutMs: 90_000,
                 },
-                outlineOutputSchema
+                outlineStructuredSchema
             )
-            outlineHtml = outlineResult.value.outlineHtml
+            outlineHtml = renderOutlineHtml(outlineResult.value)
         }
 
         const contentResult = await generateRoleJson(
@@ -275,10 +279,10 @@ export async function POST(request: NextRequest) {
                 maxTokens: 8192,
                 timeoutMs: 240_000,
             },
-            fullContentOutputSchema
+            fullContentStructuredSchema
         )
 
-        const safeContent = sanitizeArticleHtml(contentResult.value.contentHtml)
+        const safeContent = sanitizeArticleHtml(renderArticleHtml(contentResult.value))
         if (!safeContent) {
             return errorJson(
                 "Konten hasil AI kosong setelah sanitasi HTML",

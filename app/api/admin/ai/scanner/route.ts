@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import prisma from "@/lib/db/prisma"
 import { requireAdminApi } from "@/lib/security/admin"
-import { runChecks, calculateScore, SeoCheck } from "@/components/admin/seo-scanner"
+import { runChecks, calculateScore } from "@/components/admin/seo-scanner"
 
-export async function POST(request: NextRequest) {
-    // Basic admin check - no mutation strictly speaking, but treating as an action
+export async function POST() {
+    // Rule-based SEO scan over published posts. No AI/model call, so no timeout extension needed.
     const adminCheck = await requireAdminApi()
     if (!adminCheck.ok) return adminCheck.response
 
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
             }
         })
 
-    } catch (error: any) {
+    } catch (error) {
         console.error("Scanner Error:", error)
         return NextResponse.json({ success: false, error: "Gagal memproses scanner SEO" }, { status: 500 })
     }

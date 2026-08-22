@@ -4,11 +4,14 @@ import {
     authStyleCandidates,
     buildAuthHeaders,
     chatCompletion,
+    ImageGenerationUnsupportedError,
     normalizeBaseUrl,
     type AuthStyle,
     type ChatMessage,
 } from "@/lib/ai/openai-compatible"
 import { getAiProviderGuardOptions, readResponseWithLimit, safeExternalFetch } from "@/lib/security/url-guard"
+import { AiJsonParseError, parseLlmJson } from "@/lib/ai/json-extract"
+import { GoogleGenAI } from "@google/genai"
 
 export const AI_PROVIDER_GEMINI = "gemini"
 export const AI_PROVIDER_OPENAI_COMPATIBLE = "openai_compatible"
@@ -188,50 +191,67 @@ export async function generateConversation(
     return { text: result.text, model: result.model }
 }
 
-export function extractJsonObject(raw: string): string {
-    const trimmed = raw.trim()
-    if (trimmed.startsWith("{")) return trimmed
-
-    const codeFenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i)
-    if (codeFenceMatch?.[1]) {
-        return codeFenceMatch[1].trim()
-    }
-
-    const firstBrace = trimmed.indexOf("{")
-    const lastBrace = trimmed.lastIndexOf("}")
-    if (firstBrace >= 0 && lastBrace > firstBrace) {
-        return trimmed.slice(firstBrace, lastBrace + 1)
-    }
-
-    throw new Error("AI response tidak berformat JSON")
-}
+const JSON_REPAIR_REMINDER =
+    "PENTING: keluaran sebelumnya gagal diparse sebagai JSON. Jawab ULANG dengan HANYA satu JSON object valid. Tanpa teks pembuka/penutup, tanpa markdown code fence, tanpa trailing comma."
 
 /**
  * Generates a JSON object and validates it against a schema.
- * Works with providers that ignore json_mode because the text is re-extracted anyway.
+ *
+ * Resilient to gateways that ignore json_mode or wrap output in prose/fences: the text is
+ * parsed with parseLlmJson (fence stripping, balanced-span extraction, defect repair). If
+ * the first attempt cannot be parsed or fails schema validation, it retries once with an
+ * explicit repair reminder appended, since a single nudge usually fixes format-only errors.
  */
 export async function generateJson<T>(
     resolved: ResolvedAiProvider,
     request: Omit<TextGenerationRequest, "jsonMode">,
     schema: z.ZodType<T>
 ): Promise<{ data: T; model: string; authStyle?: AuthStyle }> {
-    const result = await generateText(resolved, { ...request, jsonMode: true })
+    const attempt = async (extraInstruction?: string) => {
+        const prompt = extraInstruction ? `${request.prompt}\n\n${extraInstruction}` : request.prompt
+        return generateText(resolved, { ...request, prompt, jsonMode: true })
+    }
 
-    const jsonText = extractJsonObject(result.text)
-
+    let result = await attempt()
     let parsedRaw: unknown
+    let parseFailed = false
+
     try {
-        parsedRaw = JSON.parse(jsonText)
+        parsedRaw = parseLlmJson(result.text)
     } catch {
-        throw new Error("Output AI bukan JSON yang valid")
+        parseFailed = true
     }
 
-    const parsed = schema.safeParse(parsedRaw)
-    if (!parsed.success) {
-        throw new Error(`Output AI tidak valid: ${parsed.error.issues[0]?.message || "unknown"}`)
+    if (!parseFailed) {
+        const parsed = schema.safeParse(parsedRaw)
+        if (parsed.success) {
+            return { data: parsed.data, model: result.model, authStyle: result.authStyle }
+        }
     }
 
-    return { data: parsed.data, model: result.model, authStyle: result.authStyle }
+    // One retry with an explicit reminder fixes the vast majority of format-only failures.
+    result = await attempt(JSON_REPAIR_REMINDER)
+
+    let retryRaw: unknown
+    try {
+        retryRaw = parseLlmJson(result.text)
+    } catch (error) {
+        if (error instanceof AiJsonParseError) {
+            throw new Error(
+                `Output AI bukan JSON yang valid setelah 2 percobaan. Cuplikan: ${error.snippet || "(kosong)"}`
+            )
+        }
+        throw error
+    }
+
+    const retryParsed = schema.safeParse(retryRaw)
+    if (!retryParsed.success) {
+        throw new Error(
+            `Output AI tidak sesuai format yang diminta: ${retryParsed.error.issues[0]?.message || "unknown"}`
+        )
+    }
+
+    return { data: retryParsed.data, model: result.model, authStyle: result.authStyle }
 }
 
 export function buildArticlePrompt(input: GenerateArticleInput): string {
@@ -308,82 +328,172 @@ export function buildImagePrompt(input: { title: string; topic: string }): strin
 }
 
 /**
+ * OpenAI-compatible gateways disagree on the image path. `/images/generations` is the
+ * OpenAI spec, but several proxies only expose `/images/generate` or `/image/generations`.
+ * Each is tried in turn on 404 so one non-standard gateway does not look like a dead key.
+ */
+const IMAGE_ENDPOINT_PATHS = ["/images/generations", "/images/generate", "/image/generations"] as const
+
+/** Size is rejected by some gateways; the retry drops it rather than failing outright. */
+const DEFAULT_IMAGE_SIZE = "1536x1024"
+
+function buildImageRequestBody(
+    config: { model: string },
+    prompt: string,
+    options: { includeSize: boolean }
+): string {
+    return JSON.stringify({
+        model: config.model,
+        prompt,
+        n: 1,
+        ...(options.includeSize ? { size: DEFAULT_IMAGE_SIZE } : {}),
+        response_format: "b64_json",
+    })
+}
+
+/**
  * Generates an image through an OpenAI-compatible image endpoint.
- * Base64 payloads are used inline; remote URLs are fetched through the SSRF guard.
+ *
+ * Tolerant of gateway variation: the auth header style, the image path, and whether `size`
+ * is accepted are all probed. Base64 payloads are used inline; remote URLs are fetched
+ * through the SSRF guard. A 404 across every known path means the gateway has no image
+ * surface at all, which is surfaced as ImageGenerationUnsupportedError so the operator gets
+ * an actionable message instead of a bare HTTP code.
  */
 export async function generateImageWithProvider(
-    config: { apiKey: string; baseUrl: string; model: string; authStyle?: AuthStyle | null },
+    resolved: ResolvedAiProvider,
     prompt: string,
-    options: { maxBytes: number; timeoutMs?: number }
+    options: { maxBytes: number; timeoutMs?: number; aspectRatio?: string }
 ): Promise<GeneratedImage> {
-    const endpoint = `${normalizeBaseUrl(config.baseUrl)}/images/generations`
-    const guard = getAiProviderGuardOptions()
-
-    let lastError: Error | null = null
-
-    for (const style of authStyleCandidates(config.authStyle)) {
-        const response = await safeExternalFetch(endpoint, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Accept: "application/json",
-                ...buildAuthHeaders(config.apiKey, style),
-            },
-            body: JSON.stringify({
-                model: config.model,
-                prompt,
-                n: 1,
-                size: "1536x1024",
-                response_format: "b64_json",
-            }),
-            guard,
-            timeoutMs: options.timeoutMs ?? 120_000,
-        })
-
-        if (!response.ok) {
-            const rawText = await response.text().catch(() => "")
-            lastError = new Error(
-                `Provider image HTTP ${response.status} (${config.model}): ${rawText.slice(0, 200)}`
-            )
-
-            if (response.status === 401 || response.status === 403) {
-                continue
+    if (!isCustomProvider(resolved.provider)) {
+        // Gemini Image Generation
+        const ai = new GoogleGenAI({ apiKey: resolved.apiKey })
+        
+        // Gemini Imagen supports "1:1", "3:4", "4:3", "9:16", "16:9"
+        const ratio = options.aspectRatio === "4:3" ? "4:3" : "1:1"
+        
+        try {
+            const response = await ai.models.generateImages({
+                model: "imagen-3.0-generate-001",
+                prompt: prompt,
+                config: {
+                    numberOfImages: 1,
+                    aspectRatio: ratio,
+                    outputMimeType: "image/jpeg",
+                }
+            })
+            
+            const base64 = response.generatedImages?.[0]?.image?.imageBytes
+            if (!base64) {
+                throw new Error("Gemini tidak mengembalikan data gambar")
             }
-
-            throw lastError
-        }
-
-        const payload = (await response.json()) as OpenAiImageResponse
-        const first = payload.data?.[0]
-
-        if (first?.b64_json) {
-            const buffer = Buffer.from(first.b64_json, "base64")
-            if (buffer.byteLength === 0) {
-                throw new Error("Provider image mengembalikan payload kosong")
-            }
+            
+            const buffer = Buffer.from(base64, "base64")
             if (buffer.byteLength > options.maxBytes) {
                 throw new Error("Ukuran gambar hasil AI melebihi batas yang diizinkan")
             }
-            return { buffer, mimeType: "image/png" }
+            
+            return { buffer, mimeType: response.generatedImages?.[0]?.image?.mimeType || "image/jpeg" }
+        } catch (e) {
+            throw new Error(`Gagal generate gambar dengan Gemini: ${(e as Error).message}`)
         }
+    }
 
-        if (first?.url) {
-            const imageResponse = await safeExternalFetch(first.url, {
-                method: "GET",
-                timeoutMs: 30_000,
-            })
+    const baseUrl = normalizeBaseUrl(resolved.baseUrl ?? "")
+    const guard = getAiProviderGuardOptions()
 
-            if (!imageResponse.ok) {
-                throw new Error(`Gagal mengunduh gambar hasil AI (HTTP ${imageResponse.status})`)
+    let lastError: Error | null = null
+    let allPathsNotFound = true
+    let lastNotFoundDetail = ""
+
+    for (const style of authStyleCandidates(resolved.authStyle)) {
+        for (const path of IMAGE_ENDPOINT_PATHS) {
+            for (const includeSize of [true, false]) {
+                const response = await safeExternalFetch(`${baseUrl}${path}`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Accept: "application/json",
+                        ...buildAuthHeaders(resolved.apiKey, style),
+                    },
+                    body: buildImageRequestBody({ model: resolved.model ?? "" }, prompt, { includeSize }),
+                    guard,
+                    timeoutMs: options.timeoutMs ?? 120_000,
+                })
+
+                if (response.ok) {
+                    const payload = (await response.json().catch(() => null)) as OpenAiImageResponse | null
+                    const first = payload?.data?.[0]
+
+                    if (first?.b64_json) {
+                        const buffer = Buffer.from(first.b64_json, "base64")
+                        if (buffer.byteLength === 0) {
+                            throw new Error("Provider image mengembalikan payload kosong")
+                        }
+                        if (buffer.byteLength > options.maxBytes) {
+                            throw new Error("Ukuran gambar hasil AI melebihi batas yang diizinkan")
+                        }
+                        return { buffer, mimeType: "image/png" }
+                    }
+
+                    if (first?.url) {
+                        const imageResponse = await safeExternalFetch(first.url, {
+                            method: "GET",
+                            timeoutMs: 30_000,
+                        })
+
+                        if (!imageResponse.ok) {
+                            throw new Error(`Gagal mengunduh gambar hasil AI (HTTP ${imageResponse.status})`)
+                        }
+
+                        const buffer = await readResponseWithLimit(imageResponse, options.maxBytes)
+                        const mimeType =
+                            imageResponse.headers.get("content-type")?.split(";")[0]?.trim() || "image/png"
+
+                        return { buffer, mimeType }
+                    }
+
+                    throw new Error("Provider image tidak mengembalikan data gambar")
+                }
+
+                const rawText = await response.text().catch(() => "")
+                const snippet = rawText.slice(0, 200)
+                lastError = new Error(
+                    `Provider image HTTP ${response.status} (${resolved.model}): ${snippet}`
+                )
+
+                if (response.status === 404) {
+                    lastNotFoundDetail = snippet
+                    // Path or model unknown to this gateway; try the next path.
+                    break
+                }
+
+                allPathsNotFound = false
+
+                // 400/422 while sending `size` usually means the gateway rejects that field.
+                if (includeSize && (response.status === 400 || response.status === 422)) {
+                    continue
+                }
+
+                if (response.status === 401 || response.status === 403) {
+                    // Credential rejected: stop trying paths and move to the next auth style.
+                    break
+                }
+
+                throw lastError
             }
 
-            const buffer = await readResponseWithLimit(imageResponse, options.maxBytes)
-            const mimeType = imageResponse.headers.get("content-type")?.split(";")[0]?.trim() || "image/png"
-
-            return { buffer, mimeType }
+            // A non-404 failure was already handled above (thrown or auth retry).
+            if (!allPathsNotFound) break
         }
+    }
 
-        throw new Error("Provider image tidak mengembalikan data gambar")
+    if (allPathsNotFound) {
+        throw new ImageGenerationUnsupportedError(
+            `Provider tidak menyediakan endpoint image generation untuk model "${resolved.model}". ` +
+            `Path yang dicoba: ${IMAGE_ENDPOINT_PATHS.join(", ")}.`,
+            lastNotFoundDetail
+        )
     }
 
     throw lastError ?? new Error("Permintaan ke provider image gagal")

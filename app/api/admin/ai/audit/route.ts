@@ -29,6 +29,10 @@ import {
  * hallucinated phrase can never be applied to an article.
  */
 
+// Scanning the whole archive with one large model call is slow; allow up to 5 minutes so
+// Vercel does not terminate the function before the model responds. Capped by plan limit.
+export const maxDuration = 300
+
 const auditRequestSchema = z.object({
     ideaCount: z.coerce.number().int().min(5).max(30).default(30),
     /** First publish date of the plan. Defaults to tomorrow. */

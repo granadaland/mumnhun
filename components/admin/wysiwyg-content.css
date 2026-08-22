@@ -1,0 +1,295 @@
+/*
+ * WYSIWYG content styling (classic-editor look).
+ *
+ * Colocated with the editor and imported by every component that renders editor or
+ * AI-preview HTML, instead of living in globals.css. Two reasons:
+ *  1. The rules ship in the same chunk as the component, so a stale global CSS chunk
+ *     cannot leave the visual editor unstyled while the HTML tab looks correct.
+ *  2. It keeps the concern next to the code that owns it.
+ *
+ * Why explicit rules are required at all: Tailwind preflight resets headings to
+ * `font-size: inherit; font-weight: inherit` and lists to `list-style: none`, so an H2 or
+ * a bullet list renders identically to a paragraph. @tailwindcss/typography (the source of
+ * the `prose` utilities) is not installed in this project, so those classes are inert.
+ *
+ * `.wysiwyg-content <element>` outranks preflight's bare element selectors on specificity,
+ * so no !important is needed.
+ */
+
+.wysiwyg-content {
+    color: #382821;
+    font-size: 1rem;
+    line-height: 1.7;
+    word-break: break-word;
+}
+
+.wysiwyg-content:focus {
+    outline: none;
+}
+
+.wysiwyg-content> :first-child {
+    margin-top: 0;
+}
+
+.wysiwyg-content> :last-child {
+    margin-bottom: 0;
+}
+
+/* Headings ---------------------------------------------------------------- */
+
+.wysiwyg-content h1,
+.wysiwyg-content h2,
+.wysiwyg-content h3,
+.wysiwyg-content h4,
+.wysiwyg-content h5,
+.wysiwyg-content h6 {
+    color: #2b1f19;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-top: 1.6em;
+    margin-bottom: 0.6em;
+    text-wrap: balance;
+}
+
+.wysiwyg-content h1 {
+    font-size: 1.9rem;
+}
+
+.wysiwyg-content h2 {
+    font-size: 1.55rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid rgba(70, 106, 104, 0.18);
+}
+
+.wysiwyg-content h3 {
+    font-size: 1.3rem;
+    color: #3c605e;
+}
+
+.wysiwyg-content h4 {
+    font-size: 1.12rem;
+}
+
+.wysiwyg-content h5,
+.wysiwyg-content h6 {
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6b584c;
+}
+
+/* Text blocks ------------------------------------------------------------ */
+
+.wysiwyg-content p {
+    margin-top: 0;
+    margin-bottom: 1em;
+}
+
+.wysiwyg-content ul,
+.wysiwyg-content ol {
+    margin-top: 0.75em;
+    margin-bottom: 1em;
+    padding-left: 1.6rem;
+    list-style-position: outside;
+}
+
+.wysiwyg-content ul {
+    list-style-type: disc;
+}
+
+.wysiwyg-content ul ul {
+    list-style-type: circle;
+}
+
+.wysiwyg-content ul ul ul {
+    list-style-type: square;
+}
+
+.wysiwyg-content ol {
+    list-style-type: decimal;
+}
+
+.wysiwyg-content ol ol {
+    list-style-type: lower-alpha;
+}
+
+.wysiwyg-content li {
+    display: list-item;
+    margin-bottom: 0.35em;
+    padding-left: 0.2rem;
+}
+
+.wysiwyg-content li>p {
+    margin-bottom: 0.35em;
+}
+
+.wysiwyg-content li>ul,
+.wysiwyg-content li>ol {
+    margin-top: 0.35em;
+    margin-bottom: 0.35em;
+}
+
+.wysiwyg-content li::marker {
+    color: #466A68;
+}
+
+.wysiwyg-content blockquote {
+    margin: 1.25em 0;
+    padding: 0.6em 1.1em;
+    border-left: 4px solid #466A68;
+    background: rgba(70, 106, 104, 0.05);
+    border-radius: 0 0.5rem 0.5rem 0;
+    font-style: italic;
+    color: rgba(56, 40, 33, 0.85);
+}
+
+.wysiwyg-content blockquote p:last-child {
+    margin-bottom: 0;
+}
+
+/* Inline ----------------------------------------------------------------- */
+
+.wysiwyg-content a {
+    color: #466A68;
+    text-decoration: underline;
+    text-decoration-color: rgba(70, 106, 104, 0.4);
+    text-underline-offset: 2px;
+}
+
+.wysiwyg-content strong,
+.wysiwyg-content b {
+    font-weight: 700;
+    color: #2b1f19;
+}
+
+.wysiwyg-content em,
+.wysiwyg-content i {
+    font-style: italic;
+}
+
+.wysiwyg-content s,
+.wysiwyg-content del {
+    text-decoration: line-through;
+}
+
+.wysiwyg-content u {
+    text-decoration: underline;
+}
+
+.wysiwyg-content mark {
+    background: rgba(240, 200, 120, 0.35);
+    padding: 0 0.15em;
+}
+
+.wysiwyg-content code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.875em;
+    background: rgba(56, 40, 33, 0.07);
+    padding: 0.15em 0.4em;
+    border-radius: 0.25rem;
+}
+
+.wysiwyg-content pre {
+    margin: 1.25em 0;
+    padding: 0.9rem 1.1rem;
+    background: #2b1f19;
+    color: #f7f3ee;
+    border-radius: 0.6rem;
+    overflow-x: auto;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    white-space: pre;
+}
+
+.wysiwyg-content pre code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    font-size: inherit;
+}
+
+.wysiwyg-content hr {
+    margin: 1.75em 0;
+    border: 0;
+    border-top: 2px solid rgba(212, 188, 170, 0.5);
+}
+
+/* Media ------------------------------------------------------------------ */
+
+.wysiwyg-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+    margin: 1em 0;
+}
+
+.wysiwyg-content figure {
+    margin: 1.25em 0;
+}
+
+.wysiwyg-content figcaption {
+    margin-top: 0.5em;
+    font-size: 0.8125rem;
+    color: rgba(56, 40, 33, 0.6);
+    text-align: center;
+}
+
+.wysiwyg-content table {
+    width: 100%;
+    margin: 1.25em 0;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+}
+
+.wysiwyg-content th,
+.wysiwyg-content td {
+    border: 1px solid rgba(212, 188, 170, 0.5);
+    padding: 0.5em 0.75em;
+    text-align: left;
+}
+
+.wysiwyg-content th {
+    background: rgba(70, 106, 104, 0.07);
+    font-weight: 700;
+}
+
+/* Editor-only affordances ------------------------------------------------ */
+
+/* Selected image inside the editor */
+.wysiwyg-content img.ProseMirror-selectednode {
+    outline: 3px solid #466A68;
+    outline-offset: 2px;
+}
+
+/* Placeholder on an empty document (TipTap Placeholder extension) */
+.wysiwyg-content p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+    color: rgba(140, 122, 107, 0.6);
+}
+
+/* Compact variant for narrow preview panels */
+.wysiwyg-content.wysiwyg-compact {
+    font-size: 0.875rem;
+    line-height: 1.65;
+}
+
+.wysiwyg-content.wysiwyg-compact h1 {
+    font-size: 1.35rem;
+}
+
+.wysiwyg-content.wysiwyg-compact h2 {
+    font-size: 1.15rem;
+}
+
+.wysiwyg-content.wysiwyg-compact h3 {
+    font-size: 1.03rem;
+}
+
+.wysiwyg-content.wysiwyg-compact h4,
+.wysiwyg-content.wysiwyg-compact h5,
+.wysiwyg-content.wysiwyg-compact h6 {
+    font-size: 0.9375rem;
+}

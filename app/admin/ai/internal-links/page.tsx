@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { ArrowLeft, Loader2, Save, Search, Link as LinkIcon, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
 import { AdminClientError, adminGet, adminPost, adminPut } from "@/lib/api/admin-client"
+import "@/components/admin/wysiwyg-content.css"
 
 function getClientErrorMessage(error: unknown, fallback: string): string {
     if (error instanceof AdminClientError && error.code === "TIMEOUT") {
@@ -274,7 +275,7 @@ export default function AiInternalLinksPage() {
                                         <div className="p-3 bg-emerald-50/50 rounded-lg border border-emerald-100/50">
                                             <div className="text-[10px] uppercase font-bold text-emerald-600/70 mb-1.5">Sesudahnya</div>
                                             <div
-                                                className="text-sm text-[#0F0A09]/90 italic prose prose-sm prose-a:text-indigo-600 prose-a:font-medium prose-a:underline"
+                                                className="wysiwyg-content wysiwyg-compact italic [&_a]:text-indigo-600 [&_a]:font-medium"
                                                 dangerouslySetInnerHTML={{ __html: `"...${sugg.replacementHtml}..."` }}
                                             />
                                         </div>

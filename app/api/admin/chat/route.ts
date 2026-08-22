@@ -11,6 +11,9 @@ import { summarizeUnknownError } from "@/lib/security/admin-helpers"
 import { AllAiKeysFailedError, NoActiveAiKeyError, runWithAiRotary } from "@/lib/ai/key-rotary"
 import { generateConversation, type ConversationTurn } from "@/lib/ai/provider"
 
+// Chat replies can be slow on some gateways; give the request room before timing out.
+export const maxDuration = 120
+
 const sendMessageSchema = z.object({
     message: z.string().trim().min(1, "Pesan tidak boleh kosong").max(4000),
     sessionId: z.string().trim().min(1).max(100),

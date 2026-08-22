@@ -13,6 +13,8 @@ import {
     type AiCapability,
     type GenerateArticleInput,
     type ResolvedAiProvider,
+    type GeneratedImage,
+    generateImageWithProvider,
 } from "@/lib/ai/provider"
 import { isAuthStyle, type AuthStyle } from "@/lib/ai/openai-compatible"
 
@@ -211,32 +213,58 @@ export async function generateArticleWithRotary(input: {
     }
 }
 
+export type ImageGenerationResult = {
+    image: GeneratedImage
+    usedKeyId: string
+    attemptedKeyIds: string[]
+}
+
+/** Image generation on top of the generic rotary runner. */
+export async function generateImageWithRotary(input: {
+    keys?: AiKeyRecord[]
+    keyId?: string | null
+    payload: { prompt: string, options: { maxBytes: number; timeoutMs?: number; aspectRatio?: string } }
+    onAttempt?: (attemptIndex: number, attemptedKeyIds: string[]) => Promise<void> | void
+}): Promise<ImageGenerationResult> {
+    const result = await runWithAiRotary<GeneratedImage>({
+        capability: "image",
+        keyId: input.keyId,
+        keys: input.keys,
+        onAttempt: input.onAttempt,
+        run: async (provider) => {
+            const image = await generateImageWithProvider(provider, input.payload.prompt, input.payload.options)
+            return { value: image, authStyle: provider.authStyle ?? undefined }
+        },
+    })
+
+    return {
+        image: result.value,
+        usedKeyId: result.usedKeyId,
+        attemptedKeyIds: result.attemptedKeyIds,
+    }
+}
+
 /**
  * Picks an image-capable provider. Image generation uses the OpenAI images API shape,
  * so Gemini keys are not eligible.
  */
-export async function resolveImageProvider(keyId?: string | null): Promise<{
-    keyId: string
-    apiKey: string
-    baseUrl: string
-    model: string
-    authStyle: AuthStyle | null
-} | null> {
+export async function resolveImageProvider(keyId?: string | null): Promise<ResolvedAiProvider & { keyId: string } | null> {
     const keys = await loadActiveAiKeys({ capability: "image", keyId })
 
     for (const record of keys) {
-        if (record.provider !== AI_PROVIDER_OPENAI_COMPATIBLE) continue
+        if (record.provider !== AI_PROVIDER_OPENAI_COMPATIBLE && record.provider !== "gemini") continue
 
         const baseUrl = record.baseUrl?.trim()
         const model = record.model?.trim()
-        if (!baseUrl || !model) continue
+        if (record.provider === AI_PROVIDER_OPENAI_COMPATIBLE && (!baseUrl || !model)) continue
 
         return {
             keyId: record.id,
             apiKey: decryptStoredApiKey(record.apiKey),
-            baseUrl,
-            model,
+            baseUrl: baseUrl ?? "",
+            model: model ?? "",
             authStyle: isAuthStyle(record.authStyle) ? record.authStyle : null,
+            provider: record.provider,
         }
     }
 

@@ -229,9 +229,6 @@ async function normalizeCustomBaseUrl(
  * Rejecting it here avoids storing a credential that can never succeed.
  */
 function assertRoleProviderCompatible(role: AiRole, provider: string): string | null {
-    if (role === "image" && provider !== AI_PROVIDER_OPENAI_COMPATIBLE) {
-        return "Role image membutuhkan provider OpenAI-compatible (endpoint /images/generations)."
-    }
     return null
 }
 

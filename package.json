@@ -18,6 +18,7 @@
     "import": "npx tsx scripts/import-wordpress.ts"
   },
   "dependencies": {
+    "@google/genai": "^2.18.0",
     "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.3.0",
     "@radix-ui/react-accordion": "^1.2.12",

@@ -33,9 +33,6 @@ SEO:
 export const JSON_ONLY_INSTRUCTION =
     "Jawab HANYA dengan JSON object valid. Tanpa markdown code fence, tanpa teks lain."
 
-const ALLOWED_CONTENT_TAGS =
-    "Hanya gunakan tag: h2, h3, p, ul, ol, li, strong, em, blockquote, figure, figcaption, img. Jangan pakai h1, script, style, atau atribut style."
-
 // ---------------------------------------------------------------------------
 // Title ideas
 // ---------------------------------------------------------------------------
@@ -60,12 +57,10 @@ Format: {"titles": ["Judul pertama", "Judul kedua"]}`
 }
 
 // ---------------------------------------------------------------------------
-// Outline
+// Outline (structured JSON — HTML is built server-side, see article-format.ts)
 // ---------------------------------------------------------------------------
 
-export const outlineOutputSchema = z.object({
-    outlineHtml: z.string().trim().min(30),
-})
+export { structuredOutlineSchema as outlineStructuredSchema } from "@/lib/ai/article-format"
 
 export function buildOutlinePrompt(input: {
     title: string
@@ -77,26 +72,96 @@ ${input.keyword ? `Focus keyword: ${input.keyword}` : ""}
 ${input.angle ? `Angle yang diminta: ${input.angle}` : ""}
 
 Syarat outline:
-- Struktur kuat: 5-7 bagian H2, masing-masing boleh punya 2-3 H3 bila perlu.
+- 5-7 bagian utama. Setiap bagian menjadi satu subjudul H2 di artikel.
 - Urutan logis: mulai dari kebutuhan/masalah Mums, lalu penjelasan, lalu langkah praktis.
-- Setiap H2 diikuti satu baris <p> berisi poin yang akan dibahas (bukan paragraf penuh).
+- Judul bagian natural dan spesifik, bukan template generik seperti "Pendahuluan" atau "Kesimpulan".
+- Tiap bagian boleh punya 0-3 subbagian (akan menjadi H3).
 - Sertakan satu bagian FAQ singkat di akhir bila topiknya cocok.
-- Judul bagian tetap natural, bukan template generik seperti "Pendahuluan" atau "Kesimpulan".
 
-Kembalikan HTML pada key "outlineHtml". ${ALLOWED_CONTENT_TAGS}
+Kembalikan JSON dengan bentuk PERSIS berikut:
+{
+  "sections": [
+    {
+      "heading": "Judul bagian (akan jadi H2)",
+      "point": "Satu kalimat ringkas soal yang dibahas di bagian ini",
+      "subheadings": ["Subjudul opsional (akan jadi H3)"]
+    }
+  ]
+}
+
+Aturan penting:
+- "heading" berisi teks polos saja, TANPA tanda #, tanpa angka, tanpa tag HTML.
+- "subheadings" boleh array kosong [] bila tidak perlu.
 ${JSON_ONLY_INSTRUCTION}`
 }
 
 // ---------------------------------------------------------------------------
-// Full article from outline
+// Full article from outline (structured JSON — HTML built server-side)
 // ---------------------------------------------------------------------------
 
-export const fullContentOutputSchema = z.object({
-    contentHtml: z.string().trim().min(600),
-    excerpt: z.string().trim().min(40).max(320).optional(),
-})
+export { structuredArticleSchema as fullContentStructuredSchema } from "@/lib/ai/article-format"
 
 export function buildFullContentPrompt(input: {
+    title: string
+    outline: string
+    keyword?: string | null
+    targetWordCount?: number
+}): string {
+    const wordCount = input.targetWordCount ?? 1100
+
+    return `Tulis artikel utuh berdasarkan outline berikut, dengan gaya HaiBunda.
+
+Judul: ${input.title}
+${input.keyword ? `Focus keyword: ${input.keyword}` : ""}
+Target panjang: sekitar ${wordCount} kata.
+
+OUTLINE YANG HARUS DIIKUTI (tiap bagian di sini menjadi satu section dengan heading H2):
+${input.outline}
+
+Syarat penulisan:
+- Bangun artikel MENGIKUTI urutan bagian pada outline. Tiap bagian outline = satu objek section.
+- "heading" tiap section = judul bagian tersebut (teks polos, tanpa tanda # atau HTML).
+- Isi tiap section dengan "blocks": paragraf, subheading (H3), list, atau quote.
+- Paragraf pendek, 2-4 kalimat, panjang bervariasi. Paragraf pembuka (intro) langsung menyentuh
+  situasi nyata Mums tanpa basa-basi.
+- Sertakan minimal satu block bertipe "list" berisi langkah atau checklist praktis.
+- Untuk penekanan, gunakan **teks tebal** atau *teks miring* di dalam teks (format Markdown inline).
+- Sebut "Mums" secara wajar, tidak di setiap paragraf.
+- Tulisan 100% orisinal. Jangan mengutip atau meniru kalimat dari sumber lain.
+- Akhiri dengan langkah lanjutan konkret, bukan ringkasan kosong.
+
+Kembalikan JSON dengan bentuk PERSIS berikut:
+{
+  "intro": ["Paragraf pembuka 1", "Paragraf pembuka 2 (opsional)"],
+  "sections": [
+    {
+      "heading": "Judul bagian (akan jadi H2)",
+      "blocks": [
+        { "type": "paragraph", "text": "Isi paragraf. Boleh pakai **tebal**/*miring*." },
+        { "type": "subheading", "text": "Subjudul opsional (akan jadi H3)" },
+        { "type": "list", "ordered": false, "items": ["Poin pertama", "Poin kedua"] },
+        { "type": "quote", "text": "Kutipan atau tips penting (opsional)" }
+      ]
+    }
+  ],
+  "excerpt": "Ringkasan 1-2 kalimat, maksimal 300 karakter"
+}
+
+Aturan penting:
+- Untuk penekanan di dalam "text"/"items", boleh pakai Markdown (**tebal**, *miring*) ATAU
+  tag HTML inline sederhana: <strong>, <em>, <u>, <s>, <code>, <a href="https://...">.
+- JANGAN menaruh tag blok (<p>, <h2>, <ul>, <div>) di dalam "text"/"items" — struktur blok
+  sudah ditentukan oleh "type" dan "heading".
+- Setiap section wajib punya minimal satu block.
+${JSON_ONLY_INSTRUCTION}`
+}
+
+/**
+ * Fallback prompt used when a gateway cannot reliably return the nested JSON shape.
+ * Asks for Markdown, which is then converted to HTML by coerceToHtml(). This keeps a
+ * structured result even from models that only do free-form text well.
+ */
+export function buildFullContentMarkdownPrompt(input: {
     title: string
     outline: string
     keyword?: string | null
@@ -113,18 +178,18 @@ Target panjang: sekitar ${wordCount} kata.
 OUTLINE YANG HARUS DIIKUTI:
 ${input.outline}
 
-Syarat penulisan:
-- Ikuti struktur outline. Boleh memperhalus judul bagian, jangan mengubah urutan logisnya.
-- Paragraf pendek, 2-4 kalimat. Panjang paragraf tidak seragam.
-- Paragraf pembuka langsung menyentuh situasi nyata yang dialami Mums, tanpa basa-basi.
-- Sertakan minimal satu <ul> berisi langkah atau checklist praktis.
-- Sebut "Mums" secara wajar, tidak di setiap paragraf.
-- Tulisan harus 100% orisinal. Jangan mengutip atau meniru kalimat dari sumber mana pun.
-- Akhiri dengan bagian yang memberi langkah lanjutan konkret, bukan ringkasan kosong.
+Format keluaran WAJIB Markdown yang rapi:
+- Setiap bagian outline menjadi subjudul dengan "## " (H2).
+- Subbagian memakai "### " (H3).
+- Paragraf dipisah baris kosong. Pendek, 2-4 kalimat, panjang bervariasi.
+- Daftar langkah memakai "- " (bullet) atau "1. " (bernomor).
+- Penekanan memakai **tebal** atau *miring* seperlunya.
+- Sertakan minimal satu daftar langkah/checklist praktis.
+- Paragraf pembuka langsung menyentuh situasi nyata Mums, tanpa basa-basi.
+- Jangan membungkus jawaban dalam code fence.
+- Tulisan 100% orisinal, akhiri dengan langkah lanjutan konkret.
 
-${ALLOWED_CONTENT_TAGS}
-Kembalikan JSON dengan key "contentHtml" (HTML artikel) dan "excerpt" (ringkasan 1-2 kalimat, maksimal 300 karakter).
-${JSON_ONLY_INSTRUCTION}`
+Jawab HANYA dengan artikel Markdown-nya, tanpa komentar pembuka atau penutup.`
 }
 
 // ---------------------------------------------------------------------------

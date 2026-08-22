@@ -1,20 +1,19 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useEditor, EditorContent } from "@tiptap/react"
+import { useEditor, useEditorState, EditorContent, type Editor } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
-import Link from "@tiptap/extension-link"
 import Image from "@tiptap/extension-image"
 import Placeholder from "@tiptap/extension-placeholder"
-import Underline from "@tiptap/extension-underline"
 import TextAlign from "@tiptap/extension-text-align"
 import {
     Bold, Italic, Underline as UnderlineIcon, Strikethrough,
-    List, ListOrdered, Quote, Code, Heading1, Heading2, Heading3,
-    Link as LinkIcon, Image as ImageIcon, AlignLeft, AlignCenter,
-    AlignRight, Undo, Redo, Minus,
+    List, ListOrdered, Quote, Code, Link as LinkIcon,
+    Image as ImageIcon, AlignLeft, AlignCenter, AlignRight,
+    Undo, Redo, Minus, RemoveFormatting, Code2, Eye, Wand2
 } from "lucide-react"
 import { ImageSourcePicker, type PickedImage } from "@/components/admin/image-source-picker"
+import "./wysiwyg-content.css"
 
 function escapeAttribute(value: string): string {
     return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -27,11 +26,13 @@ function escapeText(value: string): string {
 function ToolbarButton({
     onClick,
     active,
+    disabled,
     children,
     title,
 }: {
     onClick: () => void
     active?: boolean
+    disabled?: boolean
     children: React.ReactNode
     title: string
 }) {
@@ -39,16 +40,72 @@ function ToolbarButton({
         <button
             type="button"
             onClick={onClick}
+            disabled={disabled}
             title={title}
+            aria-label={title}
             aria-pressed={active}
-            className={`p-1.5 rounded transition-colors ${active
+            className={`p-1.5 rounded transition-colors disabled:opacity-35 disabled:cursor-not-allowed ${active
                 ? "bg-[#466A68]/20 text-[#466A68]"
-                : "text-[#8C7A6B]/40 hover:text-[#8C7A6B]/70 hover:bg-[#D4BCAA]/5"
+                : "text-[#8C7A6B]/70 hover:text-[#0F0A09] hover:bg-[#D4BCAA]/15"
                 }`}
         >
             {children}
         </button>
     )
+}
+
+function ToolbarDivider() {
+    return <div className="w-px h-5 bg-[#D4BCAA]/40 mx-1" />
+}
+
+const BLOCK_FORMATS = [
+    { value: "paragraph", label: "Paragraf" },
+    { value: "h2", label: "Heading 2" },
+    { value: "h3", label: "Heading 3" },
+    { value: "h4", label: "Heading 4" },
+    { value: "blockquote", label: "Kutipan" },
+    { value: "codeBlock", label: "Blok Kode" },
+] as const
+
+type BlockFormat = (typeof BLOCK_FORMATS)[number]["value"]
+
+function readActiveBlockFormat(editor: Editor): BlockFormat {
+    if (editor.isActive("heading", { level: 2 })) return "h2"
+    if (editor.isActive("heading", { level: 3 })) return "h3"
+    if (editor.isActive("heading", { level: 4 })) return "h4"
+    if (editor.isActive("codeBlock")) return "codeBlock"
+    if (editor.isActive("blockquote")) return "blockquote"
+    return "paragraph"
+}
+
+function applyBlockFormat(editor: Editor, format: BlockFormat): void {
+    const chain = editor.chain().focus()
+
+    // Leave an existing wrapper before switching, otherwise the new block type nests
+    // inside the old one instead of replacing it.
+    if (editor.isActive("blockquote") && format !== "blockquote") chain.lift("blockquote")
+    if (editor.isActive("codeBlock") && format !== "codeBlock") chain.setParagraph()
+
+    switch (format) {
+        case "paragraph":
+            chain.setParagraph().run()
+            return
+        case "h2":
+            chain.setHeading({ level: 2 }).run()
+            return
+        case "h3":
+            chain.setHeading({ level: 3 }).run()
+            return
+        case "h4":
+            chain.setHeading({ level: 4 }).run()
+            return
+        case "blockquote":
+            chain.setParagraph().toggleBlockquote().run()
+            return
+        case "codeBlock":
+            chain.toggleCodeBlock().run()
+            return
+    }
 }
 
 type RichTextEditorProps = {
@@ -68,22 +125,30 @@ export function RichTextEditor({
     articleKeyword,
 }: RichTextEditorProps) {
     const [showImagePicker, setShowImagePicker] = useState(false)
+    const [mode, setMode] = useState<"visual" | "html">("visual")
+    // null while the visual editor owns the content; a string only while the HTML tab is
+    // open. Derived this way so no effect has to mirror `content` into local state.
+    const [htmlDraft, setHtmlDraft] = useState<string | null>(null)
+    const [activeSubheading, setActiveSubheading] = useState<string | null>(null)
 
     const editor = useEditor({
         immediatelyRender: false,
         extensions: [
+            // Link and Underline ship inside StarterKit v3. Registering them again as
+            // standalone extensions duplicates the schema entry, which makes TipTap drop
+            // the duplicate and silently break the related commands.
             StarterKit.configure({
                 heading: { levels: [1, 2, 3, 4] },
-            }),
-            Link.configure({
-                openOnClick: false,
-                HTMLAttributes: { class: "text-[#466A68] underline" },
+                link: {
+                    openOnClick: false,
+                    autolink: true,
+                    HTMLAttributes: { rel: "noopener noreferrer", class: "text-[#466A68] underline" },
+                },
             }),
             Image.configure({
                 HTMLAttributes: { class: "rounded-lg max-w-full" },
             }),
             Placeholder.configure({ placeholder }),
-            Underline,
             TextAlign.configure({ types: ["heading", "paragraph"] }),
         ],
         content,
@@ -92,14 +157,54 @@ export function RichTextEditor({
         },
         editorProps: {
             attributes: {
-                class: "prose prose-sm max-w-none min-h-[300px] px-5 py-4 focus:outline-none text-[#0F0A09]/90 leading-relaxed",
+                // Block-level styling lives in globals.css (.wysiwyg-content). Tailwind's
+                // preflight strips heading sizes and list markers, and @tailwindcss/typography
+                // is not installed, so `prose` classes have no effect here.
+                class: "wysiwyg-content min-h-[420px] px-5 py-4 focus:outline-none",
             },
         },
     })
 
-    // Adopt content replaced from outside the editor (AI assistant applying an outline or
-    // a full article, or the post loading on the edit route). Without this the editor keeps
-    // showing its initial value and the applied text is silently discarded on next keystroke.
+    /**
+     * Toolbar state.
+     *
+     * TipTap v3 does not re-render the React component on every transaction
+     * (`shouldRerenderOnTransaction` defaults to false), so reading `editor.isActive(...)`
+     * during render produces stale values and the toolbar never lights up. useEditorState
+     * subscribes to the transactions and re-renders only when this slice changes.
+     */
+    const toolbar = useEditorState({
+        editor,
+        selector: ({ editor: instance }) => {
+            if (!instance) return null
+
+            return {
+                blockFormat: readActiveBlockFormat(instance),
+                bold: instance.isActive("bold"),
+                italic: instance.isActive("italic"),
+                underline: instance.isActive("underline"),
+                strike: instance.isActive("strike"),
+                code: instance.isActive("code"),
+                bulletList: instance.isActive("bulletList"),
+                orderedList: instance.isActive("orderedList"),
+                blockquote: instance.isActive("blockquote"),
+                link: instance.isActive("link"),
+                alignLeft: instance.isActive({ textAlign: "left" }),
+                alignCenter: instance.isActive({ textAlign: "center" }),
+                alignRight: instance.isActive({ textAlign: "right" }),
+                canUndo: instance.can().undo(),
+                canRedo: instance.can().redo(),
+                wordCount: (() => {
+                    const text = instance.getText().trim()
+                    return text ? text.split(/\s+/).length : 0
+                })(),
+            }
+        },
+    })
+
+    // Adopt content replaced from outside the editor (AI assistant applying an outline or a
+    // full article, or the post loading on the edit route). Without this the editor keeps
+    // showing its initial value and the applied text is discarded on the next keystroke.
     useEffect(() => {
         if (!editor) return
         if (content === editor.getHTML()) return
@@ -107,13 +212,27 @@ export function RichTextEditor({
         editor.commands.setContent(content || "", { emitUpdate: false })
     }, [content, editor])
 
-    if (!editor) return null
+    if (!editor || !toolbar) return null
 
     const addLink = () => {
-        const url = prompt("Masukan URL:")
-        if (url) {
-            editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run()
+        const previous = editor.getAttributes("link").href as string | undefined
+        const url = window.prompt("Masukkan URL:", previous || "https://")
+
+        if (url === null) return
+
+        const trimmed = url.trim()
+        if (!trimmed) {
+            editor.chain().focus().extendMarkRange("link").unsetLink().run()
+            return
         }
+
+        // Reject non-http(s) schemes so a javascript: URL can never be stored.
+        if (!/^https?:\/\//i.test(trimmed)) {
+            window.alert("URL harus dimulai dengan http:// atau https://")
+            return
+        }
+
+        editor.chain().focus().extendMarkRange("link").setLink({ href: trimmed }).run()
     }
 
     /** Inserts the picked image as a figure so the caption is part of the article HTML. */
@@ -126,94 +245,200 @@ export function RichTextEditor({
         editor.chain().focus().insertContent(figure).run()
     }
 
+    const switchToVisual = () => {
+        if (mode === "visual") return
+
+        // Hand the edited HTML back to TipTap, which normalizes it against the schema.
+        editor.commands.setContent(htmlDraft ?? "", { emitUpdate: false })
+        onChange(editor.getHTML())
+        setHtmlDraft(null)
+        setMode("visual")
+    }
+
+    const switchToHtml = () => {
+        if (mode === "html") return
+
+        setHtmlDraft(editor.getHTML())
+        setMode("html")
+    }
+
+    const handleContextAwareAiImage = () => {
+        let lastHeading = ""
+        const endPos = editor.state.selection.$from.pos
+        editor.state.doc.nodesBetween(0, endPos, (node) => {
+            if (node.type.name === "heading") {
+                lastHeading = node.textContent
+            }
+        })
+        
+        setActiveSubheading(lastHeading || null)
+        setShowImagePicker(true)
+    }
+
+    const imageContextText = activeSubheading 
+        ? `Bagian yang sedang dibahas (Subheading): "${activeSubheading}". Konteks keseluruhan artikel: ${editor.getText().slice(0, 2000)}`
+        : editor.getText().slice(0, 3000)
+
     return (
-        <div className="bg-white border border-[#D4BCAA]/20 rounded-xl overflow-hidden">
-            {/* Toolbar */}
-            <div className="flex flex-wrap items-center gap-0.5 px-3 py-2 border-b border-[#D4BCAA]/20 bg-white/50">
-                <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive("bold")} title="Bold">
-                    <Bold className="h-4 w-4" />
-                </ToolbarButton>
-                <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive("italic")} title="Italic">
-                    <Italic className="h-4 w-4" />
-                </ToolbarButton>
-                <ToolbarButton onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive("underline")} title="Underline">
-                    <UnderlineIcon className="h-4 w-4" />
-                </ToolbarButton>
-                <ToolbarButton onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive("strike")} title="Strikethrough">
-                    <Strikethrough className="h-4 w-4" />
-                </ToolbarButton>
-
-                <div className="w-px h-5 bg-[#D4BCAA]/10 mx-1" />
-
-                <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive("heading", { level: 1 })} title="Heading 1">
-                    <Heading1 className="h-4 w-4" />
-                </ToolbarButton>
-                <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive("heading", { level: 2 })} title="Heading 2">
-                    <Heading2 className="h-4 w-4" />
-                </ToolbarButton>
-                <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive("heading", { level: 3 })} title="Heading 3">
-                    <Heading3 className="h-4 w-4" />
-                </ToolbarButton>
-
-                <div className="w-px h-5 bg-[#D4BCAA]/10 mx-1" />
-
-                <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive("bulletList")} title="Bullet List">
-                    <List className="h-4 w-4" />
-                </ToolbarButton>
-                <ToolbarButton onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive("orderedList")} title="Ordered List">
-                    <ListOrdered className="h-4 w-4" />
-                </ToolbarButton>
-                <ToolbarButton onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive("blockquote")} title="Quote">
-                    <Quote className="h-4 w-4" />
-                </ToolbarButton>
-                <ToolbarButton onClick={() => editor.chain().focus().toggleCodeBlock().run()} active={editor.isActive("codeBlock")} title="Code Block">
-                    <Code className="h-4 w-4" />
-                </ToolbarButton>
-                <ToolbarButton onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Horizontal Rule">
-                    <Minus className="h-4 w-4" />
-                </ToolbarButton>
-
-                <div className="w-px h-5 bg-[#D4BCAA]/10 mx-1" />
-
-                <ToolbarButton onClick={() => editor.chain().focus().setTextAlign("left").run()} active={editor.isActive({ textAlign: "left" })} title="Align Left">
-                    <AlignLeft className="h-4 w-4" />
-                </ToolbarButton>
-                <ToolbarButton onClick={() => editor.chain().focus().setTextAlign("center").run()} active={editor.isActive({ textAlign: "center" })} title="Align Center">
-                    <AlignCenter className="h-4 w-4" />
-                </ToolbarButton>
-                <ToolbarButton onClick={() => editor.chain().focus().setTextAlign("right").run()} active={editor.isActive({ textAlign: "right" })} title="Align Right">
-                    <AlignRight className="h-4 w-4" />
-                </ToolbarButton>
-
-                <div className="w-px h-5 bg-[#D4BCAA]/10 mx-1" />
-
-                <ToolbarButton onClick={addLink} active={editor.isActive("link")} title="Add Link">
-                    <LinkIcon className="h-4 w-4" />
-                </ToolbarButton>
-                <ToolbarButton onClick={() => setShowImagePicker(true)} title="Tambah Gambar">
-                    <ImageIcon className="h-4 w-4" />
-                </ToolbarButton>
-
-                <div className="flex-1" />
-
-                <ToolbarButton onClick={() => editor.chain().focus().undo().run()} title="Undo">
-                    <Undo className="h-4 w-4" />
-                </ToolbarButton>
-                <ToolbarButton onClick={() => editor.chain().focus().redo().run()} title="Redo">
-                    <Redo className="h-4 w-4" />
-                </ToolbarButton>
+        <div className="bg-white border border-[#D4BCAA]/30 rounded-xl overflow-hidden shadow-sm">
+            {/* Visual / HTML tabs, mirroring the classic editor */}
+            <div className="flex items-center gap-1 px-3 pt-2 border-b border-[#D4BCAA]/30 bg-[#FAF9F7]">
+                <button
+                    type="button"
+                    onClick={switchToVisual}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-t-md border border-b-0 transition-colors ${mode === "visual"
+                        ? "bg-white border-[#D4BCAA]/40 text-[#0F0A09]"
+                        : "bg-transparent border-transparent text-[#8C7A6B] hover:text-[#0F0A09]"
+                        }`}
+                >
+                    <Eye className="h-3.5 w-3.5" />
+                    Visual
+                </button>
+                <button
+                    type="button"
+                    onClick={switchToHtml}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-t-md border border-b-0 transition-colors ${mode === "html"
+                        ? "bg-white border-[#D4BCAA]/40 text-[#0F0A09]"
+                        : "bg-transparent border-transparent text-[#8C7A6B] hover:text-[#0F0A09]"
+                        }`}
+                >
+                    <Code2 className="h-3.5 w-3.5" />
+                    HTML
+                </button>
             </div>
 
-            {/* Editor */}
-            <EditorContent editor={editor} />
+            {mode === "visual" ? (
+                <>
+                    {/* Toolbar */}
+                    <div className="flex flex-wrap items-center gap-0.5 px-3 py-2 border-b border-[#D4BCAA]/30 bg-[#FAF9F7]">
+                        <select
+                            value={toolbar.blockFormat}
+                            onChange={(event) => applyBlockFormat(editor, event.target.value as BlockFormat)}
+                            title="Format paragraf"
+                            aria-label="Format paragraf"
+                            className="h-8 mr-1 px-2 bg-white border border-[#D4BCAA]/40 rounded text-xs text-[#0F0A09] outline-none focus:ring-2 focus:ring-[#466A68]/30"
+                        >
+                            {BLOCK_FORMATS.map((format) => (
+                                <option key={format.value} value={format.value}>
+                                    {format.label}
+                                </option>
+                            ))}
+                        </select>
+
+                        <ToolbarDivider />
+
+                        <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={toolbar.bold} title="Bold (Ctrl+B)">
+                            <Bold className="h-4 w-4" />
+                        </ToolbarButton>
+                        <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} active={toolbar.italic} title="Italic (Ctrl+I)">
+                            <Italic className="h-4 w-4" />
+                        </ToolbarButton>
+                        <ToolbarButton onClick={() => editor.chain().focus().toggleUnderline().run()} active={toolbar.underline} title="Underline (Ctrl+U)">
+                            <UnderlineIcon className="h-4 w-4" />
+                        </ToolbarButton>
+                        <ToolbarButton onClick={() => editor.chain().focus().toggleStrike().run()} active={toolbar.strike} title="Strikethrough">
+                            <Strikethrough className="h-4 w-4" />
+                        </ToolbarButton>
+                        <ToolbarButton onClick={() => editor.chain().focus().toggleCode().run()} active={toolbar.code} title="Kode Inline">
+                            <Code className="h-4 w-4" />
+                        </ToolbarButton>
+
+                        <ToolbarDivider />
+
+                        <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={toolbar.bulletList} title="Daftar Bullet">
+                            <List className="h-4 w-4" />
+                        </ToolbarButton>
+                        <ToolbarButton onClick={() => editor.chain().focus().toggleOrderedList().run()} active={toolbar.orderedList} title="Daftar Bernomor">
+                            <ListOrdered className="h-4 w-4" />
+                        </ToolbarButton>
+                        <ToolbarButton onClick={() => editor.chain().focus().toggleBlockquote().run()} active={toolbar.blockquote} title="Kutipan">
+                            <Quote className="h-4 w-4" />
+                        </ToolbarButton>
+                        <ToolbarButton onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Garis Horizontal">
+                            <Minus className="h-4 w-4" />
+                        </ToolbarButton>
+
+                        <ToolbarDivider />
+
+                        <ToolbarButton onClick={() => editor.chain().focus().setTextAlign("left").run()} active={toolbar.alignLeft} title="Rata Kiri">
+                            <AlignLeft className="h-4 w-4" />
+                        </ToolbarButton>
+                        <ToolbarButton onClick={() => editor.chain().focus().setTextAlign("center").run()} active={toolbar.alignCenter} title="Rata Tengah">
+                            <AlignCenter className="h-4 w-4" />
+                        </ToolbarButton>
+                        <ToolbarButton onClick={() => editor.chain().focus().setTextAlign("right").run()} active={toolbar.alignRight} title="Rata Kanan">
+                            <AlignRight className="h-4 w-4" />
+                        </ToolbarButton>
+
+                        <ToolbarDivider />
+
+                        <ToolbarButton onClick={addLink} active={toolbar.link} title="Tambah / Edit Link">
+                            <LinkIcon className="h-4 w-4" />
+                        </ToolbarButton>
+                        <ToolbarButton onClick={() => { setActiveSubheading(null); setShowImagePicker(true); }} title="Tambah Gambar">
+                            <ImageIcon className="h-4 w-4" />
+                        </ToolbarButton>
+                        <ToolbarButton onClick={handleContextAwareAiImage} title="Generate AI Image (Sesuai Konteks Subheading)">
+                            <Wand2 className="h-4 w-4 text-[#466A68]" />
+                        </ToolbarButton>
+                        <ToolbarButton
+                            onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
+                            title="Hapus Format"
+                        >
+                            <RemoveFormatting className="h-4 w-4" />
+                        </ToolbarButton>
+
+                        <div className="flex-1" />
+
+                        <ToolbarButton
+                            onClick={() => editor.chain().focus().undo().run()}
+                            disabled={!toolbar.canUndo}
+                            title="Undo (Ctrl+Z)"
+                        >
+                            <Undo className="h-4 w-4" />
+                        </ToolbarButton>
+                        <ToolbarButton
+                            onClick={() => editor.chain().focus().redo().run()}
+                            disabled={!toolbar.canRedo}
+                            title="Redo (Ctrl+Shift+Z)"
+                        >
+                            <Redo className="h-4 w-4" />
+                        </ToolbarButton>
+                    </div>
+
+                    <EditorContent editor={editor} />
+
+                    <div className="flex items-center justify-between px-4 py-2 border-t border-[#D4BCAA]/30 bg-[#FAF9F7] text-[11px] text-[#8C7A6B]/70">
+                        <span>{toolbar.wordCount} kata</span>
+                        <span>Ctrl+B tebal · Ctrl+I miring · Ctrl+U garis bawah</span>
+                    </div>
+                </>
+            ) : (
+                <div className="p-3">
+                    <textarea
+                        value={htmlDraft ?? ""}
+                        onChange={(event) => setHtmlDraft(event.target.value)}
+                        spellCheck={false}
+                        aria-label="Sumber HTML artikel"
+                        className="w-full min-h-[420px] font-mono text-xs leading-relaxed text-[#0F0A09] bg-white border border-[#D4BCAA]/30 rounded-lg p-3 outline-none focus:ring-2 focus:ring-[#466A68]/30 resize-y"
+                    />
+                    <p className="mt-2 text-[11px] text-[#8C7A6B]/70">
+                        Kembali ke tab <strong>Visual</strong> untuk menerapkan perubahan HTML. Tag yang tidak
+                        didukung editor akan dirapikan otomatis.
+                    </p>
+                </div>
+            )}
 
             <ImageSourcePicker
                 isOpen={showImagePicker}
-                onClose={() => setShowImagePicker(false)}
+                onClose={() => {
+                    setShowImagePicker(false)
+                    setActiveSubheading(null)
+                }}
                 onSelect={insertPickedImage}
                 articleTitle={articleTitle}
                 articleKeyword={articleKeyword}
-                articleContext={editor.getText().slice(0, 3000)}
+                articleContext={imageContextText}
                 purpose="inline"
                 title="Tambah Gambar ke Artikel"
             />

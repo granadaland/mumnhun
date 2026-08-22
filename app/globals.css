@@ -291,6 +291,12 @@
   }
 }
 
+/* =========================================================================
+   Editor/preview content styling lives in components/admin/wysiwyg-content.css
+   and is imported by the components that render it, so the rules ship in the
+   same chunk as the editor rather than depending on this global file.
+   ========================================================================= */
+
 /* Scrollbar Utilities */
 .no-scrollbar::-webkit-scrollbar {
   display: none;

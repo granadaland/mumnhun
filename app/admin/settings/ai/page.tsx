@@ -476,7 +476,7 @@ export default function AiSettingsPage() {
             label: newKey.label.trim(),
             apiKey: newKey.apiKey.trim(),
             provider: newKey.provider,
-            capability: newKey.provider === "gemini" ? "text" : newKey.capability,
+            capability: newKey.capability,
             ...(newKey.provider === "openai_compatible"
                 ? { baseUrl: newKey.baseUrl.trim(), model: newKey.model.trim() }
                 : {}),
@@ -759,7 +759,7 @@ export default function AiSettingsPage() {
                                             ...prev,
                                             provider,
                                             ...(provider === "gemini"
-                                                ? { baseUrl: "", model: "", capability: "text" as AiCapability }
+                                                ? { baseUrl: "", model: "" }
                                                 : {}),
                                         }))
                                         setFormError(null)
@@ -777,19 +777,13 @@ export default function AiSettingsPage() {
                                 </label>
                                 <select
                                     id="ai-key-capability"
-                                    value={newKey.provider === "gemini" ? "text" : newKey.capability}
-                                    disabled={newKey.provider === "gemini"}
+                                    value={newKey.capability}
                                     onChange={(e) => setNewKey({ ...newKey, capability: e.target.value as AiCapability })}
-                                    className="w-full px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all disabled:opacity-60"
+                                    className="w-full px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all"
                                 >
                                     <option value="text">Text (artikel)</option>
                                     <option value="image">Image (gambar)</option>
                                 </select>
-                                {newKey.provider === "gemini" && (
-                                    <p className="text-[10px] text-[#8C7A6B]/40 mt-1">
-                                        Gemini hanya mendukung capability text.
-                                    </p>
-                                )}
                             </div>
                         </div>
 

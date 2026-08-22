@@ -4,14 +4,13 @@ import { requireAdminMutationApi } from "@/lib/security/admin"
 import { logAdminError, logAdminInfo, logAdminWarn } from "@/lib/observability/admin-log"
 import { summarizeUnknownError } from "@/lib/security/admin-helpers"
 import { classifyProviderFailure, toAiKeyFailureHttpStatus } from "@/lib/security/ai-key-status"
-import {
-    recordImageRoleFailure,
-    recordImageRoleSuccess,
-    resolveImageRoleModel,
-} from "@/lib/ai/task-models"
-import { generateImageWithProvider } from "@/lib/ai/provider"
+import { generateImageWithRotary, NoActiveAiKeyError, AllAiKeysFailedError } from "@/lib/ai/key-rotary"
+import { ImageGenerationUnsupportedError } from "@/lib/ai/openai-compatible"
 import { MAX_IMAGE_BYTES, MediaIngestError, assertAllowedImageBuffer, ingestImage } from "@/lib/media/ingest"
 import { slugifyTitle } from "@/lib/content/post-publishing"
+
+// Image generation plus Cloudinary upload can take a while; extend the platform timeout.
+export const maxDuration = 180
 
 /**
  * Generates an image on the dedicated "image" role model and stores it in Cloudinary.
@@ -82,34 +81,20 @@ export async function POST(request: NextRequest) {
         return errorJson("Invalid request payload", "AI_IMAGE_INVALID_JSON", 400)
     }
 
-    const provider = await resolveImageRoleModel()
-    if (!provider) {
-        return errorJson(
-            "Model Generate Gambar belum dikonfigurasi. Atur di Settings > AI Models (butuh provider OpenAI-compatible dengan base URL dan model).",
-            "AI_ROLE_NOT_CONFIGURED",
-            400,
-            { role: "image" }
-        )
-    }
-
     try {
-        const generated = await generateImageWithProvider(
-            {
-                apiKey: provider.apiKey,
-                baseUrl: provider.baseUrl,
-                model: provider.model,
-                authStyle: provider.authStyle,
-            },
-            payload.prompt,
-            { maxBytes: MAX_IMAGE_BYTES }
-        )
+        const generated = await generateImageWithRotary({
+            payload: {
+                prompt: payload.prompt,
+                options: { maxBytes: MAX_IMAGE_BYTES, aspectRatio: "4:3" }
+            }
+        })
 
-        const mimeType = assertAllowedImageBuffer(generated.buffer)
+        const mimeType = assertAllowedImageBuffer(generated.image.buffer)
         const extension = mimeType.split("/")[1] || "png"
         const filenameBase = slugifyTitle(payload.filenameHint || payload.prompt.slice(0, 60)) || "ai-image"
 
         const media = await ingestImage({
-            buffer: generated.buffer,
+            buffer: generated.image.buffer,
             mimeType,
             filename: `${filenameBase}.${extension}`,
             source: "ai",
@@ -119,8 +104,6 @@ export async function POST(request: NextRequest) {
             folder: "mumnhun/ai",
         })
 
-        await recordImageRoleSuccess(provider.roleModelId)
-
         logAdminInfo({
             requestId,
             action: "ai-image:create",
@@ -128,7 +111,7 @@ export async function POST(request: NextRequest) {
             role: adminCheck.identity.role,
             roleSource: adminCheck.identity.source,
             status: 200,
-            payloadSummary: { mediaId: media.mediaId, roleModelId: provider.roleModelId },
+            payloadSummary: { mediaId: media.mediaId, roleModelId: generated.usedKeyId },
             validation: { ok: true },
         })
 
@@ -137,9 +120,20 @@ export async function POST(request: NextRequest) {
             data: { ...media, alt: payload.alt ?? null, caption: payload.caption ?? null },
         })
     } catch (error) {
-        const failure = classifyProviderFailure(error)
-
-        await recordImageRoleFailure(provider.roleModelId, error)
+        let failure = classifyProviderFailure(error)
+        let status = toAiKeyFailureHttpStatus(failure)
+        
+        if (error instanceof AllAiKeysFailedError) {
+            failure = error.failure
+            status = toAiKeyFailureHttpStatus(failure)
+        } else if (error instanceof NoActiveAiKeyError) {
+            return errorJson(
+                "API Key untuk Generate Gambar belum dikonfigurasi. Atur di Settings > AI Configuration (capability Image).",
+                "AI_ROLE_NOT_CONFIGURED",
+                400,
+                { role: "image" }
+            )
+        }
 
         logAdminError({
             requestId,
@@ -147,7 +141,7 @@ export async function POST(request: NextRequest) {
             userId: adminCheck.identity.id,
             role: adminCheck.identity.role,
             roleSource: adminCheck.identity.source,
-            status: toAiKeyFailureHttpStatus(failure),
+            status: status,
             error: summarizeUnknownError(error),
         })
 
@@ -156,7 +150,18 @@ export async function POST(request: NextRequest) {
             return errorJson(error.message, error.code, status)
         }
 
-        return errorJson("Gagal generate gambar AI", failure.code, toAiKeyFailureHttpStatus(failure), {
+        // The gateway has no image endpoint at all: tell the operator to repoint the role
+        // rather than reporting an opaque HTTP 404.
+        if (error instanceof ImageGenerationUnsupportedError) {
+            return errorJson(
+                `${error.message} Ganti model role Image ke model image-generation (mis. gpt-image-1, dall-e-3, flux) atau pakai provider lain di Settings > AI Models.`,
+                "AI_IMAGE_ENDPOINT_UNSUPPORTED",
+                400,
+                { reason: error.detail || undefined }
+            )
+        }
+
+        return errorJson("Gagal generate gambar AI", failure.code, status, {
             reason: failure.message,
         })
     }

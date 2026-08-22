@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { ArrowLeft, RefreshCw, Save, Loader2, CheckCircle2, History, Languages, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { AdminClientError, adminGet, adminPost, adminPut } from "@/lib/api/admin-client"
+import "@/components/admin/wysiwyg-content.css"
 
 function getClientErrorMessage(error: unknown, fallback: string): string {
     if (error instanceof AdminClientError && error.code === "TIMEOUT") {
@@ -306,7 +307,7 @@ export default function AiRewritePage() {
                                     <h3 className="text-lg font-bold text-[#0F0A09]">{result.originalTitle}</h3>
                                     {originalContent ? (
                                         <div
-                                            className="prose prose-sm max-w-none prose-p:text-[#0F0A09]/80 prose-headings:text-[#0F0A09]"
+                                            className="wysiwyg-content wysiwyg-compact"
                                             dangerouslySetInnerHTML={{ __html: originalContent }}
                                         />
                                     ) : (
@@ -326,7 +327,7 @@ export default function AiRewritePage() {
                                         </div>
                                     )}
                                     <div
-                                        className="prose prose-sm max-w-none prose-p:text-[#0F0A09]/90 prose-headings:text-[#0F0A09]"
+                                        className="wysiwyg-content wysiwyg-compact"
                                         dangerouslySetInnerHTML={{ __html: result.rewrittenContentHtml }}
                                     />
                                 </div>

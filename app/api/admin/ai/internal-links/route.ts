@@ -11,6 +11,9 @@ import { summarizeUnknownError, adminJsonValidationError } from "@/lib/security/
 import { AllAiKeysFailedError, NoActiveAiKeyError, runWithAiRotary } from "@/lib/ai/key-rotary"
 import { generateJson } from "@/lib/ai/provider"
 
+// Analysing a post against up to 100 targets is a large model call; extend the timeout.
+export const maxDuration = 300
+
 const internalLinksRequestSchema = z.object({
     postId: z.string().cuid(),
 })

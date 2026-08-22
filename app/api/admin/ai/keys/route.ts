@@ -310,14 +310,6 @@ export async function POST(request: NextRequest) {
         const provider = payload.provider || AI_PROVIDER_GEMINI
         const capability = payload.capability || "text"
 
-        if (provider === AI_PROVIDER_GEMINI && capability !== "text") {
-            return errorJson(
-                "Provider Gemini hanya mendukung capability text",
-                "AI_KEY_CAPABILITY_UNSUPPORTED",
-                400
-            )
-        }
-
         const count = await prisma.aiApiKey.count()
         if (count >= MAX_API_KEYS) {
             return errorJson(`Maximum ${MAX_API_KEYS} API keys allowed`, "AI_KEYS_LIMIT_REACHED", 400)
@@ -517,13 +509,6 @@ export async function PUT(request: NextRequest) {
         }
 
         if (payload.capability !== undefined) {
-            if (existingKey.provider === AI_PROVIDER_GEMINI && payload.capability !== "text") {
-                return errorJson(
-                    "Provider Gemini hanya mendukung capability text",
-                    "AI_KEY_CAPABILITY_UNSUPPORTED",
-                    400
-                )
-            }
             updateData.capability = payload.capability
         }
 

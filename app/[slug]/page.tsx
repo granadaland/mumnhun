@@ -309,10 +309,15 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
     getRecommendedPosts(post.id, categoryId, 6),
   ])
 
-  // Extract the first image from content to use as hero image
+  // Extract the first image from content so it is not duplicated when it also acts as hero.
   const { src: firstImageSrc, contentWithoutFirstImage } = extractFirstImage(post.content)
-  const heroImageUrl = firstImageSrc || post.featuredImage || '/images/placeholder.jpg'
-  const sanitizedContent = sanitizeHtmlContent(contentWithoutFirstImage)
+  // A featured image chosen in the editor is an explicit decision, so it wins as the hero.
+  // Only fall back to the first in-content image (then placeholder) when none was picked.
+  const heroImageUrl = post.featuredImage || firstImageSrc || '/images/placeholder.jpg'
+  // If the hero comes from the featured image, keep the full content intact; only strip the
+  // first image when that image itself is being promoted to hero (avoids showing it twice).
+  const bodyHtml = post.featuredImage ? post.content : contentWithoutFirstImage
+  const sanitizedContent = sanitizeHtmlContent(bodyHtml)
   const canonicalUrl = getCanonicalUrl(post.canonicalUrl, post.slug)
   const primaryCategory = post.categories[0]?.category
   const seoDescription = post.metaDescription || post.excerpt || `Artikel ${post.title} di ${SITE_NAME}`

@@ -219,10 +219,11 @@ export default function AiRoleModelsPage() {
                 setFeedback({ type: "error", message: "Base URL wajib diisi untuk provider OpenAI-compatible." })
                 return
             }
-            if (!form.model.trim()) {
-                setFeedback({ type: "error", message: "Model wajib diisi." })
-                return
-            }
+        }
+        
+        if (!form.model.trim()) {
+            setFeedback({ type: "error", message: "Model wajib diisi." })
+            return
         }
 
         setBusyRole(role)
@@ -507,17 +508,11 @@ export default function AiRoleModelsPage() {
                                                 ...(e.target.value === "gemini" ? { baseUrl: "", model: "" } : {}),
                                             })
                                         }
-                                        disabled={item.role === "image"}
                                         className="w-full bg-white border border-[#D4BCAA]/30 rounded-lg px-3 py-2 text-sm text-[#0F0A09] outline-none focus:ring-2 focus:ring-[#466A68]/30 disabled:bg-[#FAF9F7]"
                                     >
                                         <option value="openai_compatible">Custom (OpenAI-compatible)</option>
                                         <option value="gemini">Google Gemini</option>
                                     </select>
-                                    {item.role === "image" && (
-                                        <p className="text-[10px] text-[#8C7A6B]/60 mt-1">
-                                            Role gambar hanya mendukung OpenAI-compatible.
-                                        </p>
-                                    )}
                                 </div>
 
                                 <div>
@@ -535,7 +530,6 @@ export default function AiRoleModelsPage() {
                                 </div>
 
                                 {isCustom && (
-                                    <>
                                         <div>
                                             <label
                                                 htmlFor={`baseurl-${item.role}`}
@@ -552,6 +546,7 @@ export default function AiRoleModelsPage() {
                                                 className="w-full bg-white border border-[#D4BCAA]/30 rounded-lg px-3 py-2 text-sm text-[#0F0A09] font-mono outline-none focus:ring-2 focus:ring-[#466A68]/30"
                                             />
                                         </div>
+                                )}
 
                                         <div>
                                             <div className="flex items-center justify-between mb-1">
@@ -563,8 +558,8 @@ export default function AiRoleModelsPage() {
                                                     onClick={() => handleDiscover(item.role)}
                                                     disabled={
                                                         discoveringRole === item.role ||
-                                                        !form.baseUrl.trim() ||
-                                                        !form.apiKey.trim()
+                                                        !form.apiKey.trim() ||
+                                                        (isCustom && !form.baseUrl.trim())
                                                     }
                                                     className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] border border-[#466A68]/30 text-[#466A68] rounded hover:bg-[#466A68]/5 disabled:opacity-40"
                                                 >
@@ -597,12 +592,15 @@ export default function AiRoleModelsPage() {
                                                 type="text"
                                                 value={form.model}
                                                 onChange={(e) => updateForm(item.role, { model: e.target.value })}
-                                                placeholder={item.role === "image" ? "gpt-image-1" : "gpt-4o-mini"}
+                                                placeholder={item.role === "image" ? (isCustom ? "gpt-image-1" : "imagen-3.0-generate-001") : "gpt-4o-mini"}
                                                 className="w-full bg-white border border-[#D4BCAA]/30 rounded-lg px-3 py-2 text-sm text-[#0F0A09] font-mono outline-none focus:ring-2 focus:ring-[#466A68]/30"
                                             />
+                                            {item.role === "image" && (
+                                                <p className="text-[10px] text-[#8C7A6B]/60 mt-1">
+                                                    Wajib model <strong>image generation</strong> (mis. {isCustom ? "gpt-image-1, dall-e-3" : "imagen-3.0-generate-001"}).
+                                                </p>
+                                            )}
                                         </div>
-                                    </>
-                                )}
 
                                 <div>
                                     <label htmlFor={`label-${item.role}`} className="block text-xs text-[#8C7A6B] mb-1">

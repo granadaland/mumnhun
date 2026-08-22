@@ -9,21 +9,23 @@ import {
 import { logAdminError, logAdminWarn } from "@/lib/observability/admin-log"
 import { summarizeUnknownError } from "@/lib/security/admin-helpers"
 import { sanitizeArticleHtml } from "@/lib/content/post-publishing"
-import { RoleModelNotConfiguredError, generateRoleJson } from "@/lib/ai/task-models"
+import { RoleModelNotConfiguredError, generateRoleJson, generateRoleText } from "@/lib/ai/task-models"
 import {
     HAIBUNDA_VOICE,
     JSON_ONLY_INSTRUCTION,
     buildFullContentPrompt,
+    buildFullContentMarkdownPrompt,
     buildImageMetaPrompt,
     buildOutlinePrompt,
     buildSeoPackagePrompt,
     buildTitleIdeasPrompt,
-    fullContentOutputSchema,
+    fullContentStructuredSchema,
     imageMetaOutputSchema,
-    outlineOutputSchema,
+    outlineStructuredSchema,
     seoPackageOutputSchema,
     titleIdeasOutputSchema,
 } from "@/lib/ai/prompts"
+import { coerceToHtml, renderArticleHtml, renderOutlineHtml } from "@/lib/ai/article-format"
 
 /**
  * In-editor AI assistant.
@@ -32,6 +34,10 @@ import {
  * which also runs on the text model because it only produces a prompt plus alt/caption
  * copy -- the actual pixels come from the image role via /api/admin/ai/image.
  */
+
+// Full-article generation can take minutes on slower gateways; allow up to 5 minutes so
+// the platform does not kill the request before the model finishes.
+export const maxDuration = 300
 
 const assistRequestSchema = z.discriminatedUnion("action", [
     z.object({
@@ -205,15 +211,16 @@ Kembalikan JSON dengan key "excerpt". ${JSON_ONLY_INSTRUCTION}`,
                         }),
                         ...tuning,
                     },
-                    outlineOutputSchema
+                    outlineStructuredSchema
                 )
 
-                // Sanitize before it reaches the editor, so the preview and the stored
-                // content go through the same allowlist.
-                const outlineHtml = sanitizeArticleHtml(result.value.outlineHtml)
+                // Build the HTML from the structured shape, so every section becomes an H2
+                // regardless of how the model formatted its text. Then sanitize with the
+                // same allowlist used for stored content.
+                const outlineHtml = sanitizeArticleHtml(renderOutlineHtml(result.value))
                 if (!outlineHtml) {
                     return errorJson(
-                        "Outline hasil AI kosong setelah sanitasi HTML",
+                        "Outline hasil AI kosong setelah diproses",
                         502,
                         "AI_ASSIST_EMPTY_OUTPUT"
                     )
@@ -223,25 +230,55 @@ Kembalikan JSON dengan key "excerpt". ${JSON_ONLY_INSTRUCTION}`,
             }
 
             case "generate_content": {
-                const result = await generateRoleJson(
-                    "text",
-                    {
+                // Primary path: structured JSON → guaranteed H2/H3/list HTML.
+                // Fallback path: if the gateway cannot produce the nested JSON shape, ask
+                // for Markdown prose and convert it deterministically. Either way the editor
+                // receives real structure, never a flat blob.
+                let contentHtml = ""
+                let excerpt: string | null = null
+
+                try {
+                    const result = await generateRoleJson(
+                        "text",
+                        {
+                            system: HAIBUNDA_VOICE,
+                            prompt: buildFullContentPrompt({
+                                title: payload.payload.title,
+                                outline: payload.payload.outline,
+                                keyword: payload.payload.keyword,
+                                targetWordCount: payload.payload.targetWordCount,
+                            }),
+                            ...tuning,
+                        },
+                        fullContentStructuredSchema
+                    )
+
+                    contentHtml = sanitizeArticleHtml(renderArticleHtml(result.value))
+                    excerpt = result.value.excerpt ?? null
+                } catch (structuredError) {
+                    // A schema/JSON failure is recoverable via the Markdown fallback; a
+                    // provider/auth failure is not, so rethrow those to the outer handler.
+                    if (structuredError instanceof RoleModelNotConfiguredError) {
+                        throw structuredError
+                    }
+
+                    const fallback = await generateRoleText("text", {
                         system: HAIBUNDA_VOICE,
-                        prompt: buildFullContentPrompt({
+                        prompt: buildFullContentMarkdownPrompt({
                             title: payload.payload.title,
                             outline: payload.payload.outline,
                             keyword: payload.payload.keyword,
                             targetWordCount: payload.payload.targetWordCount,
                         }),
                         ...tuning,
-                    },
-                    fullContentOutputSchema
-                )
+                    })
 
-                const contentHtml = sanitizeArticleHtml(result.value.contentHtml)
+                    contentHtml = sanitizeArticleHtml(coerceToHtml(fallback.value))
+                }
+
                 if (!contentHtml) {
                     return errorJson(
-                        "Konten hasil AI kosong setelah sanitasi HTML",
+                        "Konten hasil AI kosong setelah diproses",
                         502,
                         "AI_ASSIST_EMPTY_OUTPUT"
                     )
@@ -249,7 +286,7 @@ Kembalikan JSON dengan key "excerpt". ${JSON_ONLY_INSTRUCTION}`,
 
                 return NextResponse.json({
                     success: true,
-                    data: { contentHtml, excerpt: result.value.excerpt ?? null },
+                    data: { contentHtml, excerpt },
                 })
             }
 

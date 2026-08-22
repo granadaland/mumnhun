@@ -186,6 +186,7 @@ export type ResolvedImageRoleModel = {
     baseUrl: string
     model: string
     authStyle: AuthStyle | null
+    provider: string
 }
 
 /**
@@ -197,18 +198,19 @@ export type ResolvedImageRoleModel = {
 export async function resolveImageRoleModel(): Promise<ResolvedImageRoleModel | null> {
     const record = await loadRoleModel("image")
     if (!record) return null
-    if (record.provider !== AI_PROVIDER_OPENAI_COMPATIBLE) return null
+    if (record.provider !== AI_PROVIDER_OPENAI_COMPATIBLE && record.provider !== "gemini") return null
 
     const baseUrl = record.baseUrl?.trim()
     const model = record.model?.trim()
-    if (!baseUrl || !model) return null
+    if (record.provider === AI_PROVIDER_OPENAI_COMPATIBLE && (!baseUrl || !model)) return null
 
     return {
         roleModelId: record.id,
         apiKey: decryptStoredApiKey(record.apiKey),
-        baseUrl,
-        model,
+        baseUrl: baseUrl || "",
+        model: model || "",
         authStyle: isAuthStyle(record.authStyle) ? record.authStyle : null,
+        provider: record.provider
     }
 }
 

@@ -27,6 +27,9 @@ import {
     validatePublishReadiness,
 } from "@/lib/content/post-publishing"
 
+// Article + optional image generation can take minutes; extend the platform timeout.
+export const maxDuration = 300
+
 const generateArticleSchema = z.object({
     topic: z.string().trim().min(3, "Topic/keyword minimal 3 karakter").max(200),
     tone: z.string().trim().min(2).max(80).optional(),

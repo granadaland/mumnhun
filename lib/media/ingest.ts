@@ -167,6 +167,7 @@ export async function uploadImageBuffer(
             {
                 folder: options.folder || "mumnhun/posts",
                 resource_type: "image",
+                format: "webp",
                 ...(options.publicId ? { public_id: options.publicId } : {}),
             },
             (error, result) => {
