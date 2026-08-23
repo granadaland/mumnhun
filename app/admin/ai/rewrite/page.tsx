@@ -85,7 +85,7 @@ export default function AiRewritePage() {
                     tone: tone || undefined,
                     focusKeyword: focusKeyword || undefined,
                 },
-                timeoutMs: 120000,
+                timeoutMs: 300000,
             })
 
             if (res.success && res.data?.result) {

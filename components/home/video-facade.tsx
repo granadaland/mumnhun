@@ -48,21 +48,13 @@ export function VideoFacade({
             {/* Play Button Container */}
             <button
                 onClick={() => setIsPlaying(true)}
-                className="absolute inset-0 w-full h-full flex flex-col items-center justify-center gap-3 cursor-pointer group focus:outline-none z-10 p-4"
+                className="absolute inset-0 w-full h-full flex items-center justify-center cursor-pointer group focus:outline-none z-10"
                 aria-label={`Putar video: ${title}`}
             >
-                <div className="relative flex items-center justify-center">
-                    {/* Pulsing ring */}
-                    <span className="absolute w-14 h-14 md:w-20 md:h-20 rounded-full bg-white/30 animate-ping opacity-75" />
-                    {/* Main play circle */}
-                    <div className="relative w-14 h-14 md:w-20 md:h-20 rounded-full bg-white text-[#2E5650] flex items-center justify-center shadow-2xl transition-transform duration-300 group-hover:scale-110 active:scale-95">
-                        <Play className="w-5 h-5 md:w-8 md:h-8 fill-[#2E5650] ml-0.5 md:ml-1" />
-                    </div>
+                {/* Main play circle */}
+                <div className="w-14 h-14 md:w-20 md:h-20 rounded-full bg-white text-[#2E5650] flex items-center justify-center shadow-2xl transition-transform duration-200 group-hover:scale-105 active:scale-95">
+                    <Play className="w-5 h-5 md:w-8 md:h-8 fill-[#2E5650] ml-0.5 md:ml-1" />
                 </div>
-
-                <span className="text-white font-semibold text-xs md:text-sm drop-shadow-md px-3.5 py-1.5 rounded-full bg-black/50 backdrop-blur-sm border border-white/20 text-center">
-                    Putar Video (1:45)
-                </span>
             </button>
         </div>
     )

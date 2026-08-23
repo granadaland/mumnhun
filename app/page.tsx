@@ -360,7 +360,7 @@ export default async function HomePage() {
               {/* Strict Keyword-Optimized H1 */}
               <div className="space-y-1.5">
                 <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-[2.65rem] font-bold text-[#281E19] leading-[1.15] tracking-tight">
-                  Sewa Freezer ASI & Rental Kulkas ASI Jabodetabek
+                  Sewa Freezer ASI & <span className="text-[#2E5650]">Rental Kulkas ASI</span> Jabodetabek
                 </h1>
                 <p className="text-base sm:text-lg md:text-xl font-semibold text-[#2E5650]">
                   Solusi Higienis & Aman untuk Penyimpanan Stok ASI Perah
@@ -587,87 +587,135 @@ export default async function HomePage() {
       {/* ═══════════════════════════════════════════════════════ */}
       {/* SECTION 4: TENTANG KAMI & VIDEO PROFILE                */}
       {/* ═══════════════════════════════════════════════════════ */}
-      <section className="py-14 sm:py-20 md:py-28 px-4 sm:px-6 relative overflow-hidden bg-gradient-to-b from-white via-[#FAF7F4] to-white" aria-labelledby="about-heading">
-        {/* Subtle Ambient Decorative Glows */}
-        <div className="absolute top-1/2 left-0 w-72 h-72 bg-[#E8DDD4]/40 rounded-full blur-3xl -translate-y-1/2 -z-10 pointer-events-none" />
-        <div className="absolute bottom-0 right-0 w-80 h-80 bg-[#2E5650]/5 rounded-full blur-3xl -z-10 pointer-events-none" />
+      <section className="py-16 sm:py-20 md:py-28 px-4 sm:px-6 relative overflow-hidden bg-gradient-to-b from-white via-[#FCFAF7] to-white" aria-labelledby="about-heading">
+        {/* Soft Ambient Depth Glows */}
+        <div className="absolute top-1/3 left-0 w-96 h-96 bg-[#2E5650]/5 rounded-full blur-[100px] pointer-events-none -z-10" />
+        <div className="absolute bottom-10 right-0 w-96 h-96 bg-[#C87860]/5 rounded-full blur-[100px] pointer-events-none -z-10" />
 
         <Container>
-          {/* Mobile Only Section Header: Heading -> Video -> Description */}
-          <div className="text-center lg:hidden space-y-2 mb-6 sm:mb-8">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#C87860]/10 text-[#C87860] text-xs font-bold uppercase tracking-wider">
-              Layanan Terpercaya Sejak 2010
+          {/* Unified Section Header */}
+          <div className="max-w-3xl mx-auto text-center mb-10 sm:mb-14 lg:mb-16 space-y-3 sm:space-y-4">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-stone-100/90 border border-stone-200/80 text-xs font-semibold text-[#281E19]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#2E5650]" />
+              <span>Layanan Terpercaya Sejak 2010</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-[#281E19] leading-snug tracking-tight">
-              Spesialis Jasa Sewa Freezer ASI & Rental Kulkas ASI
+            <h2 id="about-heading" className="text-2xl sm:text-3xl md:text-4xl lg:text-[2.5rem] font-bold text-[#281E19] leading-tight tracking-tight">
+              Spesialis Jasa Sewa Freezer ASI & <span className="text-[#2E5650]">Rental Kulkas ASI</span>
             </h2>
+            <p className="text-sm sm:text-base text-[#382821]/75 max-w-2xl mx-auto leading-relaxed">
+              Solusi higienis berstandar medis untuk menjaga kualitas setiap tetes ASI perah Mums tetap segar, bergizi, dan aman bagi Si Kecil.
+            </p>
           </div>
 
-          <div className="flex flex-col lg:flex-row items-center gap-8 sm:gap-12 lg:gap-16">
-            {/* Left: Enlarged Video Player with Decorative Pattern & Warm Outline */}
-            <div className="w-full lg:flex-[1.2] relative group">
-              {/* Outer Decorative Background Card with Warm Outline */}
-              <div className="absolute -inset-2.5 sm:-inset-4 bg-gradient-to-br from-[#E8DDD4]/90 via-[#E4D2C3]/80 to-[#D4BCAA]/90 rounded-2xl md:rounded-[3rem] -z-10 rotate-1 sm:rotate-2 group-hover:rotate-0 transition-transform duration-500 shadow-xl shadow-[#382821]/5 border border-[#C87860]/30" />
+          {/* Fluid Desktop & Mobile Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+            {/* Left / Media Column (7 Cols on desktop) */}
+            <div className="lg:col-span-7 space-y-3.5 sm:space-y-4">
+              <div className="relative rounded-2xl sm:rounded-3xl lg:rounded-[2rem] overflow-hidden p-2 sm:p-3 bg-white border border-stone-200/90 shadow-[0_12px_40px_-10px_rgba(40,30,25,0.08)]">
+                <VideoFacade
+                  videoId="N9FIL22ro7I"
+                  title="Profil Layanan Sewa Freezer ASI Mum 'n Hun"
+                />
+              </div>
 
-              {/* Second Outer Accent Frame with Subtle Dashed Brown Motif */}
-              <div className="absolute -inset-4 sm:-inset-6 rounded-2xl md:rounded-[3.2rem] border-2 border-dashed border-[#C87860]/20 -z-20 rotate-[-1deg] group-hover:rotate-0 transition-transform duration-500 pointer-events-none hidden sm:block" />
+              {/* Integrated Trust Badges Strip under Video */}
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                <div className="flex items-center gap-2 p-2.5 sm:p-3 rounded-xl bg-white border border-stone-200/70 shadow-2xs">
+                  <ShieldCheck className="w-4 h-4 text-[#2E5650] shrink-0" />
+                  <div className="text-[11px] sm:text-xs">
+                    <span className="font-bold text-[#281E19] block leading-tight">100% Steril</span>
+                    <span className="text-[#382821]/60 text-[10px] hidden sm:block">Food-grade medis</span>
+                  </div>
+                </div>
 
-              {/* Corner Dot Matrix Pattern Motif */}
-              <div
-                className="absolute -top-4 -left-4 w-24 h-24 opacity-25 -z-10 pointer-events-none hidden sm:block"
-                style={{
-                  backgroundImage: "radial-gradient(#C87860 1.5px, transparent 1.5px)",
-                  backgroundSize: "10px 10px",
-                }}
-              />
+                <div className="flex items-center gap-2 p-2.5 sm:p-3 rounded-xl bg-white border border-stone-200/70 shadow-2xs">
+                  <Clock3 className="w-4 h-4 text-[#2E5650] shrink-0" />
+                  <div className="text-[11px] sm:text-xs">
+                    <span className="font-bold text-[#281E19] block leading-tight">Suhu -20°C</span>
+                    <span className="text-[#382821]/60 text-[10px] hidden sm:block">Beku cepat stabil</span>
+                  </div>
+                </div>
 
-              {/* YouTube Video Facade - Enlarged & Clean */}
-              <VideoFacade
-                videoId="N9FIL22ro7I"
-                title="Profil Layanan Sewa Freezer ASI Mum 'n Hun"
-              />
+                <div className="flex items-center gap-2 p-2.5 sm:p-3 rounded-xl bg-white border border-stone-200/70 shadow-2xs">
+                  <Truck className="w-4 h-4 text-[#C87860] shrink-0" />
+                  <div className="text-[11px] sm:text-xs">
+                    <span className="font-bold text-[#281E19] block leading-tight">Antar-Jemput</span>
+                    <span className="text-[#382821]/60 text-[10px] hidden sm:block">Se-Jabodetabek</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Right: Sincere Brand Story & Description */}
-            <div className="w-full lg:flex-1 space-y-4 sm:space-y-5 text-left">
-              {/* Desktop Only Heading */}
-              <div className="hidden lg:block space-y-2">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#C87860]/10 text-[#C87860] text-xs font-bold uppercase tracking-wider">
-                  Layanan Terpercaya Sejak 2010
-                </div>
-                <h2 id="about-heading" className="text-3xl md:text-4xl font-bold text-[#281E19] leading-snug tracking-tight">
-                  Spesialis Jasa Sewa Freezer ASI & Rental Kulkas ASI
-                </h2>
-              </div>
-
-              {/* Description */}
-              <div className="space-y-3 text-sm md:text-base text-[#382821]/75 leading-relaxed">
-                <p>
-                  Kami memahami betapa berharganya setiap tetes ASI bagi tumbuh kembang Si Kecil. Sebagai penyedia layanan <strong className="text-[#281E19] font-semibold">sewa freezer ASI Jakarta & Jabodetabek</strong> terpercaya, Mum &apos;n Hun menyediakan unit freezer khusus yang dirancang untuk menjaga nutrisi dan kesegaran ASI perah (ASIP) dalam jangka panjang.
-                </p>
-                <p>
-                  Lebih dari <strong className="text-[#281E19] font-semibold">5.000+ ibu menyusui</strong> telah mempercayakan penyimpanan ASI perah mereka kepada kami karena unit selalu steril, hemat daya listrik, dan didukung garansi penggantian unit cepat.
+            {/* Right / Story & Key Pillars (5 Cols on desktop) */}
+            <div className="lg:col-span-5 space-y-4 sm:space-y-4.5">
+              {/* Brand Narrative Card */}
+              <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-stone-200/80 shadow-2xs space-y-3 text-left">
+                <h3 className="text-base sm:text-lg font-bold text-[#281E19] flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[#2E5650]" />
+                  <span>Komitmen Kualitas Mum &apos;n Hun</span>
+                </h3>
+                <p className="text-xs sm:text-sm text-[#382821]/80 leading-relaxed">
+                  Kami memahami setiap tetes ASI sangat berharga. Lebih dari <strong className="text-[#281E19] font-semibold">5.000+ ibu menyusui</strong> di Jakarta & Jabodetabek mempercayakan penyimpanan ASI perah mereka kepada kami karena unit selalu siap pakai, hemat listrik, dan bebas khawatir.
                 </p>
               </div>
 
-              {/* Checklist */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 text-xs sm:text-sm font-medium text-[#281E19]">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#2E5650] shrink-0" />
-                  <span>Bebas bau & steril food-grade</span>
+              {/* Service Pillars Bento Cards */}
+              <div className="space-y-2.5">
+                <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white/80 border border-stone-200/80 flex items-start gap-3 hover:border-[#2E5650]/40 transition-colors shadow-2xs">
+                  <div className="w-8 h-8 rounded-lg bg-[#2E5650]/10 text-[#2E5650] flex items-center justify-center shrink-0 mt-0.5">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-bold text-[#281E19]">Pembersihan Steril & Bebas Residu</h4>
+                    <p className="text-[11px] sm:text-xs text-[#382821]/70 leading-relaxed mt-0.5">
+                      Setiap unit melewati proses sterilisasi menyeluruh sebelum dikirim ke rumah Anda.
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#2E5650] shrink-0" />
-                  <span>Hemat konsumsi listrik</span>
+
+                <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white/80 border border-stone-200/80 flex items-start gap-3 hover:border-[#2E5650]/40 transition-colors shadow-2xs">
+                  <div className="w-8 h-8 rounded-lg bg-[#2E5650]/10 text-[#2E5650] flex items-center justify-center shrink-0 mt-0.5">
+                    <HeartHandshake className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-bold text-[#281E19]">Garansi Ganti Unit Cepat 24 Jam</h4>
+                    <p className="text-[11px] sm:text-xs text-[#382821]/70 leading-relaxed mt-0.5">
+                      Jika terjadi kendala teknis pada mesin, kami ganti unit baru tanpa biaya tambahan.
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#2E5650] shrink-0" />
-                  <span>Layanan antar & jemput unit</span>
+
+                <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white/80 border border-stone-200/80 flex items-start gap-3 hover:border-[#2E5650]/40 transition-colors shadow-2xs">
+                  <div className="w-8 h-8 rounded-lg bg-[#C87860]/10 text-[#C87860] flex items-center justify-center shrink-0 mt-0.5">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-bold text-[#281E19]">Tanpa Deposit & Konsultasi Ramah</h4>
+                    <p className="text-[11px] sm:text-xs text-[#382821]/70 leading-relaxed mt-0.5">
+                      Sewa fleksibel tanpa uang jaminan. Admin kami siap membantu memilih kapasitas yang tepat.
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#2E5650] shrink-0" />
-                  <span>Respon admin ramah & solutif</span>
-                </div>
+              </div>
+
+              {/* Action Trigger */}
+              <div className="pt-1">
+                <Button
+                  size="sm"
+                  className="w-full bg-[#2E5650] hover:bg-[#244742] text-white rounded-full font-bold text-xs sm:text-sm py-3 shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2"
+                  asChild
+                >
+                  <Link
+                    href={WHATSAPP_LINK}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Konsultasi sewa freezer ASI dengan admin Mum 'n Hun"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span>Konsultasi Kebutuhan ASI Anda</span>
+                    <ArrowRight className="w-4 h-4 ml-0.5" />
+                  </Link>
+                </Button>
               </div>
             </div>
           </div>

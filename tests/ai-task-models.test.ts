@@ -187,7 +187,7 @@ describe("AI role models", () => {
             await expect(resolveImageRoleModel()).resolves.toBeNull()
         })
 
-        it("rejects a Gemini credential because it has no images endpoint", async () => {
+        it("resolves a Gemini credential without baseUrl (Imagen needs only the key)", async () => {
             mockPrisma.aiRoleModel.findFirst.mockResolvedValueOnce({
                 id: "role-image",
                 role: "image",
@@ -198,7 +198,14 @@ describe("AI role models", () => {
                 authStyle: null,
             })
 
-            await expect(resolveImageRoleModel()).resolves.toBeNull()
+            await expect(resolveImageRoleModel()).resolves.toEqual({
+                roleModelId: "role-image",
+                apiKey: "AIza",
+                baseUrl: "",
+                model: "",
+                authStyle: null,
+                provider: "gemini",
+            })
         })
 
         it("rejects a credential missing baseUrl or model", async () => {
@@ -232,6 +239,7 @@ describe("AI role models", () => {
                 baseUrl: "https://api.example.com/v1",
                 model: "gpt-image-1",
                 authStyle: "bearer",
+                provider: "openai_compatible",
             })
         })
     })

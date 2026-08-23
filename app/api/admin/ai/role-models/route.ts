@@ -28,7 +28,7 @@ import {
     AI_PROVIDER_OPENAI_COMPATIBLE,
 } from "@/lib/ai/provider"
 import { type AuthStyle, type DiscoveredModel } from "@/lib/ai/openai-compatible"
-import { AI_ROLES, aiRoleSchema, type AiRole } from "@/lib/ai/task-models"
+import { AI_ROLES, aiRoleSchema } from "@/lib/ai/task-models"
 /**
  * Role models are the per-task credentials (scanning / text / image).
  *
@@ -225,10 +225,13 @@ async function normalizeCustomBaseUrl(
 }
 
 /**
- * The image role calls the OpenAI images endpoint, which Gemini does not expose.
- * Rejecting it here avoids storing a credential that can never succeed.
+ * Provider compatibility per role.
+ *
+ * Gemini is now a first-class image provider (Imagen via @google/genai), so no
+ * role/provider combination is rejected up front; an incompatible pairing surfaces at
+ * verification or first use with an actionable error instead.
  */
-function assertRoleProviderCompatible(role: AiRole, provider: string): string | null {
+function assertRoleProviderCompatible(): string | null {
     return null
 }
 
@@ -321,7 +324,7 @@ export async function PUT(request: NextRequest) {
 
     const provider = payload.provider || AI_PROVIDER_OPENAI_COMPATIBLE
 
-    const compatibilityError = assertRoleProviderCompatible(payload.role, provider)
+    const compatibilityError = assertRoleProviderCompatible()
     if (compatibilityError) {
         return errorJson(compatibilityError, "AI_ROLE_PROVIDER_UNSUPPORTED", 400)
     }

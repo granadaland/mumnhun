@@ -316,6 +316,9 @@ export async function safeExternalFetch(rawUrl: string, options: SafeFetchOption
     const controller = new AbortController()
     const externalSignal = init.signal
     const onExternalAbort = () => controller.abort()
+    // Distinguishes our own deadline from a caller-initiated abort, so the error can say
+    // which budget ran out instead of surfacing as a bare "This operation was aborted".
+    let timedOut = false
 
     if (externalSignal) {
         if (externalSignal.aborted) {
@@ -325,7 +328,10 @@ export async function safeExternalFetch(rawUrl: string, options: SafeFetchOption
         }
     }
 
-    const timeoutHandle = setTimeout(() => controller.abort(), timeoutMs)
+    const timeoutHandle = setTimeout(() => {
+        timedOut = true
+        controller.abort()
+    }, timeoutMs)
 
     try {
         let currentUrl = rawUrl
@@ -342,24 +348,36 @@ export async function safeExternalFetch(rawUrl: string, options: SafeFetchOption
             }
             previousOrigin = validated.url.origin
 
-            const response = await fetch(validated.url, {
-                ...init,
-                headers,
-                redirect: "manual",
-                signal: controller.signal,
-            })
+            try {
+                const response = await fetch(validated.url, {
+                    ...init,
+                    headers,
+                    redirect: "manual",
+                    signal: controller.signal,
+                })
 
-            const isRedirect = response.status >= 300 && response.status < 400
-            if (!isRedirect) {
-                return response
+                const isRedirect = response.status >= 300 && response.status < 400
+                if (!isRedirect) {
+                    return response
+                }
+
+                const location = response.headers.get("location")
+                if (!location) {
+                    return response
+                }
+
+                currentUrl = new URL(location, validated.url).toString()
+            } catch (error) {
+                if (timedOut && error instanceof Error && error.name === "AbortError") {
+                    // Keep the AbortError name — callers classify it as NETWORK_TIMEOUT — but
+                    // carry the configured budget so the message is diagnosable.
+                    throw Object.assign(
+                        new Error(`Provider tidak merespons dalam ${timeoutMs} ms (timeout)`) as Error & { name: string },
+                        { name: "AbortError" }
+                    )
+                }
+                throw error
             }
-
-            const location = response.headers.get("location")
-            if (!location) {
-                return response
-            }
-
-            currentUrl = new URL(location, validated.url).toString()
         }
 
         throw new UrlGuardError("Terlalu banyak redirect saat mengambil resource eksternal", "URL_REDIRECT_BLOCKED")

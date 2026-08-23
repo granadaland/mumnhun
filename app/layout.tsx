@@ -70,7 +70,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="id" className={`${poppins.variable} ${playfair.variable}`}>
+    <html lang="id" data-scroll-behavior="smooth" className={`${poppins.variable} ${playfair.variable}`}>
       <body className="min-h-screen bg-background font-sans antialiased overflow-x-hidden">
         <LayoutWrapper>{children}</LayoutWrapper>
       </body>

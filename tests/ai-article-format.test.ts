@@ -4,6 +4,7 @@ import {
     renderArticleHtml,
     renderInline,
     renderOutlineHtml,
+    salvageArticleOutputFromRaw,
     structuredArticleSchema,
     structuredOutlineSchema,
 } from "@/lib/ai/article-format"
@@ -187,5 +188,33 @@ describe("article-format: coerceToHtml fallback", () => {
 
     it("returns empty string for empty input", () => {
         expect(coerceToHtml("   ")).toBe("")
+    })
+})
+
+describe("article-format: salvageArticleOutputFromRaw", () => {
+    const LONG_MARKDOWN = [
+        "## Judul Artikel yang Cukup Panjang",
+        "",
+        "Paragraf pembuka yang menjelaskan konteks secara cukup panjang agar lolos ambang penyelamatan, karena Mums butuh penjelasan yang memadai sebelum mulai mempraktikkan langkah penyimpanan ASI perah di rumah.",
+        "",
+        "### Subbagian",
+        "",
+        "- Poin satu dengan penjelasan singkat dan jelas untuk dibaca",
+        "- Poin dua yang melengkapi poin pertama dengan contoh konkret",
+    ].join("\n")
+
+    it("mengubah Markdown panjang menjadi output artikel lengkap", () => {
+        const salvaged = salvageArticleOutputFromRaw(LONG_MARKDOWN, { title: "topik cadangan" })
+
+        expect(salvaged).not.toBeNull()
+        expect(salvaged!.title).toContain("Judul Artikel")
+        expect(salvaged!.contentHtml).toContain("<h2>")
+        expect(salvaged!.contentHtml).toContain("<ul>")
+        expect(salvaged!.excerpt.length).toBeGreaterThan(0)
+        expect(salvaged!.slugSuggestion).toMatch(/^[a-z0-9-]+$/)
+    })
+
+    it("menolak raw terlalu pendek untuk disebut artikel", () => {
+        expect(salvageArticleOutputFromRaw("maaf, gagal.", { title: "x" })).toBeNull()
     })
 })

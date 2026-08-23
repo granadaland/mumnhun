@@ -350,9 +350,14 @@ export function classifyAiKeyFailure(error: unknown): AiKeyFailure {
     }
 
     if (errorLike.name === "AbortError") {
+        // safeExternalFetch embeds the configured budget in the message when the deadline
+        // was ours; surface it so the operator can raise AI_TEXT_TIMEOUT_MS knowingly.
+        const budgetMatch = errorLike.message?.match(/dalam (\d[\d_.]*) ms/)
+        const detail = budgetMatch ? ` (${budgetMatch[1]} ms)` : ""
+
         return {
             code: "NETWORK_TIMEOUT",
-            message: "Koneksi ke provider AI timeout",
+            message: `Koneksi ke provider AI timeout${detail}. Gateway lambat merespons — coba lagi, turunkan target kata, atau naikkan AI_TEXT_TIMEOUT_MS.`,
         }
     }
 

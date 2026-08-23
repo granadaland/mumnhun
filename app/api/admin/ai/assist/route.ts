@@ -10,6 +10,7 @@ import { logAdminError, logAdminWarn } from "@/lib/observability/admin-log"
 import { summarizeUnknownError } from "@/lib/security/admin-helpers"
 import { sanitizeArticleHtml } from "@/lib/content/post-publishing"
 import { RoleModelNotConfiguredError, generateRoleJson, generateRoleText } from "@/lib/ai/task-models"
+import { AiJsonFormatError } from "@/lib/ai/provider"
 import {
     HAIBUNDA_VOICE,
     JSON_ONLY_INSTRUCTION,
@@ -25,7 +26,7 @@ import {
     seoPackageOutputSchema,
     titleIdeasOutputSchema,
 } from "@/lib/ai/prompts"
-import { coerceToHtml, renderArticleHtml, renderOutlineHtml } from "@/lib/ai/article-format"
+import { coerceToHtml, renderArticleHtml, renderOutlineHtml, salvageArticleOutputFromRaw, salvageOutlineHtmlFromRaw } from "@/lib/ai/article-format"
 
 /**
  * In-editor AI assistant.
@@ -126,8 +127,10 @@ function validationErrorJson(zodError: z.ZodError) {
 const ACTION_TUNING: Record<AssistAction, { temperature: number; maxTokens: number; timeoutMs: number }> = {
     generate_title: { temperature: 0.85, maxTokens: 1024, timeoutMs: 60_000 },
     generate_excerpt: { temperature: 0.7, maxTokens: 1024, timeoutMs: 60_000 },
-    generate_outline: { temperature: 0.6, maxTokens: 2048, timeoutMs: 90_000 },
-    generate_content: { temperature: 0.75, maxTokens: 8192, timeoutMs: 240_000 },
+    // Outline and full content go through slow free gateways; give them the same generous
+    // budget the dashboard generator gets. Still clamped by resolveTextGenerationTimeoutMs.
+    generate_outline: { temperature: 0.6, maxTokens: 2048, timeoutMs: 150_000 },
+    generate_content: { temperature: 0.75, maxTokens: 8192, timeoutMs: 260_000 },
     generate_seo: { temperature: 0.4, maxTokens: 2048, timeoutMs: 90_000 },
     generate_image_meta: { temperature: 0.7, maxTokens: 1024, timeoutMs: 60_000 },
 }
@@ -200,24 +203,43 @@ Kembalikan JSON dengan key "excerpt". ${JSON_ONLY_INSTRUCTION}`,
             }
 
             case "generate_outline": {
-                const result = await generateRoleJson(
-                    "text",
-                    {
-                        system: HAIBUNDA_VOICE,
-                        prompt: buildOutlinePrompt({
-                            title: payload.payload.title,
-                            keyword: payload.payload.keyword,
-                            angle: payload.payload.angle,
-                        }),
-                        ...tuning,
-                    },
-                    outlineStructuredSchema
-                )
+                let outlineHtml = ""
 
-                // Build the HTML from the structured shape, so every section becomes an H2
-                // regardless of how the model formatted its text. Then sanitize with the
-                // same allowlist used for stored content.
-                const outlineHtml = sanitizeArticleHtml(renderOutlineHtml(result.value))
+                try {
+                    const result = await generateRoleJson(
+                        "text",
+                        {
+                            system: HAIBUNDA_VOICE,
+                            prompt: buildOutlinePrompt({
+                                title: payload.payload.title,
+                                keyword: payload.payload.keyword,
+                                angle: payload.payload.angle,
+                            }),
+                            ...tuning,
+                        },
+                        outlineStructuredSchema
+                    )
+
+                    // Build the HTML from the structured shape, so every section becomes an H2
+                    // regardless of how the model formatted its text. Then sanitize with the
+                    // same allowlist used for stored content.
+                    outlineHtml = sanitizeArticleHtml(renderOutlineHtml(result.value))
+                } catch (structuredError) {
+                    // Slow gateways often write the outline as plain Markdown instead of JSON.
+                    // That raw text IS the outline — convert it rather than discarding a paid
+                    // generation. Anything else propagates to the outer handler.
+                    const salvagedHtml =
+                        structuredError instanceof AiJsonFormatError
+                            ? salvageOutlineHtmlFromRaw(structuredError.raw)
+                            : null
+
+                    if (salvagedHtml) {
+                        outlineHtml = sanitizeArticleHtml(salvagedHtml)
+                    } else {
+                        throw structuredError
+                    }
+                }
+
                 if (!outlineHtml) {
                     return errorJson(
                         "Outline hasil AI kosong setelah diproses",
@@ -256,24 +278,41 @@ Kembalikan JSON dengan key "excerpt". ${JSON_ONLY_INSTRUCTION}`,
                     contentHtml = sanitizeArticleHtml(renderArticleHtml(result.value))
                     excerpt = result.value.excerpt ?? null
                 } catch (structuredError) {
-                    // A schema/JSON failure is recoverable via the Markdown fallback; a
-                    // provider/auth failure is not, so rethrow those to the outer handler.
+                    // A schema/JSON failure is recoverable; a provider/auth failure is not,
+                    // so rethrow those to the outer handler.
                     if (structuredError instanceof RoleModelNotConfiguredError) {
                         throw structuredError
                     }
 
-                    const fallback = await generateRoleText("text", {
-                        system: HAIBUNDA_VOICE,
-                        prompt: buildFullContentMarkdownPrompt({
+                    // Fastest recovery: if the failed attempt actually wrote a full article
+                    // as Markdown, convert it instead of paying for another generation.
+                    if (structuredError instanceof AiJsonFormatError) {
+                        const salvaged = salvageArticleOutputFromRaw(structuredError.raw, {
                             title: payload.payload.title,
-                            outline: payload.payload.outline,
-                            keyword: payload.payload.keyword,
-                            targetWordCount: payload.payload.targetWordCount,
-                        }),
-                        ...tuning,
-                    })
+                        })
 
-                    contentHtml = sanitizeArticleHtml(coerceToHtml(fallback.value))
+                        if (salvaged) {
+                            contentHtml = sanitizeArticleHtml(coerceToHtml(salvaged.contentHtml))
+                            excerpt = salvaged.excerpt ?? null
+                        }
+                    }
+
+                    // Last resort: the raw output was unusable (refusal, too short), so ask
+                    // explicitly for Markdown and convert that.
+                    if (!contentHtml) {
+                        const fallback = await generateRoleText("text", {
+                            system: HAIBUNDA_VOICE,
+                            prompt: buildFullContentMarkdownPrompt({
+                                title: payload.payload.title,
+                                outline: payload.payload.outline,
+                                keyword: payload.payload.keyword,
+                                targetWordCount: payload.payload.targetWordCount,
+                            }),
+                            ...tuning,
+                        })
+
+                        contentHtml = sanitizeArticleHtml(coerceToHtml(fallback.value))
+                    }
                 }
 
                 if (!contentHtml) {

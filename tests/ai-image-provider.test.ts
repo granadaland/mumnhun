@@ -72,8 +72,21 @@ describe("generateImageWithProvider: endpoint tolerance", () => {
 
         await generateImageWithProvider(config, "prompt", { maxBytes: 1_000_000 })
 
-        expect(bodyOfCall(0).size).toBe("1536x1024")
+        // Default aspect ratio is 16:9, mapped onto OpenAI-style dimensions.
+        expect(bodyOfCall(0).size).toBe("1792x1024")
         expect(bodyOfCall(1).size).toBeUndefined()
+    })
+
+    it("maps the 4:3 ratio onto OpenAI-style dimensions", async () => {
+        mockFetch.mockResolvedValueOnce(imageOk())
+
+        await generateImageWithProvider(
+            { ...config, provider: "openai_compatible" } as typeof config,
+            "prompt",
+            { maxBytes: 1_000_000, aspectRatio: "4:3" }
+        )
+
+        expect(bodyOfCall(0).size).toBe("1408x1056")
     })
 
     it("throws ImageGenerationUnsupportedError when every path 404s", async () => {

@@ -73,7 +73,7 @@ export default function AiInternalLinksPage() {
         try {
             const res: any = await adminPost("/api/admin/ai/internal-links", {
                 body: { postId: selectedPostId },
-                timeoutMs: 120000,
+                timeoutMs: 300000,
             })
 
             if (res.success && res.data?.suggestions) {

@@ -1,6 +1,7 @@
 import { MetadataRoute } from "next"
 import prisma from "@/lib/db/prisma"
 import { SITE_URL } from "@/lib/constants"
+import { LOCATIONS } from "@/lib/data/locations"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Derive the freshest content date from the latest published post so that
@@ -59,6 +60,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             priority: 0.3,
         },
     ]
+
+    // Halaman pilar SEO lokal + halaman anak per lokasi
+    const pillarPage = {
+        url: `${SITE_URL}/sewa-freezer-asi`,
+        lastModified: new Date(),
+        changeFrequency: "weekly" as const,
+        priority: 0.85,
+    }
+
+    const locationPages = LOCATIONS.map((location) => ({
+        url: `${SITE_URL}/sewa-freezer-asi/${location.slug}`,
+        lastModified: new Date(),
+        changeFrequency: "monthly" as const,
+        priority: 0.8,
+    }))
 
     // Get all published posts
     const posts = await prisma.post.findMany({
@@ -125,5 +141,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.6,
     }))
 
-    return [...staticPages, ...postPages, ...categoryPages, ...tagPages]
+    return [...staticPages, pillarPage, ...postPages, ...categoryPages, ...tagPages, ...locationPages]
 }

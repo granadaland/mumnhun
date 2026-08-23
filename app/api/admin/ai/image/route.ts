@@ -6,6 +6,7 @@ import { summarizeUnknownError } from "@/lib/security/admin-helpers"
 import { classifyProviderFailure, toAiKeyFailureHttpStatus } from "@/lib/security/ai-key-status"
 import { generateImageWithRotary, NoActiveAiKeyError, AllAiKeysFailedError } from "@/lib/ai/key-rotary"
 import { ImageGenerationUnsupportedError } from "@/lib/ai/openai-compatible"
+import { applyImagePolicy, IMAGE_ASPECT_RATIOS, DEFAULT_IMAGE_ASPECT_RATIO } from "@/lib/ai/image-policy"
 import { MAX_IMAGE_BYTES, MediaIngestError, assertAllowedImageBuffer, ingestImage } from "@/lib/media/ingest"
 import { slugifyTitle } from "@/lib/content/post-publishing"
 
@@ -25,6 +26,7 @@ const generateImageSchema = z.object({
     alt: z.string().trim().max(500).optional().nullable(),
     caption: z.string().trim().max(500).optional().nullable(),
     filenameHint: z.string().trim().max(120).optional().nullable(),
+    aspectRatio: z.enum(IMAGE_ASPECT_RATIOS).optional(),
 })
 
 function errorJson(error: string, errorCode: string, status: number, details?: Record<string, unknown>) {
@@ -82,10 +84,20 @@ export async function POST(request: NextRequest) {
     }
 
     try {
+        // The modesty policy and aspect-ratio framing are appended server-side so they hold
+        // no matter what the client sent as the creative prompt.
+        const finalPrompt = applyImagePolicy({
+            prompt: payload.prompt,
+            aspectRatio: payload.aspectRatio ?? DEFAULT_IMAGE_ASPECT_RATIO,
+        })
+
         const generated = await generateImageWithRotary({
             payload: {
-                prompt: payload.prompt,
-                options: { maxBytes: MAX_IMAGE_BYTES, aspectRatio: "4:3" }
+                prompt: finalPrompt,
+                options: {
+                    maxBytes: MAX_IMAGE_BYTES,
+                    aspectRatio: payload.aspectRatio ?? DEFAULT_IMAGE_ASPECT_RATIO,
+                },
             }
         })
 

@@ -319,15 +319,32 @@ describe("POST /api/admin/ai/keys: custom OpenAI-compatible provider", () => {
         expect(mockVerifyOpenAiCompatibleApiKey).not.toHaveBeenCalled()
     })
 
-    it("rejects image capability on Gemini", async () => {
+    it("accepts image capability on Gemini (Imagen via @google/genai)", async () => {
+        mockPrisma.aiApiKey.create.mockImplementationOnce(async ({ data }: { data: Record<string, unknown> }) => ({
+            id: "key-gemini-image",
+            provider: data.provider,
+            capability: data.capability,
+            baseUrl: data.baseUrl,
+            model: data.model,
+            authStyle: data.authStyle,
+            label: null,
+            isActive: true,
+            usageCount: 0,
+            order: 0,
+            lastUsedAt: new Date(),
+            lastError: null,
+            apiKey: data.apiKey,
+        }))
+
         const response = await createAiKey(
             buildRequest("POST", { apiKey: "AIzaSy-valid-key-1234567890", capability: "image" })
         )
 
-        expect(response.status).toBe(400)
+        expect(response.status).toBe(200)
         await expect(response.json()).resolves.toMatchObject({
-            errorCode: "AI_KEY_CAPABILITY_UNSUPPORTED",
+            data: { provider: "gemini", capability: "image" },
         })
+        expect(mockVerifyGeminiApiKey).toHaveBeenCalledWith("AIzaSy-valid-key-1234567890")
     })
 })
 

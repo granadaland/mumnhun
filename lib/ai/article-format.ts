@@ -1,4 +1,5 @@
 import { z } from "zod"
+import type { AiArticleOutput } from "@/lib/ai/provider"
 
 /**
  * Deterministic Markdown/plain-text → HTML rendering for AI article output.
@@ -226,6 +227,79 @@ export function renderArticleHtml(article: StructuredArticle): string {
     }
 
     return parts.filter(Boolean).join("\n")
+}
+
+// ---------------------------------------------------------------------------
+// Salvage: recovering usable articles from non-JSON model output
+// ---------------------------------------------------------------------------
+
+const MIN_SALVAGE_RAW_CHARS = 300
+const MIN_SALVAGE_TEXT_CHARS = 200
+
+function slugifyLoose(text: string): string {
+    return text
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-+|-+$/g, "")
+}
+
+function stripTags(html: string): string {
+    return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
+}
+
+/**
+ * Attempts to recover a publishable article from raw model output that failed JSON
+ * parsing — typically a gateway that wrote the whole article as Markdown prose.
+ *
+ * Returns null when the raw text is too short to be an article or converts into too
+ * little HTML, so callers can fall back to a reprompt instead of storing junk.
+ */
+export function salvageArticleOutputFromRaw(
+    raw: string,
+    fallback: { title: string }
+): AiArticleOutput | null {
+    const trimmed = (raw ?? "").trim()
+    if (trimmed.length < MIN_SALVAGE_RAW_CHARS) return null
+
+    const html = coerceToHtml(trimmed)
+    const plain = stripTags(html)
+    if (plain.length < MIN_SALVAGE_TEXT_CHARS) return null
+
+    // Prefer the first H2 as the title when the model led with a heading.
+    const headingMatch = html.match(/<h[12]>([\s\S]*?)<\/h[12]>/i)
+    const derivedTitle = headingMatch ? stripTags(headingMatch[1]) : ""
+
+    const title = (derivedTitle || fallback.title || "").trim().slice(0, 180)
+
+    return {
+        title,
+        contentHtml: html,
+        excerpt: plain.slice(0, 280),
+        metaTitle: title.slice(0, 70),
+        metaDescription: plain.slice(0, 160),
+        focusKeyword: slugifyLoose(fallback.title).slice(0, 60) || fallback.title.slice(0, 60),
+        slugSuggestion: slugifyLoose(title || fallback.title).slice(0, 80),
+    }
+}
+
+/**
+ * Recovers an outline from raw non-JSON model output.
+ *
+ * Outlines are naturally much shorter than articles, so the article-length floor does not
+ * apply here: any conversion that yields at least one real heading is accepted, since that
+ * is exactly what "Terapkan Outline ke Editor" needs.
+ */
+export function salvageOutlineHtmlFromRaw(raw: string): string | null {
+    const trimmed = (raw ?? "").trim()
+    if (trimmed.length < 60) return null
+
+    const html = coerceToHtml(trimmed)
+    if (!/<h[1-6]>/.test(html)) return null
+
+    return html
 }
 
 // ---------------------------------------------------------------------------

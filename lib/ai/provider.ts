@@ -11,6 +11,8 @@ import {
 } from "@/lib/ai/openai-compatible"
 import { getAiProviderGuardOptions, readResponseWithLimit, safeExternalFetch } from "@/lib/security/url-guard"
 import { AiJsonParseError, parseLlmJson } from "@/lib/ai/json-extract"
+import { openAiSizeForAspectRatio } from "@/lib/ai/image-policy"
+import { salvageArticleOutputFromRaw } from "@/lib/ai/article-format"
 import { GoogleGenAI } from "@google/genai"
 
 export const AI_PROVIDER_GEMINI = "gemini"
@@ -23,7 +25,40 @@ export type AiCapability = (typeof AI_CAPABILITIES)[number]
 
 export { GEMINI_MODEL_CANDIDATES }
 
-const GENERATE_TIMEOUT_MS = 90_000
+/**
+ * Default budget for one long-form text generation attempt.
+ *
+ * Free/aggregate OpenAI-compatible gateways routinely take 2–4 minutes for a full
+ * Indonesian article; a 90 s ceiling aborted them mid-generation and surfaced as
+ * NETWORK_TIMEOUT. Overridable via AI_TEXT_TIMEOUT_MS because gateway speed varies wildly.
+ * The 280 s ceiling keeps a single attempt inside the 300 s route maxDuration with room
+ * for parsing and DB writes.
+ */
+const DEFAULT_TEXT_TIMEOUT_MS = 150_000
+
+export function resolveTextGenerationTimeoutMs(explicit?: number): number {
+    const raw =
+        typeof explicit === "number" && Number.isFinite(explicit)
+            ? explicit
+            : Number.parseInt(process.env.AI_TEXT_TIMEOUT_MS ?? "", 10)
+
+    if (!Number.isFinite(raw)) return DEFAULT_TEXT_TIMEOUT_MS
+    return Math.min(280_000, Math.max(30_000, Math.round(raw)))
+}
+
+/**
+ * Decides whether a failed-JSON first attempt is worth an automatic repair retry.
+ *
+ * A retry costs a second full generation. When the first attempt was slow, the remaining
+ * route/platform budget cannot fit another one, so the caller would be aborted mid-retry
+ * and see a confusing timeout instead of the real format error. Fast failures (<30 s) are
+ * almost always refusals/format issues that the reminder nudge fixes cheaply.
+ */
+export const JSON_RETRY_FAST_THRESHOLD_MS = 30_000
+
+export function shouldRetryJsonParse(elapsedMs: number): boolean {
+    return elapsedMs < JSON_RETRY_FAST_THRESHOLD_MS
+}
 
 export const aiArticleOutputSchema = z.object({
     title: z.string().trim().min(10).max(180),
@@ -106,7 +141,7 @@ export async function generateText(
                 topP: request.topP,
                 maxTokens: request.maxTokens,
                 jsonMode: request.jsonMode,
-                timeoutMs: request.timeoutMs ?? GENERATE_TIMEOUT_MS,
+                timeoutMs: resolveTextGenerationTimeoutMs(request.timeoutMs),
             }
         )
 
@@ -120,7 +155,7 @@ export async function generateText(
         topP: request.topP,
         maxOutputTokens: request.maxTokens,
         jsonMode: request.jsonMode,
-        timeoutMs: request.timeoutMs ?? GENERATE_TIMEOUT_MS,
+        timeoutMs: resolveTextGenerationTimeoutMs(request.timeoutMs),
         model: resolved.model,
     })
 
@@ -165,7 +200,7 @@ export async function generateConversation(
                 temperature: input.temperature,
                 topP: input.topP,
                 maxTokens: input.maxTokens,
-                timeoutMs: input.timeoutMs ?? 60_000,
+                timeoutMs: resolveTextGenerationTimeoutMs(input.timeoutMs ?? 60_000),
             }
         )
 
@@ -184,7 +219,7 @@ export async function generateConversation(
         temperature: input.temperature,
         topP: input.topP,
         maxOutputTokens: input.maxTokens,
-        timeoutMs: input.timeoutMs ?? 60_000,
+        timeoutMs: resolveTextGenerationTimeoutMs(input.timeoutMs ?? 60_000),
         model: resolved.model,
     })
 
@@ -195,12 +230,35 @@ const JSON_REPAIR_REMINDER =
     "PENTING: keluaran sebelumnya gagal diparse sebagai JSON. Jawab ULANG dengan HANYA satu JSON object valid. Tanpa teks pembuka/penutup, tanpa markdown code fence, tanpa trailing comma."
 
 /**
+ * Thrown when the model's output cannot be parsed as the requested JSON even after the
+ * repair retry (or when a retry was skipped because the first attempt was slow).
+ *
+ * Carries the RAW model output so callers can salvage it: a gateway that wrote a perfectly
+ * good article as Markdown instead of JSON should not cost the operator another paid
+ * generation — the text converts deterministically via coerceToHtml/salvage helpers.
+ */
+export class AiJsonFormatError extends Error {
+    raw: string
+    elapsedMs: number
+
+    constructor(message: string, raw: string, elapsedMs: number) {
+        super(message)
+        this.name = "AiJsonFormatError"
+        this.raw = raw
+        this.elapsedMs = elapsedMs
+    }
+}
+
+/**
  * Generates a JSON object and validates it against a schema.
  *
  * Resilient to gateways that ignore json_mode or wrap output in prose/fences: the text is
  * parsed with parseLlmJson (fence stripping, balanced-span extraction, defect repair). If
  * the first attempt cannot be parsed or fails schema validation, it retries once with an
- * explicit repair reminder appended, since a single nudge usually fixes format-only errors.
+ * explicit repair reminder appended — but only when the first attempt failed FAST. A slow
+ * first attempt has already consumed most of the route/platform budget, so a second full
+ * generation would be aborted mid-flight and surface as a misleading timeout instead of the
+ * real format error.
  */
 export async function generateJson<T>(
     resolved: ResolvedAiProvider,
@@ -212,6 +270,7 @@ export async function generateJson<T>(
         return generateText(resolved, { ...request, prompt, jsonMode: true })
     }
 
+    const startedAt = Date.now()
     let result = await attempt()
     let parsedRaw: unknown
     let parseFailed = false
@@ -229,7 +288,16 @@ export async function generateJson<T>(
         }
     }
 
-    // One retry with an explicit reminder fixes the vast majority of format-only failures.
+    // One retry with an explicit reminder fixes the vast majority of format-only failures —
+    // but only when there is budget left for a second full generation.
+    if (!shouldRetryJsonParse(Date.now() - startedAt)) {
+        throw new AiJsonFormatError(
+            "Output AI tidak dapat diparse sebagai JSON pada percobaan panjang.",
+            result.text,
+            Date.now() - startedAt
+        )
+    }
+
     result = await attempt(JSON_REPAIR_REMINDER)
 
     let retryRaw: unknown
@@ -237,8 +305,10 @@ export async function generateJson<T>(
         retryRaw = parseLlmJson(result.text)
     } catch (error) {
         if (error instanceof AiJsonParseError) {
-            throw new Error(
-                `Output AI bukan JSON yang valid setelah 2 percobaan. Cuplikan: ${error.snippet || "(kosong)"}`
+            throw new AiJsonFormatError(
+                `Output AI bukan JSON yang valid setelah 2 percobaan. Cuplikan: ${error.snippet || "(kosong)"}`,
+                result.text,
+                Date.now() - startedAt
             )
         }
         throw error
@@ -246,8 +316,10 @@ export async function generateJson<T>(
 
     const retryParsed = schema.safeParse(retryRaw)
     if (!retryParsed.success) {
-        throw new Error(
-            `Output AI tidak sesuai format yang diminta: ${retryParsed.error.issues[0]?.message || "unknown"}`
+        throw new AiJsonFormatError(
+            `Output AI tidak sesuai format yang diminta: ${retryParsed.error.issues[0]?.message || "unknown"}`,
+            result.text,
+            Date.now() - startedAt
         )
     }
 
@@ -294,19 +366,30 @@ export async function generateArticleWithProvider(
     resolved: ResolvedAiProvider,
     input: GenerateArticleInput
 ): Promise<AiArticleOutput & { usedAuthStyle?: AuthStyle }> {
-    const result = await generateJson(
-        resolved,
-        {
-            system: ARTICLE_SYSTEM_PROMPT,
-            prompt: buildArticlePrompt(input),
-            temperature: 0.7,
-            topP: 0.9,
-            maxTokens: 4096,
-        },
-        aiArticleOutputSchema
-    )
+    try {
+        const result = await generateJson(
+            resolved,
+            {
+                system: ARTICLE_SYSTEM_PROMPT,
+                prompt: buildArticlePrompt(input),
+                temperature: 0.7,
+                topP: 0.9,
+                maxTokens: 4096,
+            },
+            aiArticleOutputSchema
+        )
 
-    return { ...result.data, usedAuthStyle: result.authStyle }
+        return { ...result.data, usedAuthStyle: result.authStyle }
+    } catch (error) {
+        // A gateway that wrote the whole article as Markdown instead of JSON should not
+        // cost a second paid generation: convert the raw text deterministically instead.
+        if (error instanceof AiJsonFormatError) {
+            const salvaged = salvageArticleOutputFromRaw(error.raw, { title: input.topic })
+            if (salvaged) return salvaged
+        }
+
+        throw error
+    }
 }
 
 export type GeneratedImage = {
@@ -335,18 +418,20 @@ export function buildImagePrompt(input: { title: string; topic: string }): strin
 const IMAGE_ENDPOINT_PATHS = ["/images/generations", "/images/generate", "/image/generations"] as const
 
 /** Size is rejected by some gateways; the retry drops it rather than failing outright. */
-const DEFAULT_IMAGE_SIZE = "1536x1024"
-
 function buildImageRequestBody(
     config: { model: string },
     prompt: string,
-    options: { includeSize: boolean }
+    options: { includeSize: boolean; aspectRatio?: string }
 ): string {
     return JSON.stringify({
         model: config.model,
         prompt,
         n: 1,
-        ...(options.includeSize ? { size: DEFAULT_IMAGE_SIZE } : {}),
+        // OpenAI-style APIs take pixel dimensions, not a ratio; map the site's two
+        // landscape ratios onto the closest supported sizes.
+        ...(options.includeSize
+            ? { size: openAiSizeForAspectRatio(options.aspectRatio === "4:3" ? "4:3" : "16:9") }
+            : {}),
         response_format: "b64_json",
     })
 }
@@ -366,33 +451,32 @@ export async function generateImageWithProvider(
     options: { maxBytes: number; timeoutMs?: number; aspectRatio?: string }
 ): Promise<GeneratedImage> {
     if (!isCustomProvider(resolved.provider)) {
-        // Gemini Image Generation
+        // Gemini image generation (Imagen via @google/genai).
+        // Only landscape ratios are offered site-wide: 16:9 (default) and 4:3.
+        const ratio = options.aspectRatio === "4:3" ? "4:3" : "16:9"
         const ai = new GoogleGenAI({ apiKey: resolved.apiKey })
-        
-        // Gemini Imagen supports "1:1", "3:4", "4:3", "9:16", "16:9"
-        const ratio = options.aspectRatio === "4:3" ? "4:3" : "1:1"
-        
+
         try {
             const response = await ai.models.generateImages({
                 model: "imagen-3.0-generate-001",
-                prompt: prompt,
+                prompt,
                 config: {
                     numberOfImages: 1,
                     aspectRatio: ratio,
                     outputMimeType: "image/jpeg",
-                }
+                },
             })
-            
+
             const base64 = response.generatedImages?.[0]?.image?.imageBytes
             if (!base64) {
                 throw new Error("Gemini tidak mengembalikan data gambar")
             }
-            
+
             const buffer = Buffer.from(base64, "base64")
             if (buffer.byteLength > options.maxBytes) {
                 throw new Error("Ukuran gambar hasil AI melebihi batas yang diizinkan")
             }
-            
+
             return { buffer, mimeType: response.generatedImages?.[0]?.image?.mimeType || "image/jpeg" }
         } catch (e) {
             throw new Error(`Gagal generate gambar dengan Gemini: ${(e as Error).message}`)
@@ -416,7 +500,10 @@ export async function generateImageWithProvider(
                         Accept: "application/json",
                         ...buildAuthHeaders(resolved.apiKey, style),
                     },
-                    body: buildImageRequestBody({ model: resolved.model ?? "" }, prompt, { includeSize }),
+                    body: buildImageRequestBody({ model: resolved.model ?? "" }, prompt, {
+                        includeSize,
+                        aspectRatio: options.aspectRatio,
+                    }),
                     guard,
                     timeoutMs: options.timeoutMs ?? 120_000,
                 })

@@ -193,7 +193,7 @@ export default function AiGeneratePage() {
         try {
             const data = await adminPost<GenerateResponse, GenerateRequest>("/api/admin/ai/generate", {
                 body: payload,
-                timeoutMs: 180000,
+                timeoutMs: 300000,
             })
 
             if (!data.success || !data.data) {

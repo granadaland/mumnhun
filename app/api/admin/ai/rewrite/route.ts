@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
                         prompt,
                         temperature: 0.7,
                         maxTokens: 4096,
-                        timeoutMs: 90_000,
+                        timeoutMs: 150_000,
                     },
                     rewriteOutputSchema
                 )

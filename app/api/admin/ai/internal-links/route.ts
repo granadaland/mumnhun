@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
                         // Low temperature: the phrase must match the source text verbatim.
                         temperature: 0.2,
                         maxTokens: 4096,
-                        timeoutMs: 60_000,
+                        timeoutMs: 150_000,
                     },
                     internalLinksOutputSchema
                 )

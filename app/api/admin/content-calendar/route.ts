@@ -258,7 +258,7 @@ export async function POST(request: NextRequest) {
                     }),
                     temperature: 0.6,
                     maxTokens: 2048,
-                    timeoutMs: 90_000,
+                    timeoutMs: 150_000,
                 },
                 outlineStructuredSchema
             )

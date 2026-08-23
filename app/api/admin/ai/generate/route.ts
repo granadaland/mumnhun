@@ -19,6 +19,7 @@ import {
     resolveImageProvider,
 } from "@/lib/ai/key-rotary"
 import { buildImagePrompt, generateImageWithProvider } from "@/lib/ai/provider"
+import { applyImagePolicy } from "@/lib/ai/image-policy"
 import { MAX_IMAGE_BYTES, assertAllowedImageBuffer, ingestImage } from "@/lib/media/ingest"
 import {
     ensureUniquePostSlug,
@@ -105,13 +106,16 @@ async function tryGenerateFeaturedImage(input: {
         return { error: "Tidak ada provider gambar AI aktif (capability=image)" }
     }
 
-    const prompt = buildImagePrompt({ title: input.title, topic: input.topic })
+    const prompt = applyImagePolicy({
+        prompt: buildImagePrompt({ title: input.title, topic: input.topic }),
+        aspectRatio: "16:9",
+    })
 
     try {
         const generated = await generateImageWithProvider(
             provider,
             prompt,
-            { maxBytes: MAX_IMAGE_BYTES }
+            { maxBytes: MAX_IMAGE_BYTES, aspectRatio: "16:9" }
         )
 
         const mimeType = assertAllowedImageBuffer(generated.buffer)
