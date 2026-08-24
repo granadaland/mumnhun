@@ -8,6 +8,11 @@ export type PublishScheduledResult = {
 }
 
 const MAX_BATCH = 50
+// Posts that fail the readiness gate are pushed this far into the future so they leave
+// the head of the `scheduledAt asc` queue. Without this, a batch full of permanently
+// unpublishable posts (e.g. under the minimum word count) would starve every newer due
+// post behind them forever.
+const FAILED_ATTEMPT_BACKOFF_MS = 60 * 60 * 1000
 
 /**
  * Publishes every SCHEDULED post whose `scheduledAt` has passed.
@@ -47,10 +52,18 @@ export async function publishDueScheduledPosts(now: Date = new Date()): Promise<
         })
 
         if (issues.length > 0) {
+            // Retry with backoff instead of leaving the post at the queue head: the same
+            // CAS guard keeps concurrent cron runs from double-shifting the schedule.
+            const nextAttemptAt = new Date(now.getTime() + FAILED_ATTEMPT_BACKOFF_MS)
+            await prisma.post.updateMany({
+                where: { id: post.id, status: "SCHEDULED" },
+                data: { scheduledAt: nextAttemptAt },
+            })
+
             skipped.push({
                 id: post.id,
                 slug: post.slug,
-                reason: issues.map((issue) => issue.message).join("; "),
+                reason: `${issues.map((issue) => issue.message).join("; ")} (dicoba ulang otomatis 1 jam ke depan)`,
             })
             continue
         }

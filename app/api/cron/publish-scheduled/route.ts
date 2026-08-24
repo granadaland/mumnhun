@@ -4,6 +4,7 @@ import { timingSafeEqual } from "node:crypto"
 import { publishDueScheduledPosts } from "@/lib/content/scheduled-publisher"
 import { logAdminError, logAdminInfo, logAdminWarn } from "@/lib/observability/admin-log"
 import { summarizeUnknownError } from "@/lib/security/admin-helpers"
+import { checkRateLimit, createRateLimitExceededResponse } from "@/lib/security/rate-limit"
 
 /**
  * Cron endpoint that flips due SCHEDULED posts to PUBLISHED.
@@ -40,9 +41,24 @@ function extractProvidedSecret(request: NextRequest): string | null {
     return custom || null
 }
 
+function getClientKey(request: NextRequest): string {
+    const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    return forwarded || request.headers.get("x-real-ip")?.trim() || "unknown"
+}
+
 async function handle(request: NextRequest) {
     const requestId = crypto.randomUUID()
     const expectedSecret = process.env.CRON_SECRET?.trim()
+
+    // Throttle secret guessing before the comparison: a wrong guess costs the caller a
+    // 429 instead of another timing-safe check.
+    const rateLimit = checkRateLimit(`cron-publish:${getClientKey(request)}`, {
+        limit: 10,
+        windowMs: 60_000,
+    })
+    if (!rateLimit.ok) {
+        return createRateLimitExceededResponse(rateLimit)
+    }
 
     if (!expectedSecret) {
         logAdminWarn({

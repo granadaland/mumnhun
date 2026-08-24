@@ -277,6 +277,39 @@
   border-radius: 0 0.5rem 0.5rem 0 !important;
 }
 
+/*
+ * Tables. AI-generated articles use them for comparisons and price lists, and Tailwind
+ * preflight removes cell borders, so published tables need explicit rules here to match
+ * what the admin editor shows.
+ */
+.article-content table {
+  width: 100% !important;
+  margin: 2rem 0 !important;
+  border-collapse: collapse !important;
+  font-size: 1rem !important;
+  display: block;
+  overflow-x: auto;
+}
+
+.article-content th,
+.article-content td {
+  border: 1px solid rgba(212, 188, 170, 0.6) !important;
+  padding: 0.75rem 1rem !important;
+  text-align: left !important;
+  vertical-align: top !important;
+}
+
+.article-content th {
+  background: rgba(70, 106, 104, 0.08) !important;
+  font-weight: 700 !important;
+  color: #382821 !important;
+}
+
+.article-content td>p,
+.article-content th>p {
+  margin-bottom: 0 !important;
+}
+
 @media (max-width: 768px) {
   .article-content h2 {
     font-size: 1.75rem !important;

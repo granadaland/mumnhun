@@ -23,6 +23,7 @@ export default function CategoriesPage() {
     const [editingId, setEditingId] = useState<string | null>(null)
     const [editName, setEditName] = useState("")
     const [editDesc, setEditDesc] = useState("")
+    const [savingEdit, setSavingEdit] = useState(false)
     const [deleting, setDeleting] = useState<string | null>(null)
 
     const fetchCategories = useCallback(async () => {
@@ -67,7 +68,8 @@ export default function CategoriesPage() {
     }
 
     const handleEdit = async (id: string) => {
-        if (!editName.trim()) return
+        if (!editName.trim() || savingEdit) return
+        setSavingEdit(true)
         try {
             const csrfToken = await getAdminCsrfToken()
             const res = await fetch(`/api/admin/categories/${id}`, {
@@ -84,6 +86,8 @@ export default function CategoriesPage() {
             }
         } catch (err) {
             console.error(err)
+        } finally {
+            setSavingEdit(false)
         }
     }
 
@@ -172,8 +176,8 @@ export default function CategoriesPage() {
                                             placeholder="Deskripsi"
                                             className="flex-1 px-3 py-1.5 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#D4BCAA]/20 outline-none"
                                         />
-                                        <button onClick={() => handleEdit(cat.id)} className="p-1.5 text-green-600 hover:text-green-700">
-                                            <Check className="h-4 w-4" />
+                                        <button onClick={() => handleEdit(cat.id)} disabled={savingEdit} className="p-1.5 text-green-600 hover:text-green-700 disabled:opacity-40">
+                                            {savingEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                                         </button>
                                         <button onClick={() => setEditingId(null)} className="p-1.5 text-[#8C7A6B]/30 hover:text-[#0F0A09]">
                                             <X className="h-4 w-4" />

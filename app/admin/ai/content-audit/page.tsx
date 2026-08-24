@@ -108,7 +108,15 @@ function toDateInputValue(value: string | null): string {
     if (!value) return ""
     const date = new Date(value)
     if (Number.isNaN(date.getTime())) return ""
-    return date.toISOString().slice(0, 16)
+
+    const localTime = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+    return localTime.toISOString().slice(0, 16)
+}
+
+function dateInputValueToIso(value: string): string | null {
+    if (!value) return null
+    const date = new Date(value)
+    return Number.isNaN(date.getTime()) ? null : date.toISOString()
 }
 
 function getIdeaStatusMeta(status: string): { label: string; className: string } {
@@ -212,7 +220,7 @@ export default function ContentAuditPage() {
         try {
             await adminPatch<{ success: boolean }, { id: string; scheduledFor: string | null }>(
                 "/api/admin/content-calendar",
-                { body: { id: ideaId, scheduledFor: value || null } }
+                { body: { id: ideaId, scheduledFor: dateInputValueToIso(value) } }
             )
         } catch (err) {
             setFeedback({ type: "error", message: getErrorMessage(err, "Gagal mengubah jadwal") })

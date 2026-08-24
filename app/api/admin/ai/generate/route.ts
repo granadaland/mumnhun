@@ -115,7 +115,8 @@ async function tryGenerateFeaturedImage(input: {
         const generated = await generateImageWithProvider(
             provider,
             prompt,
-            { maxBytes: MAX_IMAGE_BYTES, aspectRatio: "16:9" }
+            // Bound the attempt so image generation cannot consume the article's budget.
+            { maxBytes: MAX_IMAGE_BYTES, timeoutMs: 60_000, aspectRatio: "16:9" }
         )
 
         const mimeType = assertAllowedImageBuffer(generated.buffer)
@@ -218,6 +219,9 @@ export async function POST(request: NextRequest) {
 
         const generation = await generateArticleWithRotary({
             keys: activeKeys,
+            // Route budget is 300s (maxDuration below): stop rotating keys once the wall
+            // clock is spent instead of starting another multi-minute attempt.
+            budgetMs: 250_000,
             payload: {
                 topic: payload.topic,
                 tone: payload.tone,

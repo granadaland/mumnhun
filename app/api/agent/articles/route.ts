@@ -154,7 +154,8 @@ async function tryGenerateFeaturedImage(input: {
         const generated = await generateImageWithProvider(
             provider,
             prompt,
-            { maxBytes: MAX_IMAGE_BYTES, aspectRatio: "16:9" }
+            // Bound the attempt so a slow gateway cannot consume the whole agent request.
+            { maxBytes: MAX_IMAGE_BYTES, timeoutMs: 90_000, aspectRatio: "16:9" }
         )
 
         const mimeType = assertAllowedImageBuffer(generated.buffer)

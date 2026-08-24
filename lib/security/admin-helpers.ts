@@ -1,5 +1,6 @@
 import { ZodError } from "zod"
 import { NextResponse } from "next/server"
+import { sanitizeAiKeyErrorMessage } from "@/lib/security/ai-key-status"
 
 export function adminJsonValidationError(error: unknown) {
     if (error instanceof ZodError) {
@@ -20,9 +21,16 @@ export function adminJsonValidationError(error: unknown) {
 }
 
 export function summarizeUnknownError(error: unknown): string {
-    if (error instanceof Error) return error.message
-    if (typeof error === "string") return error
-    return "Unknown error"
+    const raw =
+        error instanceof Error
+            ? error.message
+            : typeof error === "string"
+                ? error
+                : "Unknown error"
+
+    // Gateway error bodies can echo credential material (Authorization headers, keys).
+    // Masking centrally keeps it out of server logs and persisted task errors.
+    return sanitizeAiKeyErrorMessage(raw)
 }
 
 export function getPrismaErrorCode(error: unknown): string | null {

@@ -5,6 +5,7 @@ import prisma from "@/lib/db/prisma"
 import { requireAdminApi, requireAdminMutationApi } from "@/lib/security/admin"
 import { logAdminError, logAdminInfo, logAdminWarn } from "@/lib/observability/admin-log"
 import { adminJsonValidationError, getPrismaErrorCode, summarizeUnknownError } from "@/lib/security/admin-helpers"
+import { sanitizeArticleHtml } from "@/lib/content/post-publishing"
 
 const routeParamsSchema = z.object({
     id: z.string().min(1, "Page ID is required"),
@@ -136,7 +137,10 @@ export async function PUT(
             data: {
                 title: payload.title,
                 slug: payload.slug,
-                content: payload.content,
+                // Same allowlist as posts/pages-create: stored HTML must stay sanitized.
+                ...(payload.content !== undefined
+                    ? { content: sanitizeArticleHtml(payload.content ?? "") }
+                    : {}),
                 metaTitle: payload.metaTitle,
                 metaDescription: payload.metaDescription,
                 status: payload.status,

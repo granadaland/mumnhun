@@ -134,6 +134,13 @@ export async function runWithAiRotary<T>(input: {
     capability?: AiCapability
     keyId?: string | null
     keys?: AiKeyRecord[]
+    /**
+     * Wall-clock budget for the WHOLE operation across all key attempts. When the
+     * elapsed time exceeds it, no further keys are tried and the accumulated failure is
+     * raised as NETWORK_TIMEOUT — without this, per-request timeouts multiply
+     * (3 keys × internal retries) far past the platform function limit.
+     */
+    budgetMs?: number
     run: (provider: ResolvedAiProvider, record: AiKeyRecord) => Promise<{ value: T; authStyle?: AuthStyle }>
     onAttempt?: (attemptIndex: number, attemptedKeyIds: string[]) => Promise<void> | void
 }): Promise<RotaryResult<T>> {
@@ -145,40 +152,64 @@ export async function runWithAiRotary<T>(input: {
         throw new NoActiveAiKeyError("Tidak ada API key AI aktif")
     }
 
+    const startedAt = Date.now()
     const attemptedKeyIds: string[] = []
     const maxAttempts = Math.min(keys.length, MAX_KEY_ATTEMPTS)
     let lastFailure: AiKeyFailure = { code: "UNKNOWN_ERROR", message: "AI request failed" }
 
     for (let index = 0; index < maxAttempts; index += 1) {
+        // Budget check happens BEFORE spending another multi-minute attempt, not after.
+        if (
+            index > 0 &&
+            typeof input.budgetMs === "number" &&
+            Date.now() - startedAt > input.budgetMs
+        ) {
+            lastFailure = {
+                code: "NETWORK_TIMEOUT",
+                message: `Budget waktu ${Math.round(input.budgetMs / 1000)}s tercapai setelah ${index} percobaan — hentikan retry antar key`,
+            }
+            break
+        }
+
         const record = keys[index]
         attemptedKeyIds.push(record.id)
 
-        await input.onAttempt?.(index, [...attemptedKeyIds])
+        await input.onAttempt?.(index, [...attemptedIdsSafe(attemptedKeyIds)])
 
+        let outcome: { value: T; authStyle?: AuthStyle }
         try {
             const resolved = toResolvedProvider(record)
-            const outcome = await input.run(resolved, record)
-
-            await markKeySuccess(record.id, {
-                authStyle: outcome.authStyle,
-                currentAuthStyle: record.authStyle,
-            })
-
-            return {
-                value: outcome.value,
-                usedKeyId: record.id,
-                usedProvider: record.provider,
-                usedModel: record.model,
-                attemptedKeyIds,
-            }
+            outcome = await input.run(resolved, record)
         } catch (error) {
             const failure = classifyAiKeyFailure(error)
             lastFailure = failure
-            await markKeyFailure(record.id, failure)
+            // Bookkeeping must not mask the real provider failure by throwing its own.
+            await markKeyFailure(record.id, failure).catch(() => undefined)
+            continue
+        }
+
+        // The generation already succeeded and is paid for: a bookkeeping failure here
+        // must not discard it and trigger a regeneration on the next key.
+        await markKeySuccess(record.id, {
+            authStyle: outcome.authStyle,
+            currentAuthStyle: record.authStyle,
+        }).catch(() => undefined)
+
+        return {
+            value: outcome.value,
+            usedKeyId: record.id,
+            usedProvider: record.provider,
+            usedModel: record.model,
+            attemptedKeyIds,
         }
     }
 
     throw new AllAiKeysFailedError(lastFailure, attemptedKeyIds)
+}
+
+/** Defensive copy helper so callbacks cannot mutate the caller's array mid-flight. */
+function attemptedIdsSafe(ids: string[]): string[] {
+    return [...ids]
 }
 
 export type ArticleGenerationResult = {
@@ -192,12 +223,14 @@ export async function generateArticleWithRotary(input: {
     keys?: AiKeyRecord[]
     keyId?: string | null
     payload: GenerateArticleInput
+    budgetMs?: number
     onAttempt?: (attemptIndex: number, attemptedKeyIds: string[]) => Promise<void> | void
 }): Promise<ArticleGenerationResult> {
     const result = await runWithAiRotary<AiArticleOutput>({
         capability: "text",
         keyId: input.keyId,
         keys: input.keys,
+        budgetMs: input.budgetMs,
         onAttempt: input.onAttempt,
         run: async (provider) => {
             const article = await generateArticleWithProvider(provider, input.payload)
@@ -224,12 +257,14 @@ export async function generateImageWithRotary(input: {
     keys?: AiKeyRecord[]
     keyId?: string | null
     payload: { prompt: string, options: { maxBytes: number; timeoutMs?: number; aspectRatio?: string } }
+    budgetMs?: number
     onAttempt?: (attemptIndex: number, attemptedKeyIds: string[]) => Promise<void> | void
 }): Promise<ImageGenerationResult> {
     const result = await runWithAiRotary<GeneratedImage>({
         capability: "image",
         keyId: input.keyId,
         keys: input.keys,
+        budgetMs: input.budgetMs,
         onAttempt: input.onAttempt,
         run: async (provider) => {
             const image = await generateImageWithProvider(provider, input.payload.prompt, input.payload.options)

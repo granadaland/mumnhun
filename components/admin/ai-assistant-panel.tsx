@@ -21,6 +21,10 @@ export type AiSeoPackage = {
     schemaType: string
     categorySlug: string | null
     tags: string[]
+    /** Empty string means "keep the existing value" — see applySeoPackage in post-editor. */
+    slug: string
+    ogTitle: string
+    ogDescription: string
 }
 
 interface AiAssistantPanelProps {
@@ -501,8 +505,8 @@ export function AiAssistantPanel({
                     {activeTab === "seo" && (
                         <div className="space-y-4">
                             <p className="text-sm text-[#8C7A6B]">
-                                AI menyusun keyword, meta title, meta description, schema, kategori, dan tag.
-                                Kategori hanya dipilih dari yang sudah ada; tag baru boleh dibuat.
+                                AI menyusun keyword, meta title, meta description, slug, OG, schema, kategori,
+                                dan tag. Kategori hanya dipilih dari yang sudah ada; tag baru boleh dibuat.
                             </p>
                             <button
                                 onClick={handleGenerateSeo}
@@ -540,6 +544,24 @@ export function AiAssistantPanel({
                                             <dt className="text-[#8C7A6B]/70">Schema</dt>
                                             <dd className="text-[#0F0A09]">{seoResult.schemaType}</dd>
                                         </div>
+                                        {seoResult.slug && (
+                                            <div>
+                                                <dt className="text-[#8C7A6B]/70">Slug</dt>
+                                                <dd className="text-[#466A68] font-mono">{seoResult.slug}</dd>
+                                            </div>
+                                        )}
+                                        {seoResult.ogTitle && (
+                                            <div>
+                                                <dt className="text-[#8C7A6B]/70">OG Title</dt>
+                                                <dd className="text-[#0F0A09]">{seoResult.ogTitle}</dd>
+                                            </div>
+                                        )}
+                                        {seoResult.ogDescription && (
+                                            <div>
+                                                <dt className="text-[#8C7A6B]/70">OG Description</dt>
+                                                <dd className="text-[#0F0A09]">{seoResult.ogDescription}</dd>
+                                            </div>
+                                        )}
                                         <div>
                                             <dt className="text-[#8C7A6B]/70">Kategori</dt>
                                             <dd className="text-[#0F0A09]">

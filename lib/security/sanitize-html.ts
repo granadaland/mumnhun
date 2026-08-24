@@ -26,10 +26,29 @@ const SANITIZE_OPTIONS: IOptions = {
         'figure',
         'figcaption',
         'img',
+        // Tables: AI-generated articles frequently use them for comparisons and price
+        // lists, and the admin editor can now insert them. `style` stays disallowed
+        // (parseStyleAttributes: false), so layout comes from CSS, not inline styles.
+        'table',
+        'thead',
+        'tbody',
+        'tfoot',
+        'tr',
+        'th',
+        'td',
+        'caption',
+        'colgroup',
+        'col',
     ],
     allowedAttributes: {
         a: ['href', 'title', 'target', 'rel'],
         img: ['src', 'alt', 'title', 'width', 'height', 'loading', 'decoding'],
+        // `colwidth` is how TipTap persists column sizes; keeping it means a resized
+        // table survives a save/load round-trip.
+        th: ['colspan', 'rowspan', 'scope', 'colwidth'],
+        td: ['colspan', 'rowspan', 'colwidth'],
+        col: ['span', 'width'],
+        colgroup: ['span'],
     },
     allowedSchemes: ['http', 'https', 'mailto', 'tel'],
     allowedSchemesAppliedToAttributes: ['href', 'src', 'cite'],

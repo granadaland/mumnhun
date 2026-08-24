@@ -17,6 +17,8 @@ import type { AiArticleOutput } from "@/lib/ai/provider"
 const MAX_SECTIONS = 14
 const MAX_BLOCKS_PER_SECTION = 40
 const MAX_LIST_ITEMS = 30
+const MAX_TABLE_ROWS = 40
+const MAX_TABLE_COLUMNS = 10
 
 function escapeHtml(value: string): string {
     return value
@@ -117,6 +119,78 @@ function renderList(items: string[], ordered: boolean): string {
 }
 
 // ---------------------------------------------------------------------------
+// Tables
+// ---------------------------------------------------------------------------
+
+/**
+ * Renders a table from already-split cell text.
+ *
+ * The first row becomes a `<th>` header row when `hasHeader` is set, which is what both
+ * Markdown pipe tables and the structured `table` block produce. Rows are padded or
+ * trimmed to the header width so ProseMirror never receives a ragged table (it would
+ * otherwise drop the whole node).
+ */
+export function renderTable(rows: string[][], hasHeader: boolean): string {
+    const limitedRows = rows
+        .map((row) => row.slice(0, MAX_TABLE_COLUMNS))
+        .filter((row) => row.length > 0)
+        .slice(0, MAX_TABLE_ROWS)
+
+    if (limitedRows.length === 0) return ""
+
+    const columnCount = Math.max(...limitedRows.map((row) => row.length))
+    const normalize = (row: string[]) =>
+        Array.from({ length: columnCount }, (_unused, index) => row[index] ?? "")
+
+    const parts: string[] = []
+    let bodyRows = limitedRows
+
+    if (hasHeader) {
+        const headerCells = normalize(limitedRows[0])
+            .map((cell) => `<th>${renderInline(cell) || "&nbsp;"}</th>`)
+            .join("")
+        parts.push(`<thead><tr>${headerCells}</tr></thead>`)
+        bodyRows = limitedRows.slice(1)
+    }
+
+    if (bodyRows.length > 0) {
+        const body = bodyRows
+            .map((row) => {
+                const cells = normalize(row)
+                    .map((cell) => `<td>${renderInline(cell) || "&nbsp;"}</td>`)
+                    .join("")
+                return `<tr>${cells}</tr>`
+            })
+            .join("")
+        parts.push(`<tbody>${body}</tbody>`)
+    }
+
+    if (parts.length === 0) return ""
+
+    return `<table>${parts.join("")}</table>`
+}
+
+/** True for a Markdown table separator row such as `|---|:---:|---:|`. */
+function isTableSeparatorLine(line: string): boolean {
+    if (!line.includes("-")) return false
+    return /^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?$/.test(line)
+}
+
+/** True for any line that looks like a Markdown pipe-table row. */
+function isTableRowLine(line: string): boolean {
+    return line.includes("|") && /\|/.test(line.replace(/^\||\|$/g, ""))
+}
+
+/** Splits `| a | b |` into `["a", "b"]`, tolerating missing outer pipes. */
+function splitTableRow(line: string): string[] {
+    return line
+        .replace(/^\s*\|/, "")
+        .replace(/\|\s*$/, "")
+        .split("|")
+        .map((cell) => cell.trim())
+}
+
+// ---------------------------------------------------------------------------
 // Structured outline
 // ---------------------------------------------------------------------------
 
@@ -175,6 +249,15 @@ const articleBlockSchema = z.discriminatedUnion("type", [
         items: z.array(z.string().trim().min(1)).min(1).max(MAX_LIST_ITEMS),
     }),
     z.object({ type: z.literal("quote"), text: z.string().trim().min(1) }),
+    z.object({
+        type: z.literal("table"),
+        // Header row is optional so a plain data grid still renders.
+        header: z.array(z.string().trim()).max(MAX_TABLE_COLUMNS).optional().default([]),
+        rows: z
+            .array(z.array(z.string().trim()).max(MAX_TABLE_COLUMNS))
+            .min(1)
+            .max(MAX_TABLE_ROWS),
+    }),
 ])
 
 export const structuredArticleSchema = z.object({
@@ -222,6 +305,11 @@ export function renderArticleHtml(article: StructuredArticle): string {
             } else if (block.type === "quote") {
                 const rendered = renderInline(block.text)
                 if (rendered) parts.push(`<blockquote><p>${rendered}</p></blockquote>`)
+            } else if (block.type === "table") {
+                const header = block.header ?? []
+                const hasHeader = header.some((cell) => cell.trim().length > 0)
+                const table = renderTable(hasHeader ? [header, ...block.rows] : block.rows, hasHeader)
+                if (table) parts.push(table)
             }
         }
     }
@@ -327,9 +415,9 @@ function flushList(items: string[], ordered: boolean, out: string[]): void {
  *
  * Used as a safety net: if the model returns a bare `contentHtml` string that already
  * contains block-level tags it is passed through untouched; otherwise it is parsed line by
- * line so double newlines become paragraphs, `##`/`#` become headings, and `-`/`1.` lines
- * become lists. Pure prose with no markers still ends up as clean paragraphs instead of one
- * flat blob.
+ * line so double newlines become paragraphs, `##`/`#` become headings, `-`/`1.` lines
+ * become lists, and Markdown pipe tables become real `<table>` markup. Pure prose with no
+ * markers still ends up as clean paragraphs instead of one flat blob.
  */
 export function coerceToHtml(raw: string): string {
     const trimmed = (raw ?? "").trim()
@@ -345,6 +433,8 @@ export function coerceToHtml(raw: string): string {
     const listItems: string[] = []
     let listOrdered = false
     let inList = false
+    let tableRows: string[][] = []
+    let tableHasHeader = false
 
     const endList = () => {
         if (inList) {
@@ -353,13 +443,42 @@ export function coerceToHtml(raw: string): string {
         }
     }
 
-    for (const rawLine of lines) {
-        const line = rawLine.trim()
+    const endTable = () => {
+        if (tableRows.length === 0) return
+        const table = renderTable(tableRows, tableHasHeader)
+        if (table) out.push(table)
+        tableRows = []
+        tableHasHeader = false
+    }
+
+    for (let index = 0; index < lines.length; index += 1) {
+        const line = lines[index].trim()
 
         if (!line) {
             flushParagraph(paragraph, out)
             endList()
+            endTable()
             continue
+        }
+
+        // A separator only ever follows the header row of a table already in progress.
+        if (tableRows.length > 0 && isTableSeparatorLine(line)) {
+            tableHasHeader = true
+            continue
+        }
+
+        if (isTableRowLine(line)) {
+            // Only start a table when the next line is a separator, or one is already open.
+            // Otherwise a prose sentence containing a pipe would be swallowed as a table.
+            const nextLine = lines[index + 1]?.trim() ?? ""
+            if (tableRows.length > 0 || isTableSeparatorLine(nextLine)) {
+                flushParagraph(paragraph, out)
+                endList()
+                tableRows.push(splitTableRow(line))
+                continue
+            }
+        } else {
+            endTable()
         }
 
         const headingMatch = line.match(/^(#{1,6})\s+(.*)$/)
@@ -403,6 +522,7 @@ export function coerceToHtml(raw: string): string {
 
     flushParagraph(paragraph, out)
     endList()
+    endTable()
 
     return out.filter(Boolean).join("\n")
 }

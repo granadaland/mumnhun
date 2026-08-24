@@ -155,10 +155,19 @@ export function deriveAiKeyConnectionState(input: { lastError: string | null; la
 }
 
 function classifyProviderHttpStatus(status: number, providerLabel: string): AiKeyFailure {
-    if (status === 400 || status === 401 || status === 403) {
+    if (status === 401 || status === 403) {
         return {
             code: "PROVIDER_KEY_INVALID",
             message: `API key ${providerLabel} tidak valid atau tidak memiliki izin akses`,
+        }
+    }
+
+    // A 400 from the provider is almost always a malformed request (bad model name,
+    // unsupported generationConfig, safety block) — not an invalid credential.
+    if (status === 400 || status === 422) {
+        return {
+            code: "PROVIDER_REQUEST_FAILED",
+            message: `${providerLabel} menolak permintaan (cek nama model dan format request)`,
         }
     }
 
@@ -358,6 +367,17 @@ export function classifyAiKeyFailure(error: unknown): AiKeyFailure {
         return {
             code: "NETWORK_TIMEOUT",
             message: `Koneksi ke provider AI timeout${detail}. Gateway lambat merespons — coba lagi, turunkan target kata, atau naikkan AI_TEXT_TIMEOUT_MS.`,
+        }
+    }
+
+    // The gateway responded fine but wrote prose instead of the requested JSON shape.
+    // Reporting this as an unknown/upstream failure (502) misleads the operator; it is a
+    // request/format problem on our side of the contract.
+    if (errorLike.name === "AiJsonFormatError" || errorLike.name === "AiJsonParseError") {
+        return {
+            code: "PROVIDER_REQUEST_FAILED",
+            message:
+                "Model tidak mengembalikan format JSON yang valid — coba lagi atau ganti model text role",
         }
     }
 

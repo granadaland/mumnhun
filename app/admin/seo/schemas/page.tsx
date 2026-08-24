@@ -48,6 +48,8 @@ export default function SchemasPage() {
     const [form, setForm] = useState({ entityType: "global", entityId: "", schemaType: "Article", schemaData: "" })
     const [saving, setSaving] = useState(false)
     const [jsonError, setJsonError] = useState("")
+    // Per-row busy flag so toggle/delete buttons cannot fire concurrent requests.
+    const [busyId, setBusyId] = useState<string | null>(null)
 
     const fetchSchemas = useCallback(async () => {
         try {
@@ -110,6 +112,8 @@ export default function SchemasPage() {
     }
 
     const handleToggle = async (schema: Schema) => {
+        if (busyId) return
+        setBusyId(schema.id)
         try {
             const csrfToken = await getAdminCsrfToken()
             await fetch("/api/admin/seo/schemas", {
@@ -120,11 +124,15 @@ export default function SchemasPage() {
             fetchSchemas()
         } catch (err) {
             console.error(err)
+        } finally {
+            setBusyId(null)
         }
     }
 
     const handleDelete = async (id: string) => {
         if (!confirm("Hapus schema ini?")) return
+        if (busyId) return
+        setBusyId(id)
         try {
             const csrfToken = await getAdminCsrfToken()
             await fetch("/api/admin/seo/schemas", {
@@ -135,6 +143,8 @@ export default function SchemasPage() {
             fetchSchemas()
         } catch (err) {
             console.error(err)
+        } finally {
+            setBusyId(null)
         }
     }
 
@@ -243,14 +253,14 @@ export default function SchemasPage() {
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-1 flex-shrink-0">
-                                    <button onClick={() => handleToggle(schema)} className={`p-1.5 transition-colors ${schema.isActive ? "text-green-600 hover:text-green-700" : "text-[#8C7A6B]/20 hover:text-[#8C7A6B]/50"}`}>
-                                        {schema.isActive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                                    <button onClick={() => handleToggle(schema)} disabled={busyId !== null} className={`p-1.5 transition-colors disabled:opacity-40 ${schema.isActive ? "text-green-600 hover:text-green-700" : "text-[#8C7A6B]/20 hover:text-[#8C7A6B]/50"}`}>
+                                        {busyId === schema.id ? <Loader2 className="h-4 w-4 animate-spin" /> : schema.isActive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                                     </button>
-                                    <button onClick={() => startEdit(schema)} className="p-1.5 text-[#8C7A6B]/30 hover:text-[#466A68] transition-colors">
+                                    <button onClick={() => startEdit(schema)} disabled={busyId !== null} className="p-1.5 text-[#8C7A6B]/30 hover:text-[#466A68] transition-colors disabled:opacity-40">
                                         <Pencil className="h-4 w-4" />
                                     </button>
-                                    <button onClick={() => handleDelete(schema.id)} className="p-1.5 text-[#8C7A6B]/30 hover:text-red-600 transition-colors">
-                                        <Trash2 className="h-4 w-4" />
+                                    <button onClick={() => handleDelete(schema.id)} disabled={busyId !== null} className="p-1.5 text-[#8C7A6B]/30 hover:text-red-600 transition-colors disabled:opacity-40">
+                                        {busyId === schema.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                                     </button>
                                 </div>
                             </div>

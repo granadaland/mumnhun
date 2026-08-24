@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import prisma from "@/lib/db/prisma"
-import { requireAdminApi, requireAdminMutationApi } from "@/lib/security/admin"
+import { requireAdminMutationApi } from "@/lib/security/admin"
 import { logAdminError, logAdminInfo, logAdminWarn } from "@/lib/observability/admin-log"
 import { adminJsonValidationError, getPrismaErrorCode, summarizeUnknownError } from "@/lib/security/admin-helpers"
 
@@ -142,8 +142,15 @@ export async function DELETE(
     const { id } = await params
 
     // Remove category associations first
-    await prisma.categoriesOnPosts.deleteMany({ where: { categoryId: id } })
-    await prisma.category.delete({ where: { id } })
+    try {
+        await prisma.categoriesOnPosts.deleteMany({ where: { categoryId: id } })
+        await prisma.category.delete({ where: { id } })
+    } catch (error) {
+        if (getPrismaErrorCode(error) === "P2025") {
+            return NextResponse.json({ error: "Kategori tidak ditemukan" }, { status: 404 })
+        }
+        throw error
+    }
 
     return NextResponse.json({ success: true })
 }

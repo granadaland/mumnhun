@@ -8,11 +8,12 @@ import { SeoScanner } from "@/components/admin/seo-scanner"
 import { AiAssistantPanel, type AiSeoPackage } from "@/components/admin/ai-assistant-panel"
 import { ImageSourcePicker, type PickedImage } from "@/components/admin/image-source-picker"
 import { ADMIN_CSRF_HEADER, getAdminCsrfToken } from "@/lib/security/csrf-client"
+import { AdminClientError, adminPost } from "@/lib/api/admin-client"
 import { SITE_URL } from "@/lib/constants"
 import {
     Save, Loader2, ArrowLeft, Eye, ChevronDown, ChevronUp,
     Calendar, Globe, FileText, Search as SearchIcon, BarChart3,
-    Sparkles, ImagePlus, Trash2,
+    Sparkles, ImagePlus, Trash2, Wand2, Check,
 } from "lucide-react"
 
 type Category = { id: string; name: string; slug: string }
@@ -59,6 +60,36 @@ function slugify(text: string): string {
         .replace(/^-+|-+$/g, "")
 }
 
+/** Convert an ISO timestamp to the wall-clock format required by datetime-local. */
+function toDateTimeLocalValue(value: string | null | undefined): string {
+    if (!value) return ""
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return ""
+
+    const localTime = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+    return localTime.toISOString().slice(0, 16)
+}
+
+/** Convert browser-local datetime input back to an unambiguous UTC timestamp. */
+function dateTimeLocalToIso(value: string): string {
+    if (!value) return ""
+    const date = new Date(value)
+    return Number.isNaN(date.getTime()) ? value : date.toISOString()
+}
+
+function getAiErrorMessage(error: unknown, fallback: string): string {
+    if (error instanceof AdminClientError) {
+        const payload = error.payload
+        if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+            const record = payload as Record<string, unknown>
+            if (typeof record.error === "string" && record.error.trim()) return record.error
+        }
+        if (error.message.trim()) return error.message
+    }
+    if (error instanceof Error && error.message.trim()) return error.message
+    return fallback
+}
+
 export function PostEditor({ postId }: { postId?: string }) {
     const router = useRouter()
     const [post, setPost] = useState<PostData>(defaultPost)
@@ -67,6 +98,8 @@ export function PostEditor({ postId }: { postId?: string }) {
     const [tagSearch, setTagSearch] = useState("")
     const [filteredTags, setFilteredTags] = useState<Tag[]>([])
     const [loading, setLoading] = useState(!!postId)
+    const [loadError, setLoadError] = useState<string | null>(null)
+    const [taxonomyError, setTaxonomyError] = useState<string | null>(null)
     const [saving, setSaving] = useState(false)
     const [showSeo, setShowSeo] = useState(false)
     const [showSchedule, setShowSchedule] = useState(false)
@@ -75,30 +108,54 @@ export function PostEditor({ postId }: { postId?: string }) {
     const [showFeaturedPicker, setShowFeaturedPicker] = useState(false)
     const [autoSlug, setAutoSlug] = useState(!postId)
     const [autoCanonical, setAutoCanonical] = useState(true)
+    const [seoAutoLoading, setSeoAutoLoading] = useState(false)
+    const [seoAutoError, setSeoAutoError] = useState<string | null>(null)
+    const [seoAutoDone, setSeoAutoDone] = useState(false)
 
     // Fetch categories and tags
     useEffect(() => {
+        const controller = new AbortController()
+
         Promise.all([
-            fetch("/api/admin/categories").then((r) => r.json()),
-            fetch("/api/admin/tags").then((r) => r.json()),
+            fetch("/api/admin/categories", { signal: controller.signal }).then(async (response) => {
+                if (!response.ok) throw new Error("Gagal memuat kategori")
+                return response.json()
+            }),
+            fetch("/api/admin/tags", { signal: controller.signal }).then(async (response) => {
+                if (!response.ok) throw new Error("Gagal memuat tag")
+                return response.json()
+            }),
         ]).then(([catData, tagData]) => {
             if (catData.success) setCategories(catData.data)
             if (tagData.success) {
                 setTags(tagData.data)
                 setFilteredTags(tagData.data.slice(0, 20))
             }
+        }).catch((error: unknown) => {
+            if (error instanceof DOMException && error.name === "AbortError") return
+            setTaxonomyError(error instanceof Error ? error.message : "Gagal memuat kategori dan tag")
         })
+
+        return () => controller.abort()
     }, [])
 
     // Fetch post for edit
     useEffect(() => {
         if (!postId) return
-        fetch(`/api/admin/posts/${postId}`)
-            .then((r) => r.json())
+
+        const controller = new AbortController()
+        setLoadError(null)
+
+        fetch(`/api/admin/posts/${postId}`, { signal: controller.signal })
+            .then(async (response) => {
+                if (!response.ok) throw new Error(`Gagal memuat artikel (${response.status})`)
+                return response.json()
+            })
             .then((data) => {
-                if (data.success) {
-                    const p = data.data
-                    setPost({
+                if (!data.success) throw new Error(data.error || "Artikel tidak dapat dimuat")
+
+                const p = data.data
+                setPost({
                         id: p.id,
                         title: p.title || "",
                         slug: p.slug || "",
@@ -106,8 +163,8 @@ export function PostEditor({ postId }: { postId?: string }) {
                         excerpt: p.excerpt || "",
                         featuredImage: p.featuredImage || "",
                         status: p.status || "DRAFT",
-                        publishedAt: p.publishedAt ? new Date(p.publishedAt).toISOString().slice(0, 16) : "",
-                        scheduledAt: p.scheduledAt ? new Date(p.scheduledAt).toISOString().slice(0, 16) : "",
+                        publishedAt: toDateTimeLocalValue(p.publishedAt),
+                        scheduledAt: toDateTimeLocalValue(p.scheduledAt),
                         categoryIds: p.categories?.map((c: { category: Category }) => c.category.id) || [],
                         tagIds: p.tags?.map((t: { tag: Tag }) => t.tag.id) || [],
                         metaTitle: p.metaTitle || "",
@@ -120,13 +177,20 @@ export function PostEditor({ postId }: { postId?: string }) {
                         ogDescription: p.ogDescription || "",
                         schemaType: p.schemaType || "",
                         schemaData: p.schemaData || "",
-                    })
-                    if (p.status === "SCHEDULED") setShowSchedule(true)
-                    // A canonical the editor already set by hand must not be overwritten.
-                    if (p.canonicalUrl) setAutoCanonical(false)
-                }
+                })
+                if (p.status === "SCHEDULED") setShowSchedule(true)
+                // A canonical the editor already set by hand must not be overwritten.
+                if (p.canonicalUrl) setAutoCanonical(false)
             })
-            .finally(() => setLoading(false))
+            .catch((error: unknown) => {
+                if (error instanceof DOMException && error.name === "AbortError") return
+                setLoadError(error instanceof Error ? error.message : "Gagal memuat artikel")
+            })
+            .finally(() => {
+                if (!controller.signal.aborted) setLoading(false)
+            })
+
+        return () => controller.abort()
     }, [postId])
 
     // Auto-generate slug from title
@@ -166,9 +230,18 @@ export function PostEditor({ postId }: { postId?: string }) {
      * Categories are matched against existing ones only (the API already restricts the
      * model to real slugs). Tags may be new, so unknown names are created first and the
      * local tag list is refreshed to keep the chips rendering.
+     *
+     * An empty string from the model means "keep what the editor already has", so every
+     * field falls back to its previous value instead of being wiped.
      */
     const applySeoPackage = useCallback(
         async (seo: AiSeoPackage) => {
+            const aiSlug = slugify(seo.slug ?? "")
+
+            // An AI-provided slug is an explicit decision, so stop mirroring the title.
+            // The canonical effect then follows this new slug on its own.
+            if (aiSlug) setAutoSlug(false)
+
             setPost((prev) => ({
                 ...prev,
                 focusKeyword: seo.focusKeyword || prev.focusKeyword,
@@ -178,6 +251,9 @@ export function PostEditor({ postId }: { postId?: string }) {
                 metaTitle: seo.metaTitle || prev.metaTitle,
                 metaDescription: seo.metaDescription || prev.metaDescription,
                 schemaType: seo.schemaType || prev.schemaType,
+                slug: aiSlug || prev.slug,
+                ogTitle: seo.ogTitle || prev.ogTitle,
+                ogDescription: seo.ogDescription || prev.ogDescription,
             }))
 
             if (seo.categorySlug) {
@@ -241,6 +317,55 @@ export function PostEditor({ postId }: { postId?: string }) {
         [categories, tags]
     )
 
+    /**
+     * One-click SEO: generates the whole metadata package and applies it immediately.
+     *
+     * Same endpoint the AI panel's SEO tab uses, but without the preview step, so the
+     * editor does not have to open the panel and confirm. `applySeoPackage` still owns
+     * merging, category matching, and tag creation.
+     */
+    const handleGenerateAndApplySeo = useCallback(async () => {
+        if (!post.title.trim() || !post.content.trim()) {
+            setSeoAutoError("Judul dan konten harus terisi sebelum SEO bisa dibuat.")
+            return
+        }
+
+        setSeoAutoLoading(true)
+        setSeoAutoError(null)
+        setSeoAutoDone(false)
+
+        try {
+            const response = await adminPost<
+                { success: boolean; data: AiSeoPackage },
+                { action: "generate_seo"; payload: { title: string; content: string; keyword?: string } }
+            >("/api/admin/ai/assist", {
+                body: {
+                    action: "generate_seo",
+                    payload: {
+                        title: post.title,
+                        content: post.content,
+                        ...(post.focusKeyword.trim() ? { keyword: post.focusKeyword.trim() } : {}),
+                    },
+                },
+                timeoutMs: 120_000,
+            })
+
+            if (!response.success) {
+                setSeoAutoError("AI tidak mengembalikan hasil SEO.")
+                return
+            }
+
+            await applySeoPackage(response.data)
+            // Open the section so the applied values are visible right away.
+            setShowSeo(true)
+            setSeoAutoDone(true)
+        } catch (err) {
+            setSeoAutoError(getAiErrorMessage(err, "Gagal membuat pengaturan SEO otomatis"))
+        } finally {
+            setSeoAutoLoading(false)
+        }
+    }, [applySeoPackage, post.content, post.focusKeyword, post.title])
+
     const handleFeaturedImagePicked = useCallback((image: PickedImage) => {
         setPost((prev) => ({
             ...prev,
@@ -266,7 +391,13 @@ export function PostEditor({ postId }: { postId?: string }) {
             const res = await fetch(url, {
                 method,
                 headers: { "Content-Type": "application/json", [ADMIN_CSRF_HEADER]: csrfToken },
-                body: JSON.stringify({ ...post, status, ogImage: post.featuredImage }),
+                body: JSON.stringify({
+                    ...post,
+                    status,
+                    ogImage: post.featuredImage,
+                    publishedAt: dateTimeLocalToIso(post.publishedAt),
+                    scheduledAt: dateTimeLocalToIso(post.scheduledAt),
+                }),
             })
             const data = await res.json()
             if (data.success) {
@@ -296,8 +427,29 @@ export function PostEditor({ postId }: { postId?: string }) {
         )
     }
 
+    if (loadError) {
+        return (
+            <div role="alert" className="max-w-xl mx-auto bg-white border border-red-200 rounded-xl p-6 text-center">
+                <h1 className="text-lg font-semibold text-red-700">Artikel gagal dimuat</h1>
+                <p className="mt-2 text-sm text-[#8C7A6B]">{loadError}</p>
+                <button
+                    type="button"
+                    onClick={() => window.location.reload()}
+                    className="mt-5 px-4 py-2 bg-[#466A68] text-white text-sm font-medium rounded-lg"
+                >
+                    Coba Lagi
+                </button>
+            </div>
+        )
+    }
+
     return (
         <div className="space-y-6">
+            {taxonomyError && (
+                <div role="alert" className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                    {taxonomyError}. Artikel tetap bisa diedit, tetapi kategori dan tag belum tersedia.
+                </div>
+            )}
             {/* Header */}
             <div className="flex items-center justify-between">
                 <button
@@ -396,16 +548,49 @@ export function PostEditor({ postId }: { postId?: string }) {
 
                     {/* SEO Section */}
                     <div className="bg-white border border-[#D4BCAA]/20 rounded-xl overflow-hidden">
-                        <button
-                            onClick={() => setShowSeo(!showSeo)}
-                            className="w-full flex items-center justify-between px-5 py-4 text-sm font-medium text-[#8C7A6B]/70 hover:text-[#0F0A09] transition-colors"
-                        >
-                            <div className="flex items-center gap-2">
-                                <Globe className="h-4 w-4" />
-                                SEO Settings
+                        <div className="flex items-center gap-2 px-5 py-3">
+                            <button
+                                onClick={() => setShowSeo(!showSeo)}
+                                className="flex-1 flex items-center justify-between text-sm font-medium text-[#8C7A6B]/70 hover:text-[#0F0A09] transition-colors"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <Globe className="h-4 w-4" />
+                                    SEO Settings
+                                </div>
+                                {showSeo ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            </button>
+
+                            {/* One-click: generate every SEO field and apply it immediately. */}
+                            <button
+                                type="button"
+                                onClick={handleGenerateAndApplySeo}
+                                disabled={seoAutoLoading || !post.title.trim() || !post.content.trim()}
+                                title="Generate & terapkan semua pengaturan SEO dengan AI"
+                                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-[#466A68]/30 text-[#466A68] bg-gradient-to-r from-[#466A68]/10 to-[#466A68]/5 hover:bg-[#466A68]/15 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                            >
+                                {seoAutoLoading ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : seoAutoDone ? (
+                                    <Check className="h-3.5 w-3.5" />
+                                ) : (
+                                    <Wand2 className="h-3.5 w-3.5" />
+                                )}
+                                {seoAutoLoading ? "Menyusun SEO..." : "AI Isi Semua SEO"}
+                            </button>
+                        </div>
+
+                        {seoAutoError && (
+                            <div role="alert" className="mx-5 mb-3 p-2.5 bg-red-50 text-red-700 text-xs rounded-lg border border-red-100">
+                                {seoAutoError}
                             </div>
-                            {showSeo ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                        </button>
+                        )}
+
+                        {seoAutoDone && !seoAutoError && (
+                            <p className="mx-5 mb-3 p-2.5 bg-[#466A68]/5 text-[#466A68] text-xs rounded-lg border border-[#466A68]/20">
+                                Pengaturan SEO sudah diisi AI. Periksa hasilnya lalu simpan artikel.
+                            </p>
+                        )}
+
                         {showSeo && (
                             <div className="px-5 pb-5 space-y-4 border-t border-[#D4BCAA]/20 pt-4">
                                 <div>

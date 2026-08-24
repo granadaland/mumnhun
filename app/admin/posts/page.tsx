@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import Link from "next/link"
 import {
     Plus, Search, FileText, Loader2, Trash2, Eye,
@@ -46,11 +46,25 @@ export default function PostsListPage() {
     const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, totalPages: 0 })
     const [loading, setLoading] = useState(true)
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
+    const [searchInput, setSearchInput] = useState("")
     const [search, setSearch] = useState("")
     const [statusFilter, setStatusFilter] = useState("")
     const [deleting, setDeleting] = useState<string | null>(null)
+    // Aborts the in-flight list request so a slower older query can never overwrite the
+    // results of a newer one.
+    const activeRequestRef = useRef<AbortController | null>(null)
+
+    // Debounce typing: one request per settled query instead of one per keystroke.
+    useEffect(() => {
+        const timer = setTimeout(() => setSearch(searchInput.trim()), 300)
+        return () => clearTimeout(timer)
+    }, [searchInput])
 
     const fetchPosts = useCallback(async (page = 1) => {
+        activeRequestRef.current?.abort()
+        const controller = new AbortController()
+        activeRequestRef.current = controller
+
         setLoading(true)
         setErrorMessage(null)
         const params = new URLSearchParams({ page: String(page), limit: "20" })
@@ -58,17 +72,21 @@ export default function PostsListPage() {
         if (statusFilter) params.set("status", statusFilter)
 
         try {
-            const data = await adminGet<ListPostsResponse>(`/api/admin/posts?${params.toString()}`)
+            const data = await adminGet<ListPostsResponse>(`/api/admin/posts?${params.toString()}`, {
+                signal: controller.signal,
+            })
+            if (controller.signal.aborted) return
             if (data.success) {
                 setPosts(data.data)
                 setPagination(data.pagination)
             }
         } catch (err) {
+            if (err instanceof AdminClientError && err.code === "ABORTED") return
             const message = getClientErrorMessage(err, "Gagal memuat artikel")
             setErrorMessage(message)
             console.error("Failed to fetch posts:", err)
         } finally {
-            setLoading(false)
+            if (!controller.signal.aborted) setLoading(false)
         }
     }, [search, statusFilter])
 
@@ -127,9 +145,11 @@ export default function PostsListPage() {
                     <Search className="h-4 w-4 text-[#8C7A6B]/30" />
                     <input
                         type="text"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && fetchPosts()}
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") setSearch(searchInput.trim())
+                        }}
                         placeholder="Cari artikel..."
                         className="bg-transparent text-sm text-[#0F0A09] placeholder-[#8C7A6B]/60 outline-none w-full"
                     />

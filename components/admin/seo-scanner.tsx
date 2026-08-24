@@ -36,12 +36,30 @@ function countWords(text: string): number {
     return stripHtml(text).split(/\s+/).filter(Boolean).length
 }
 
+/** Count literal, non-overlapping occurrences without treating user input as RegExp. */
+function countLiteralOccurrences(text: string, needle: string): number {
+    if (!needle) return 0
+
+    let count = 0
+    let cursor = 0
+
+    while (cursor < text.length) {
+        const index = text.indexOf(needle, cursor)
+        if (index === -1) break
+        count += 1
+        cursor = index + needle.length
+    }
+
+    return count
+}
+
 function runChecks(props: SeoScannerProps): SeoCheck[] {
     const checks: SeoCheck[] = []
     const plainContent = stripHtml(props.content)
     const wordCount = countWords(props.content)
     const effectiveTitle = props.metaTitle || props.title
     const kw = props.focusKeyword?.toLowerCase().trim()
+    const lowerContent = plainContent.toLowerCase()
 
     // === TITLE & META ===
     checks.push({
@@ -113,16 +131,16 @@ function runChecks(props: SeoScannerProps): SeoCheck[] {
             id: "kw-in-content",
             label: "Keyword di konten",
             category: "keywords",
-            status: plainContent.toLowerCase().includes(kw) ? "pass" : "fail",
-            message: plainContent.toLowerCase().includes(kw)
-                ? `Muncul ${(plainContent.toLowerCase().match(new RegExp(kw, "g")) || []).length}x`
+            status: lowerContent.includes(kw) ? "pass" : "fail",
+            message: lowerContent.includes(kw)
+                ? `Muncul ${countLiteralOccurrences(lowerContent, kw)}x`
                 : "Tidak ditemukan — tambahkan keyword di konten",
             weight: 8,
         })
 
         // Keyword density
-        if (wordCount > 0 && plainContent.toLowerCase().includes(kw)) {
-            const kwCount = (plainContent.toLowerCase().match(new RegExp(kw, "g")) || []).length
+        if (wordCount > 0 && lowerContent.includes(kw)) {
+            const kwCount = countLiteralOccurrences(lowerContent, kw)
             const density = ((kwCount * kw.split(/\s+/).length) / wordCount) * 100
             checks.push({
                 id: "kw-density",

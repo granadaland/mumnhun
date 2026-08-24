@@ -5,6 +5,8 @@ import { logAdminError, logAdminInfo, logAdminWarn } from "@/lib/observability/a
 import { summarizeUnknownError } from "@/lib/security/admin-helpers"
 import { classifyProviderFailure, toAiKeyFailureHttpStatus } from "@/lib/security/ai-key-status"
 import { generateImageWithRotary, NoActiveAiKeyError, AllAiKeysFailedError } from "@/lib/ai/key-rotary"
+import { generateImageWithProvider } from "@/lib/ai/provider"
+import { resolveImageRoleModel, recordImageRoleSuccess, recordImageRoleFailure } from "@/lib/ai/task-models"
 import { ImageGenerationUnsupportedError } from "@/lib/ai/openai-compatible"
 import { applyImagePolicy, IMAGE_ASPECT_RATIOS, DEFAULT_IMAGE_ASPECT_RATIO } from "@/lib/ai/image-policy"
 import { MAX_IMAGE_BYTES, MediaIngestError, assertAllowedImageBuffer, ingestImage } from "@/lib/media/ingest"
@@ -91,15 +93,53 @@ export async function POST(request: NextRequest) {
             aspectRatio: payload.aspectRatio ?? DEFAULT_IMAGE_ASPECT_RATIO,
         })
 
-        const generated = await generateImageWithRotary({
-            payload: {
-                prompt: finalPrompt,
-                options: {
-                    maxBytes: MAX_IMAGE_BYTES,
-                    aspectRatio: payload.aspectRatio ?? DEFAULT_IMAGE_ASPECT_RATIO,
-                },
+        const aspectRatio = payload.aspectRatio ?? DEFAULT_IMAGE_ASPECT_RATIO
+        const imageOptions = {
+            maxBytes: MAX_IMAGE_BYTES,
+            timeoutMs: 60_000,
+            aspectRatio,
+        }
+
+        // Prefer the pinned "image" role model when the operator configured one; the
+        // rotary pool is only a fallback. This keeps Settings > AI Models (role "image")
+        // meaningful instead of silently reading a different table.
+        const roleModel = await resolveImageRoleModel()
+
+        let generated: Awaited<ReturnType<typeof generateImageWithRotary>>
+        if (roleModel) {
+            try {
+                const image = await generateImageWithProvider(
+                    {
+                        provider: roleModel.provider,
+                        apiKey: roleModel.apiKey,
+                        baseUrl: roleModel.baseUrl || null,
+                        model: roleModel.model || null,
+                        authStyle: roleModel.authStyle,
+                    },
+                    finalPrompt,
+                    imageOptions
+                )
+
+                await recordImageRoleSuccess(roleModel.roleModelId).catch(() => undefined)
+
+                generated = { image, usedKeyId: roleModel.roleModelId, attemptedKeyIds: [roleModel.roleModelId] }
+            } catch (error) {
+                // The role's own bookkeeping: record the failure against this credential
+                // so the dashboard shows why the pinned model failed.
+                await recordImageRoleFailure(roleModel.roleModelId, error)
+                throw error
             }
-        })
+        } else {
+            generated = await generateImageWithRotary({
+                // Route budget is 180s (maxDuration below): cap each provider attempt and
+                // the cross-key budget so worst-case retries stay inside the function limit.
+                budgetMs: 160_000,
+                payload: {
+                    prompt: finalPrompt,
+                    options: imageOptions,
+                }
+            })
+        }
 
         const mimeType = assertAllowedImageBuffer(generated.image.buffer)
         const extension = mimeType.split("/")[1] || "png"

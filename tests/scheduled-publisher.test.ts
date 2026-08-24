@@ -80,17 +80,26 @@ describe("publishDueScheduledPosts", () => {
         expect(mockPrisma.contentIdea.updateMany).not.toHaveBeenCalled()
     })
 
-    it("refuses to publish content that fails the readiness gate", async () => {
+    it("refuses to publish content that fails the readiness gate and backs off one hour", async () => {
         mockPrisma.post.findMany.mockResolvedValueOnce([
             buildPost({ id: "thin", slug: "thin", content: "<p>terlalu pendek</p>" }),
         ])
 
-        const result = await publishDueScheduledPosts(new Date())
+        const now = new Date("2026-08-22T10:00:00.000Z")
+        const result = await publishDueScheduledPosts(now)
 
         expect(result.published).toEqual([])
         expect(result.skipped).toHaveLength(1)
         expect(result.skipped[0].reason).toContain("120 kata")
-        expect(mockPrisma.post.updateMany).not.toHaveBeenCalled()
+        // The post stays SCHEDULED; only the schedule moves one hour into the future so a
+        // permanently invalid post cannot starve newer due posts in later batches.
+        expect(mockPrisma.post.updateMany).toHaveBeenCalledTimes(1)
+        const backoffCall = mockPrisma.post.updateMany.mock.calls[0][0]
+        expect(backoffCall.where).toEqual({ id: "thin", status: "SCHEDULED" })
+        expect((backoffCall.data as { scheduledAt: Date }).scheduledAt.getTime()).toBe(
+            now.getTime() + 60 * 60 * 1000
+        )
+        expect(Object.keys(backoffCall.data)).not.toContain("status")
     })
 
     it("requires a title of at least 10 characters", async () => {

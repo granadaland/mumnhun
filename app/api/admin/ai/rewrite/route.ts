@@ -10,6 +10,7 @@ import { logAdminError, logAdminInfo, logAdminWarn } from "@/lib/observability/a
 import { summarizeUnknownError, adminJsonValidationError } from "@/lib/security/admin-helpers"
 import { AllAiKeysFailedError, NoActiveAiKeyError, runWithAiRotary } from "@/lib/ai/key-rotary"
 import { generateJson } from "@/lib/ai/provider"
+import { sanitizeArticleHtml } from "@/lib/content/post-publishing"
 
 // Rewriting a long article is a multi-minute model call; extend the platform timeout.
 export const maxDuration = 300
@@ -163,7 +164,9 @@ export async function POST(request: NextRequest) {
             postId: postToRewrite.id,
             originalTitle: postToRewrite.title,
             rewrittenTitle: result.value.title,
-            rewrittenContentHtml: result.value.contentHtml,
+            // Model output is untrusted; apply the same allowlist used for stored content
+            // before it is persisted or rendered into the admin preview.
+            rewrittenContentHtml: sanitizeArticleHtml(result.value.contentHtml),
             rewrittenExcerpt: result.value.excerpt,
             usedKeyId: result.usedKeyId,
             attemptedKeyIds: result.attemptedKeyIds,

@@ -28,6 +28,8 @@ export default function HeroSectionPage() {
     const [adding, setAdding] = useState(false)
     const [newForm, setNewForm] = useState({ title: "", subtitle: "", imageUrl: "", ctaPrimaryText: "Cek Harga Sewa", ctaPrimaryLink: "/#pricing", ctaSecondaryText: "", ctaSecondaryLink: "" })
     const [saving, setSaving] = useState(false)
+    // Per-slide busy flags so toggle/delete buttons cannot fire concurrent requests.
+    const [busySlideId, setBusySlideId] = useState<string | null>(null)
 
     const fetchSlides = useCallback(async () => {
         try {
@@ -90,6 +92,8 @@ export default function HeroSectionPage() {
     }
 
     const handleToggle = async (slide: Slide) => {
+        if (busySlideId) return
+        setBusySlideId(slide.id)
         try {
             const csrfToken = await getAdminCsrfToken()
             await fetch("/api/admin/hero", {
@@ -100,11 +104,15 @@ export default function HeroSectionPage() {
             fetchSlides()
         } catch (err) {
             console.error(err)
+        } finally {
+            setBusySlideId(null)
         }
     }
 
     const handleDelete = async (id: string) => {
         if (!confirm("Hapus slide ini?")) return
+        if (busySlideId) return
+        setBusySlideId(id)
         try {
             const csrfToken = await getAdminCsrfToken()
             await fetch("/api/admin/hero", {
@@ -115,6 +123,8 @@ export default function HeroSectionPage() {
             fetchSlides()
         } catch (err) {
             console.error(err)
+        } finally {
+            setBusySlideId(null)
         }
     }
 
@@ -203,14 +213,14 @@ export default function HeroSectionPage() {
                                         <p className="text-[10px] text-[#466A68]/60 mt-0.5">CTA: {slide.ctaPrimaryText}</p>
                                     </div>
                                     <div className="flex items-center gap-1 flex-shrink-0">
-                                        <button onClick={() => handleToggle(slide)} className={`p-1.5 transition-colors ${slide.isActive ? "text-green-600 hover:text-green-700" : "text-[#8C7A6B]/20 hover:text-[#8C7A6B]/50"}`}>
-                                            {slide.isActive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                                        <button onClick={() => handleToggle(slide)} disabled={busySlideId !== null} className={`p-1.5 transition-colors disabled:opacity-40 ${slide.isActive ? "text-green-600 hover:text-green-700" : "text-[#8C7A6B]/20 hover:text-[#8C7A6B]/50"}`}>
+                                            {busySlideId === slide.id ? <Loader2 className="h-4 w-4 animate-spin" /> : slide.isActive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                                         </button>
-                                        <button onClick={() => { setEditingId(slide.id); setEditForm(slide) }} className="p-1.5 text-[#8C7A6B]/30 hover:text-[#466A68] transition-colors">
+                                        <button onClick={() => { setEditingId(slide.id); setEditForm(slide) }} disabled={busySlideId !== null} className="p-1.5 text-[#8C7A6B]/30 hover:text-[#466A68] transition-colors disabled:opacity-40">
                                             <Pencil className="h-4 w-4" />
                                         </button>
-                                        <button onClick={() => handleDelete(slide.id)} className="p-1.5 text-[#8C7A6B]/30 hover:text-red-600 transition-colors">
-                                            <Trash2 className="h-4 w-4" />
+                                        <button onClick={() => handleDelete(slide.id)} disabled={busySlideId !== null} className="p-1.5 text-[#8C7A6B]/30 hover:text-red-600 transition-colors disabled:opacity-40">
+                                            {busySlideId === slide.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                                         </button>
                                     </div>
                                 </div>

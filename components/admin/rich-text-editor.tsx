@@ -6,11 +6,13 @@ import StarterKit from "@tiptap/starter-kit"
 import Image from "@tiptap/extension-image"
 import Placeholder from "@tiptap/extension-placeholder"
 import TextAlign from "@tiptap/extension-text-align"
+import { TableKit } from "@tiptap/extension-table"
 import {
     Bold, Italic, Underline as UnderlineIcon, Strikethrough,
     List, ListOrdered, Quote, Code, Link as LinkIcon,
     Image as ImageIcon, AlignLeft, AlignCenter, AlignRight,
-    Undo, Redo, Minus, RemoveFormatting, Code2, Eye, Wand2
+    Undo, Redo, Minus, RemoveFormatting, Code2, Eye, Wand2,
+    Table as TableIcon, Columns3, Rows3, Trash2, Heading,
 } from "lucide-react"
 import { ImageSourcePicker, type PickedImage } from "@/components/admin/image-source-picker"
 import "./wysiwyg-content.css"
@@ -150,6 +152,12 @@ export function RichTextEditor({
             }),
             Placeholder.configure({ placeholder }),
             TextAlign.configure({ types: ["heading", "paragraph"] }),
+            // Tables: AI-generated articles use them for comparisons and price lists, and
+            // TableKit bundles table/row/cell/header so the schema accepts pasted <table>
+            // markup instead of flattening it into paragraphs.
+            TableKit.configure({
+                table: { resizable: true, allowTableNodeSelection: true },
+            }),
         ],
         content,
         onUpdate: ({ editor }) => {
@@ -194,6 +202,7 @@ export function RichTextEditor({
                 alignRight: instance.isActive({ textAlign: "right" }),
                 canUndo: instance.can().undo(),
                 canRedo: instance.can().redo(),
+                inTable: instance.isActive("table"),
                 wordCount: (() => {
                     const text = instance.getText().trim()
                     return text ? text.split(/\s+/).length : 0
@@ -279,38 +288,52 @@ export function RichTextEditor({
         ? `Bagian yang sedang dibahas (Subheading): "${activeSubheading}". Konteks keseluruhan artikel: ${editor.getText().slice(0, 2000)}`
         : editor.getText().slice(0, 3000)
 
-    return (
-        <div className="bg-white border border-[#D4BCAA]/30 rounded-xl overflow-hidden shadow-sm">
-            {/* Visual / HTML tabs, mirroring the classic editor */}
-            <div className="flex items-center gap-1 px-3 pt-2 border-b border-[#D4BCAA]/30 bg-[#FAF9F7]">
-                <button
-                    type="button"
-                    onClick={switchToVisual}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-t-md border border-b-0 transition-colors ${mode === "visual"
-                        ? "bg-white border-[#D4BCAA]/40 text-[#0F0A09]"
-                        : "bg-transparent border-transparent text-[#8C7A6B] hover:text-[#0F0A09]"
-                        }`}
-                >
-                    <Eye className="h-3.5 w-3.5" />
-                    Visual
-                </button>
-                <button
-                    type="button"
-                    onClick={switchToHtml}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-t-md border border-b-0 transition-colors ${mode === "html"
-                        ? "bg-white border-[#D4BCAA]/40 text-[#0F0A09]"
-                        : "bg-transparent border-transparent text-[#8C7A6B] hover:text-[#0F0A09]"
-                        }`}
-                >
-                    <Code2 className="h-3.5 w-3.5" />
-                    HTML
-                </button>
-            </div>
+    const insertTable = () => {
+        editor
+            .chain()
+            .focus()
+            .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+            .run()
+    }
 
-            {mode === "visual" ? (
-                <>
-                    {/* Toolbar */}
-                    <div className="flex flex-wrap items-center gap-0.5 px-3 py-2 border-b border-[#D4BCAA]/30 bg-[#FAF9F7]">
+    return (
+        // No `overflow-hidden` here: it would turn this wrapper into a scroll container and
+        // `position: sticky` on the toolbar would never activate. Corners are rounded on the
+        // first/last children instead.
+        <div className="bg-white border border-[#D4BCAA]/30 rounded-xl shadow-sm">
+            {/*
+              * Sticky chrome: tabs + toolbar stay reachable while the article grows past the
+              * viewport. `top-16` clears the 4rem admin top bar (see app/admin/layout.tsx).
+              */}
+            <div className="sticky top-16 z-20 rounded-t-xl border-b border-[#D4BCAA]/30 bg-[#FAF9F7]">
+                {/* Visual / HTML tabs, mirroring the classic editor */}
+                <div className="flex items-center gap-1 px-3 pt-2">
+                    <button
+                        type="button"
+                        onClick={switchToVisual}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-t-md border border-b-0 transition-colors ${mode === "visual"
+                            ? "bg-white border-[#D4BCAA]/40 text-[#0F0A09]"
+                            : "bg-transparent border-transparent text-[#8C7A6B] hover:text-[#0F0A09]"
+                            }`}
+                    >
+                        <Eye className="h-3.5 w-3.5" />
+                        Visual
+                    </button>
+                    <button
+                        type="button"
+                        onClick={switchToHtml}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-t-md border border-b-0 transition-colors ${mode === "html"
+                            ? "bg-white border-[#D4BCAA]/40 text-[#0F0A09]"
+                            : "bg-transparent border-transparent text-[#8C7A6B] hover:text-[#0F0A09]"
+                            }`}
+                    >
+                        <Code2 className="h-3.5 w-3.5" />
+                        HTML
+                    </button>
+                </div>
+
+                {mode === "visual" && (
+                    <div className="flex flex-wrap items-center gap-0.5 px-3 py-2 border-t border-[#D4BCAA]/30">
                         <select
                             value={toolbar.blockFormat}
                             onChange={(event) => applyBlockFormat(editor, event.target.value as BlockFormat)}
@@ -381,6 +404,39 @@ export function RichTextEditor({
                         <ToolbarButton onClick={handleContextAwareAiImage} title="Generate AI Image (Sesuai Konteks Subheading)">
                             <Wand2 className="h-4 w-4 text-[#466A68]" />
                         </ToolbarButton>
+
+                        <ToolbarDivider />
+
+                        {/* Tables. Row/column controls only appear inside a table so the
+                          * toolbar does not fill up with permanently disabled buttons. */}
+                        <ToolbarButton onClick={insertTable} active={toolbar.inTable} title="Sisipkan Tabel 3x3">
+                            <TableIcon className="h-4 w-4" />
+                        </ToolbarButton>
+                        {toolbar.inTable && (
+                            <>
+                                <ToolbarButton onClick={() => editor.chain().focus().addColumnAfter().run()} title="Tambah Kolom">
+                                    <Columns3 className="h-4 w-4" />
+                                </ToolbarButton>
+                                <ToolbarButton onClick={() => editor.chain().focus().addRowAfter().run()} title="Tambah Baris">
+                                    <Rows3 className="h-4 w-4" />
+                                </ToolbarButton>
+                                <ToolbarButton onClick={() => editor.chain().focus().toggleHeaderRow().run()} title="Toggle Baris Header">
+                                    <Heading className="h-4 w-4" />
+                                </ToolbarButton>
+                                <ToolbarButton onClick={() => editor.chain().focus().deleteColumn().run()} title="Hapus Kolom">
+                                    <Columns3 className="h-4 w-4 text-red-500" />
+                                </ToolbarButton>
+                                <ToolbarButton onClick={() => editor.chain().focus().deleteRow().run()} title="Hapus Baris">
+                                    <Rows3 className="h-4 w-4 text-red-500" />
+                                </ToolbarButton>
+                                <ToolbarButton onClick={() => editor.chain().focus().deleteTable().run()} title="Hapus Tabel">
+                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                </ToolbarButton>
+                            </>
+                        )}
+
+                        <ToolbarDivider />
+
                         <ToolbarButton
                             onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
                             title="Hapus Format"
@@ -405,10 +461,14 @@ export function RichTextEditor({
                             <Redo className="h-4 w-4" />
                         </ToolbarButton>
                     </div>
+                )}
+            </div>
 
+            {mode === "visual" ? (
+                <>
                     <EditorContent editor={editor} />
 
-                    <div className="flex items-center justify-between px-4 py-2 border-t border-[#D4BCAA]/30 bg-[#FAF9F7] text-[11px] text-[#8C7A6B]/70">
+                    <div className="flex items-center justify-between px-4 py-2 rounded-b-xl border-t border-[#D4BCAA]/30 bg-[#FAF9F7] text-[11px] text-[#8C7A6B]/70">
                         <span>{toolbar.wordCount} kata</span>
                         <span>Ctrl+B tebal · Ctrl+I miring · Ctrl+U garis bawah</span>
                     </div>

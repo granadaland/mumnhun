@@ -20,6 +20,7 @@ export default function TagsPage() {
     const [adding, setAdding] = useState(false)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [editName, setEditName] = useState("")
+    const [savingEdit, setSavingEdit] = useState(false)
     const [deleting, setDeleting] = useState<string | null>(null)
 
     const fetchTags = useCallback(async () => {
@@ -63,7 +64,8 @@ export default function TagsPage() {
     }
 
     const handleEdit = async (id: string) => {
-        if (!editName.trim()) return
+        if (!editName.trim() || savingEdit) return
+        setSavingEdit(true)
         try {
             const csrfToken = await getAdminCsrfToken()
             const res = await fetch(`/api/admin/tags/${id}`, {
@@ -80,6 +82,8 @@ export default function TagsPage() {
             }
         } catch (err) {
             console.error(err)
+        } finally {
+            setSavingEdit(false)
         }
     }
 
@@ -153,8 +157,8 @@ export default function TagsPage() {
                                             className="flex-1 px-3 py-1.5 bg-white border border-[#466A68]/30 rounded-lg text-[#0F0A09] text-sm outline-none"
                                             autoFocus
                                         />
-                                        <button onClick={() => handleEdit(tag.id)} className="p-1.5 text-green-600 hover:text-green-700">
-                                            <Check className="h-4 w-4" />
+                                        <button onClick={() => handleEdit(tag.id)} disabled={savingEdit} className="p-1.5 text-green-600 hover:text-green-700 disabled:opacity-40">
+                                            {savingEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                                         </button>
                                         <button onClick={() => setEditingId(null)} className="p-1.5 text-[#8C7A6B]/30 hover:text-[#0F0A09]">
                                             <X className="h-4 w-4" />

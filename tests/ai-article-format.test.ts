@@ -4,6 +4,7 @@ import {
     renderArticleHtml,
     renderInline,
     renderOutlineHtml,
+    renderTable,
     salvageArticleOutputFromRaw,
     structuredArticleSchema,
     structuredOutlineSchema,
@@ -188,6 +189,87 @@ describe("article-format: coerceToHtml fallback", () => {
 
     it("returns empty string for empty input", () => {
         expect(coerceToHtml("   ")).toBe("")
+    })
+})
+
+describe("article-format: tables", () => {
+    it("renderTable emits thead/th when a header row is given", () => {
+        const html = renderTable(
+            [
+                ["Paket", "Harga"],
+                ["1 Bulan", "Rp160.000"],
+                ["3 Bulan", "Rp325.000"],
+            ],
+            true
+        )
+
+        expect(html).toContain("<table>")
+        expect(html).toContain("<thead><tr><th>Paket</th><th>Harga</th></tr></thead>")
+        expect(html).toContain("<td>1 Bulan</td><td>Rp160.000</td>")
+    })
+
+    it("renderTable pads short rows so ProseMirror never sees a ragged grid", () => {
+        const html = renderTable([["A", "B", "C"], ["satu"]], true)
+        // Body row is padded from 1 to 3 cells to match the header width.
+        expect((html.match(/<td>/g) || []).length).toBe(3)
+    })
+
+    it("renders an empty string when there are no rows", () => {
+        expect(renderTable([], false)).toBe("")
+    })
+
+    it("structuredArticleSchema accepts table blocks and renders them", () => {
+        const article = structuredArticleSchema.parse({
+            sections: [
+                {
+                    heading: "Perbandingan Paket",
+                    blocks: [
+                        {
+                            type: "table",
+                            header: ["Paket", "Harga"],
+                            rows: [["1 Bulan", "Rp160.000"]],
+                        },
+                    ],
+                },
+                {
+                    heading: "Penutup",
+                    blocks: [{ type: "paragraph", text: "Pilih paket sesuai kebutuhan Mums." }],
+                },
+            ],
+        })
+
+        const html = renderArticleHtml(article)
+        expect(html).toContain("<thead><tr><th>Paket</th><th>Harga</th></tr></thead>")
+        expect(html).toContain("<td>1 Bulan</td><td>Rp160.000</td>")
+    })
+
+    it("coerceToHtml converts Markdown pipe tables into real <table> markup", () => {
+        const md = [
+            "## Harga Sewa",
+            "",
+            "| Paket | Harga |",
+            "| --- | --- |",
+            "| 1 Bulan | Rp160.000 |",
+            "| 6 Bulan | Rp550.000 |",
+            "",
+            "Paragraf penutup.",
+        ].join("\n")
+
+        const html = coerceToHtml(md)
+
+        expect(html).toContain("<h2>Harga Sewa</h2>")
+        expect(html).toContain("<thead><tr><th>Paket</th><th>Harga</th></tr></thead>")
+        expect(html).toContain("<td>1 Bulan</td><td>Rp160.000</td>")
+        expect(html).toContain("<td>6 Bulan</td><td>Rp550.000</td>")
+        expect(html).toContain("<p>Paragraf penutup.</p>")
+    })
+
+    it("coerceToHtml keeps prose containing pipes as paragraphs, not tables", () => {
+        const md = "Kalimat dengan tanda | di tengah tanpa baris pemisah.\n\nParagraf kedua."
+        const html = coerceToHtml(md)
+
+        expect(html).not.toContain("<table")
+        expect((html.match(/<p>/g) || []).length).toBe(2)
     })
 })
 

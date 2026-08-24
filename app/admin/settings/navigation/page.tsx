@@ -9,6 +9,73 @@ type NavLink = {
     label: string
 }
 
+type LinkEditorProps = {
+    links: NavLink[]
+    onUpdate: (i: number, field: "href" | "label", value: string) => void
+    onRemove: (i: number) => void
+    onAdd: () => void
+    title: string
+    description: string
+}
+
+/** Declared at module scope so controlled inputs keep their identity and focus. */
+function LinkEditor({
+    links,
+    onUpdate,
+    onRemove,
+    onAdd,
+    title,
+    description,
+}: LinkEditorProps) {
+    return (
+        <div className="bg-white border border-[#D4BCAA]/20 rounded-xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-[#D4BCAA]/20">
+                <h2 className="font-semibold text-[#0F0A09]">{title}</h2>
+                <p className="text-xs text-[#8C7A6B]/40 mt-0.5">{description}</p>
+            </div>
+            <div className="divide-y divide-[#D4BCAA]/20">
+                {links.map((link, i) => (
+                    <div key={i} className="flex items-center gap-3 px-6 py-3">
+                        <GripVertical className="h-4 w-4 text-[#8C7A6B]/20 flex-shrink-0 cursor-grab" />
+                        <input
+                            type="text"
+                            value={link.label}
+                            onChange={(e) => onUpdate(i, "label", e.target.value)}
+                            placeholder="Label"
+                            className="flex-1 px-3 py-2 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all"
+                        />
+                        <input
+                            type="text"
+                            value={link.href}
+                            onChange={(e) => onUpdate(i, "href", e.target.value)}
+                            placeholder="/path"
+                            className="flex-1 px-3 py-2 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all"
+                        />
+                        <button
+                            type="button"
+                            onClick={() => onRemove(i)}
+                            className="p-2 text-[#8C7A6B]/30 hover:text-red-600 transition-colors"
+                            aria-label={`Hapus link ${link.label || i + 1}`}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </button>
+                    </div>
+                ))}
+            </div>
+            <div className="px-6 py-3 border-t border-[#D4BCAA]/20">
+                <button
+                    type="button"
+                    onClick={onAdd}
+                    className="flex items-center gap-2 text-sm text-[#466A68] hover:text-[#466A68]/80 transition-colors"
+                >
+                    <Plus className="h-4 w-4" />
+                    Tambah Link
+                </button>
+            </div>
+        </div>
+    )
+}
+
 export default function NavigationSettingsPage() {
     const [navLinks, setNavLinks] = useState<NavLink[]>([])
     const [footerLinks, setFooterLinks] = useState<NavLink[]>([])
@@ -78,21 +145,21 @@ export default function NavigationSettingsPage() {
         }
     }
 
-    const addNavLink = () => setNavLinks([...navLinks, { href: "", label: "" }])
-    const addFooterLink = () => setFooterLinks([...footerLinks, { href: "", label: "" }])
-    const removeNavLink = (i: number) => setNavLinks(navLinks.filter((_, idx) => idx !== i))
-    const removeFooterLink = (i: number) => setFooterLinks(footerLinks.filter((_, idx) => idx !== i))
+    const addNavLink = () => setNavLinks((current) => [...current, { href: "", label: "" }])
+    const addFooterLink = () => setFooterLinks((current) => [...current, { href: "", label: "" }])
+    const removeNavLink = (i: number) => setNavLinks((current) => current.filter((_, idx) => idx !== i))
+    const removeFooterLink = (i: number) => setFooterLinks((current) => current.filter((_, idx) => idx !== i))
 
     const updateNavLink = (i: number, field: "href" | "label", value: string) => {
-        const updated = [...navLinks]
-        updated[i][field] = value
-        setNavLinks(updated)
+        setNavLinks((current) =>
+            current.map((link, index) => (index === i ? { ...link, [field]: value } : link))
+        )
     }
 
     const updateFooterLink = (i: number, field: "href" | "label", value: string) => {
-        const updated = [...footerLinks]
-        updated[i][field] = value
-        setFooterLinks(updated)
+        setFooterLinks((current) =>
+            current.map((link, index) => (index === i ? { ...link, [field]: value } : link))
+        )
     }
 
     if (loading) {
@@ -102,65 +169,6 @@ export default function NavigationSettingsPage() {
             </div>
         )
     }
-
-    const LinkEditor = ({
-        links,
-        onUpdate,
-        onRemove,
-        onAdd,
-        title,
-        description,
-    }: {
-        links: NavLink[]
-        onUpdate: (i: number, field: "href" | "label", value: string) => void
-        onRemove: (i: number) => void
-        onAdd: () => void
-        title: string
-        description: string
-    }) => (
-        <div className="bg-white border border-[#D4BCAA]/20 rounded-xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-[#D4BCAA]/20">
-                <h2 className="font-semibold text-[#0F0A09]">{title}</h2>
-                <p className="text-xs text-[#8C7A6B]/40 mt-0.5">{description}</p>
-            </div>
-            <div className="divide-y divide-[#D4BCAA]/20">
-                {links.map((link, i) => (
-                    <div key={i} className="flex items-center gap-3 px-6 py-3">
-                        <GripVertical className="h-4 w-4 text-[#8C7A6B]/20 flex-shrink-0 cursor-grab" />
-                        <input
-                            type="text"
-                            value={link.label}
-                            onChange={(e) => onUpdate(i, "label", e.target.value)}
-                            placeholder="Label"
-                            className="flex-1 px-3 py-2 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all"
-                        />
-                        <input
-                            type="text"
-                            value={link.href}
-                            onChange={(e) => onUpdate(i, "href", e.target.value)}
-                            placeholder="/path"
-                            className="flex-1 px-3 py-2 bg-white border border-[#D4BCAA]/20 rounded-lg text-[#0F0A09] text-sm placeholder-[#8C7A6B]/60 focus:outline-none focus:ring-2 focus:ring-[#466A68]/30 transition-all"
-                        />
-                        <button
-                            onClick={() => onRemove(i)}
-                            className="p-2 text-[#8C7A6B]/30 hover:text-red-600 transition-colors"
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </button>
-                    </div>
-                ))}
-            </div>
-            <div className="px-6 py-3 border-t border-[#D4BCAA]/20">
-                <button
-                    onClick={onAdd}
-                    className="flex items-center gap-2 text-sm text-[#466A68] hover:text-[#466A68]/80 transition-colors"
-                >
-                    <Plus className="h-4 w-4" />
-                    Tambah Link
-                </button>
-            </div>
-        </div>
-    )
 
     return (
         <div className="space-y-6 max-w-3xl">

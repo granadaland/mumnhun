@@ -455,17 +455,35 @@ export async function generateImageWithProvider(
         // Only landscape ratios are offered site-wide: 16:9 (default) and 4:3.
         const ratio = options.aspectRatio === "4:3" ? "4:3" : "16:9"
         const ai = new GoogleGenAI({ apiKey: resolved.apiKey })
+        // The SDK exposes no per-request deadline of its own; without this race a hung
+        // Imagen call runs until the platform kills the whole function.
+        const timeoutMs = options.timeoutMs ?? 120_000
+        let timeoutHandle: ReturnType<typeof setTimeout> | undefined
 
         try {
-            const response = await ai.models.generateImages({
-                model: "imagen-3.0-generate-001",
-                prompt,
-                config: {
-                    numberOfImages: 1,
-                    aspectRatio: ratio,
-                    outputMimeType: "image/jpeg",
-                },
+            const timeoutPromise = new Promise<never>((_resolve, reject) => {
+                timeoutHandle = setTimeout(() => {
+                    // "AbortError" maps to NETWORK_TIMEOUT in ai-key-status classification.
+                    const error = new Error(`Gemini image generation melebihi ${timeoutMs} ms`)
+                    error.name = "AbortError"
+                    reject(error)
+                }, timeoutMs)
             })
+
+            const response = await Promise.race([
+                ai.models.generateImages({
+                    model: "imagen-3.0-generate-001",
+                    prompt,
+                    config: {
+                        numberOfImages: 1,
+                        aspectRatio: ratio,
+                        outputMimeType: "image/jpeg",
+                    },
+                }),
+                timeoutPromise,
+            ])
+
+            clearTimeout(timeoutHandle)
 
             const base64 = response.generatedImages?.[0]?.image?.imageBytes
             if (!base64) {
@@ -479,7 +497,11 @@ export async function generateImageWithProvider(
 
             return { buffer, mimeType: response.generatedImages?.[0]?.image?.mimeType || "image/jpeg" }
         } catch (e) {
-            throw new Error(`Gagal generate gambar dengan Gemini: ${(e as Error).message}`)
+            const err = e as Error
+            // Re-throw deadline errors untouched so NETWORK_TIMEOUT classification and
+            // the operator-facing message survive the wrapper.
+            if (err?.name === "AbortError") throw err
+            throw new Error(`Gagal generate gambar dengan Gemini: ${err.message}`)
         }
     }
 

@@ -1,11 +1,13 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/db/prisma"
-import { requireAdminApi } from "@/lib/security/admin"
+import { requireAdminMutationApi } from "@/lib/security/admin"
 import { runChecks, calculateScore } from "@/components/admin/seo-scanner"
 
-export async function POST() {
-    // Rule-based SEO scan over published posts. No AI/model call, so no timeout extension needed.
-    const adminCheck = await requireAdminApi()
+export async function POST(request: NextRequest) {
+    // Rule-based SEO scan over published posts (no AI/model call), but it is a heavy
+    // full-archive read triggered by a POST — so it goes through the mutation gate to
+    // inherit CSRF verification and the per-user rate limit.
+    const adminCheck = await requireAdminMutationApi(request, { action: "seo-scan" })
     if (!adminCheck.ok) return adminCheck.response
 
     try {

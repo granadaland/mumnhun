@@ -48,6 +48,7 @@ vi.mock("@/lib/observability/admin-log", () => ({
 
 vi.mock("@/lib/security/ai-key-status", () => ({
     classifyProviderFailure: vi.fn(() => ({ code: "UNKNOWN_ERROR", message: "error" })),
+    sanitizeAiKeyErrorMessage: vi.fn((message: string) => message),
     toAiKeyFailureHttpStatus: vi.fn(() => 502),
 }))
 

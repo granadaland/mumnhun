@@ -239,6 +239,7 @@
     margin: 1.25em 0;
     border-collapse: collapse;
     font-size: 0.9375rem;
+    table-layout: fixed;
 }
 
 .wysiwyg-content th,
@@ -246,11 +247,61 @@
     border: 1px solid rgba(212, 188, 170, 0.5);
     padding: 0.5em 0.75em;
     text-align: left;
+    vertical-align: top;
+    position: relative;
 }
 
 .wysiwyg-content th {
     background: rgba(70, 106, 104, 0.07);
     font-weight: 700;
+}
+
+.wysiwyg-content th>p,
+.wysiwyg-content td>p {
+    margin-bottom: 0;
+}
+
+/* Editor-only table affordances (prosemirror-tables) ---------------------- */
+
+/*
+ * TipTap wraps the table in `div.tableWrapper` so wide tables can scroll instead of
+ * breaking the editor layout.
+ */
+.wysiwyg-content .tableWrapper {
+    margin: 1.25em 0;
+    overflow-x: auto;
+}
+
+.wysiwyg-content .tableWrapper table {
+    margin: 0;
+    min-width: 100%;
+}
+
+/* Cell selection highlight while dragging across cells */
+.wysiwyg-content .selectedCell::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(70, 106, 104, 0.16);
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* Draggable column edge produced by Table.configure({ resizable: true }) */
+.wysiwyg-content .column-resize-handle {
+    position: absolute;
+    top: 0;
+    right: -2px;
+    bottom: 0;
+    width: 4px;
+    background: #466A68;
+    pointer-events: none;
+    z-index: 3;
+}
+
+.wysiwyg-content.resize-cursor,
+.wysiwyg-content .resize-cursor {
+    cursor: col-resize;
 }
 
 /* Editor-only affordances ------------------------------------------------ */

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import prisma from "@/lib/db/prisma"
-import { requireAdminApi, requireAdminMutationApi } from "@/lib/security/admin"
+import { requireAdminMutationApi } from "@/lib/security/admin"
 import { logAdminError, logAdminInfo, logAdminWarn } from "@/lib/observability/admin-log"
 import { adminJsonValidationError, getPrismaErrorCode, summarizeUnknownError } from "@/lib/security/admin-helpers"
 
@@ -140,8 +140,16 @@ export async function DELETE(
 
     const { id } = await params
 
-    await prisma.tagsOnPosts.deleteMany({ where: { tagId: id } })
-    await prisma.tag.delete({ where: { id } })
+    try {
+        // Remove tag associations first
+        await prisma.tagsOnPosts.deleteMany({ where: { tagId: id } })
+        await prisma.tag.delete({ where: { id } })
+    } catch (error) {
+        if (getPrismaErrorCode(error) === "P2025") {
+            return NextResponse.json({ error: "Tag tidak ditemukan" }, { status: 404 })
+        }
+        throw error
+    }
 
     return NextResponse.json({ success: true })
 }

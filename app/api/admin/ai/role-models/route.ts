@@ -93,8 +93,9 @@ function validationErrorJson(zodError: z.ZodError) {
 
 function maskApiKey(value: string): string {
     if (!value) return ""
+    // Fixed-length mask: revealing the bullet count would disclose the plaintext length.
     if (value.length <= 8) return "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
-    return `${value.slice(0, 4)}${"\u2022".repeat(Math.max(0, value.length - 8))}${value.slice(-4)}`
+    return `${value.slice(0, 4)}\u2022\u2022\u2022\u2022\u2022\u2022${value.slice(-4)}`
 }
 
 function maskStoredApiKey(storedValue: string): string {

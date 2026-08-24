@@ -22,29 +22,44 @@ export default function PageEditorPage() {
         ogImage: "", canonicalUrl: "", schemaType: "", schemaData: "",
     })
     const [loading, setLoading] = useState(!isNew)
+    const [loadError, setLoadError] = useState<string | null>(null)
     const [saving, setSaving] = useState(false)
     const [showSeo, setShowSeo] = useState(false)
     const [autoSlug, setAutoSlug] = useState(isNew)
 
     useEffect(() => {
-        if (pageId) {
-            fetch(`/api/admin/pages/${pageId}`)
-                .then((r) => r.json())
+        if (!pageId) return
+
+        const controller = new AbortController()
+        setLoadError(null)
+
+        fetch(`/api/admin/pages/${pageId}`, { signal: controller.signal })
+                .then(async (response) => {
+                    if (!response.ok) throw new Error(`Gagal memuat halaman (${response.status})`)
+                    return response.json()
+                })
                 .then((data) => {
-                    if (data.success) {
-                        const p = data.data
-                        setForm({
+                    if (!data.success) throw new Error(data.error || "Halaman tidak dapat dimuat")
+
+                    const p = data.data
+                    setForm({
                             title: p.title || "", slug: p.slug || "", content: p.content || "",
                             metaTitle: p.metaTitle || "", metaDescription: p.metaDescription || "",
                             status: p.status || "DRAFT", focusKeyword: p.focusKeyword || "",
                             ogTitle: p.ogTitle || "", ogDescription: p.ogDescription || "",
                             ogImage: p.ogImage || "", canonicalUrl: p.canonicalUrl || "",
                             schemaType: p.schemaType || "", schemaData: p.schemaData || "",
-                        })
-                    }
+                    })
                 })
-                .finally(() => setLoading(false))
-        }
+                .catch((error: unknown) => {
+                    if (error instanceof DOMException && error.name === "AbortError") return
+                    setLoadError(error instanceof Error ? error.message : "Gagal memuat halaman")
+                })
+                .finally(() => {
+                    if (!controller.signal.aborted) setLoading(false)
+                })
+
+        return () => controller.abort()
     }, [pageId])
 
     useEffect(() => {
@@ -78,6 +93,22 @@ export default function PageEditorPage() {
 
     if (loading) {
         return (<div className="flex items-center justify-center h-64"><Loader2 className="h-6 w-6 text-[#466A68] animate-spin" /></div>)
+    }
+
+    if (loadError) {
+        return (
+            <div role="alert" className="max-w-xl mx-auto bg-white border border-red-200 rounded-xl p-6 text-center">
+                <h1 className="text-lg font-semibold text-red-700">Halaman gagal dimuat</h1>
+                <p className="mt-2 text-sm text-[#8C7A6B]">{loadError}</p>
+                <button
+                    type="button"
+                    onClick={() => window.location.reload()}
+                    className="mt-5 px-4 py-2 bg-[#466A68] text-white text-sm font-medium rounded-lg"
+                >
+                    Coba Lagi
+                </button>
+            </div>
+        )
     }
 
     return (

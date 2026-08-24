@@ -66,8 +66,9 @@ const deleteKeySchema = z.object({
 
 function maskApiKey(value: string): string {
     if (!value) return ""
+    // Fixed-length mask: revealing the bullet count would disclose the plaintext length.
     if (value.length <= 8) return "••••••••"
-    return `${value.slice(0, 4)}${"•".repeat(Math.max(0, value.length - 8))}${value.slice(-4)}`
+    return `${value.slice(0, 4)}••••••${value.slice(-4)}`
 }
 
 function maskStoredApiKey(storedValue: string): string {

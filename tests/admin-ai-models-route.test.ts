@@ -51,6 +51,7 @@ vi.mock("@/lib/security/ai-key-status", () => ({
         }
         return { code: "UNKNOWN_ERROR", message: "error" }
     }),
+    sanitizeAiKeyErrorMessage: vi.fn((message: string) => message),
     toAiKeyFailureHttpStatus: vi.fn((failure: { code: string }) => {
         if (failure.code === "PROVIDER_KEY_INVALID") return 400
         if (failure.code === "PROVIDER_MODEL_UNAVAILABLE") return 400

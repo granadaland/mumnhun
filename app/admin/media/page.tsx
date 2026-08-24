@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import {
     Plus, Loader2, Trash2, Search, Image as ImageIcon,
     Copy, Check, ChevronLeft, ChevronRight, X,
@@ -28,6 +28,7 @@ export default function MediaPage() {
     const [media, setMedia] = useState<MediaItem[]>([])
     const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 30, total: 0, totalPages: 0 })
     const [loading, setLoading] = useState(true)
+    const [searchInput, setSearchInput] = useState("")
     const [search, setSearch] = useState("")
     const [showAdd, setShowAdd] = useState(false)
     const [newUrl, setNewUrl] = useState("")
@@ -36,23 +37,38 @@ export default function MediaPage() {
     const [copied, setCopied] = useState<string | null>(null)
     const [deleting, setDeleting] = useState<string | null>(null)
     const [preview, setPreview] = useState<MediaItem | null>(null)
+    // Aborts the in-flight list request so a slower older query can never overwrite the
+    // results of a newer one.
+    const activeRequestRef = useRef<AbortController | null>(null)
+
+    // Debounce typing: one request per settled query instead of one per keystroke.
+    useEffect(() => {
+        const timer = setTimeout(() => setSearch(searchInput.trim()), 300)
+        return () => clearTimeout(timer)
+    }, [searchInput])
 
     const fetchMedia = useCallback(async (page = 1) => {
+        activeRequestRef.current?.abort()
+        const controller = new AbortController()
+        activeRequestRef.current = controller
+
         setLoading(true)
         const params = new URLSearchParams({ page: String(page), limit: "30" })
         if (search) params.set("search", search)
 
         try {
-            const res = await fetch(`/api/admin/media?${params}`)
+            const res = await fetch(`/api/admin/media?${params}`, { signal: controller.signal })
+            if (controller.signal.aborted) return
             const data = await res.json()
             if (data.success) {
                 setMedia(data.data)
                 setPagination(data.pagination)
             }
         } catch (err) {
+            if (err instanceof DOMException && err.name === "AbortError") return
             console.error(err)
         } finally {
-            setLoading(false)
+            if (!controller.signal.aborted) setLoading(false)
         }
     }, [search])
 
@@ -103,7 +119,9 @@ export default function MediaPage() {
     }
 
     const copyUrl = (url: string) => {
-        navigator.clipboard.writeText(url)
+        // Clipboard can be denied or unavailable (non-secure context); never leave a
+        // rejection unhandled while the UI still claims "Copied!".
+        navigator.clipboard.writeText(url).catch(() => { })
         setCopied(url)
         setTimeout(() => setCopied(null), 2000)
     }
@@ -151,7 +169,7 @@ export default function MediaPage() {
             {/* Search */}
             <div className="flex items-center gap-2 px-4 py-2.5 bg-white border border-[#D4BCAA]/20 rounded-lg">
                 <Search className="h-4 w-4 text-[#8C7A6B]/30" />
-                <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === "Enter" && fetchMedia()} placeholder="Cari media..." className="bg-transparent text-sm text-[#0F0A09] placeholder-[#8C7A6B]/60 outline-none w-full" />
+                <input type="text" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") setSearch(searchInput.trim()) }} placeholder="Cari media..." className="bg-transparent text-sm text-[#0F0A09] placeholder-[#8C7A6B]/60 outline-none w-full" />
             </div>
 
             {/* Grid */}

@@ -52,6 +52,25 @@ function errorJson(message: string, status: number, data?: unknown) {
     return NextResponse.json({ success: false, error: message, data }, { status })
 }
 
+function escapeText(value: string): string {
+    return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+}
+
+/**
+ * Rebuilds the replacement anchor from validated parts instead of trusting the model's
+ * `replacementHtml`. The page renders suggestions via dangerouslySetInnerHTML, so the only
+ * safe shape is one we constructed ourselves from the verified slug and source phrase.
+ */
+function buildReplacementAnchor(slug: string, exactPhrase: string): string {
+    return `<a href="/${slug}">${escapeText(exactPhrase)}</a>`
+}
+
+/** Maps a model-provided targetUrl back to a known post slug; null when it matches none. */
+function resolveTargetSlug(targetUrl: string, targetPosts: TargetPost[]): string | null {
+    const normalized = targetUrl.trim().replace(/^\/+/, "").replace(/\/+$/, "")
+    return targetPosts.some((post) => post.slug === normalized) ? normalized : null
+}
+
 function buildInternalLinkPrompt(sourcePost: SourcePost, targetPosts: TargetPost[]): string {
     return `Tugas Anda adalah menemukan peluang menyisipkan internal link pada "Artikel Sumber" menuju "Artikel Target".
 Pilihlah 3 hingga 5 kalimat spesifik dari Artikel Sumber di mana internal link bisa ditambahkan secara sangat natural, kontekstual, dan SEO-friendly.
@@ -168,10 +187,23 @@ export async function POST(request: NextRequest) {
             },
         })
 
-        // Drop hallucinated phrases that do not literally occur in the source content.
-        const validSuggestions = result.value.suggestions.filter((suggestion) =>
-            sourceContent.includes(suggestion.exactPhrase)
-        )
+        // Drop hallucinated phrases that do not literally occur in the source content, and
+        // targets that do not resolve to a real post slug. replacementHtml is rebuilt from
+        // validated parts — never taken from the model.
+        const validSuggestions = result.value.suggestions
+            .filter((suggestion) => sourceContent.includes(suggestion.exactPhrase))
+            .flatMap((suggestion) => {
+                const slug = resolveTargetSlug(suggestion.targetUrl, targetPosts)
+                if (!slug) return []
+
+                return [
+                    {
+                        ...suggestion,
+                        targetUrl: `/${slug}`,
+                        replacementHtml: buildReplacementAnchor(slug, suggestion.exactPhrase),
+                    },
+                ]
+            })
 
         const taskOutput = {
             postId: sourcePost.id,
@@ -179,7 +211,9 @@ export async function POST(request: NextRequest) {
             validSuggestionsCount: validSuggestions.length,
             suggestions: validSuggestions,
             invalidSuggestions: result.value.suggestions.filter(
-                (suggestion) => !sourceContent.includes(suggestion.exactPhrase)
+                (suggestion) =>
+                    !sourceContent.includes(suggestion.exactPhrase) ||
+                    resolveTargetSlug(suggestion.targetUrl, targetPosts) === null
             ),
             usedKeyId: result.usedKeyId,
         }

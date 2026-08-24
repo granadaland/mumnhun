@@ -350,9 +350,18 @@ export async function DELETE(
 
     const { id } = await params
 
-    const post = await prisma.post.delete({ where: { id }, select: { slug: true } })
+    let slug: string
+    try {
+        const post = await prisma.post.delete({ where: { id }, select: { slug: true } })
+        slug = post.slug
+    } catch (error) {
+        if (getPrismaErrorCode(error) === "P2025") {
+            return NextResponse.json({ error: "Artikel tidak ditemukan" }, { status: 404 })
+        }
+        throw error
+    }
 
-    revalidatePath(`/${post.slug}`)
+    revalidatePath(`/${slug}`)
     revalidatePath("/")
 
     return NextResponse.json({ success: true })

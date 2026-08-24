@@ -5,6 +5,7 @@ import prisma from "@/lib/db/prisma"
 import { requireAdminApi, requireAdminMutationApi } from "@/lib/security/admin"
 import { logAdminError, logAdminInfo, logAdminWarn } from "@/lib/observability/admin-log"
 import { adminJsonValidationError, getPrismaErrorCode, summarizeUnknownError } from "@/lib/security/admin-helpers"
+import { sanitizeArticleHtml } from "@/lib/content/post-publishing"
 
 const createPageSchema = z.object({
     title: z.string().trim().min(1, "Title is required"),
@@ -121,7 +122,9 @@ export async function POST(request: NextRequest) {
         const rawData = {
             title: payload.title,
             slug: payload.slug,
-            content: payload.content || "",
+            // Editor HTML is untrusted input; keep the stored markup within the allowlist
+            // (same invariant as posts) so no second consumer can become an XSS sink.
+            content: sanitizeArticleHtml(payload.content || ""),
             metaTitle: payload.metaTitle,
             metaDescription: payload.metaDescription,
             status,

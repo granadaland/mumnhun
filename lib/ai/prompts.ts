@@ -125,6 +125,8 @@ Syarat penulisan:
 - Paragraf pendek, 2-4 kalimat, panjang bervariasi. Paragraf pembuka (intro) langsung menyentuh
   situasi nyata Mums tanpa basa-basi.
 - Sertakan minimal satu block bertipe "list" berisi langkah atau checklist praktis.
+- Bila isinya memang berupa perbandingan, spesifikasi, atau daftar harga, gunakan block
+  bertipe "table" (bukan paragraf berisi pipa "|").
 - Untuk penekanan, gunakan **teks tebal** atau *teks miring* di dalam teks (format Markdown inline).
 - Sebut "Mums" secara wajar, tidak di setiap paragraf.
 - Tulisan 100% orisinal. Jangan mengutip atau meniru kalimat dari sumber lain.
@@ -140,7 +142,12 @@ Kembalikan JSON dengan bentuk PERSIS berikut:
         { "type": "paragraph", "text": "Isi paragraf. Boleh pakai **tebal**/*miring*." },
         { "type": "subheading", "text": "Subjudul opsional (akan jadi H3)" },
         { "type": "list", "ordered": false, "items": ["Poin pertama", "Poin kedua"] },
-        { "type": "quote", "text": "Kutipan atau tips penting (opsional)" }
+        { "type": "quote", "text": "Kutipan atau tips penting (opsional)" },
+        {
+          "type": "table",
+          "header": ["Kolom 1", "Kolom 2"],
+          "rows": [["Baris 1 kolom 1", "Baris 1 kolom 2"]]
+        }
       ]
     }
   ],
@@ -152,6 +159,7 @@ Aturan penting:
   tag HTML inline sederhana: <strong>, <em>, <u>, <s>, <code>, <a href="https://...">.
 - JANGAN menaruh tag blok (<p>, <h2>, <ul>, <div>) di dalam "text"/"items" — struktur blok
   sudah ditentukan oleh "type" dan "heading".
+- Pada block "table", setiap baris di "rows" wajib punya jumlah kolom yang sama dengan "header".
 - Setiap section wajib punya minimal satu block.
 ${JSON_ONLY_INSTRUCTION}`
 }
@@ -183,6 +191,10 @@ Format keluaran WAJIB Markdown yang rapi:
 - Subbagian memakai "### " (H3).
 - Paragraf dipisah baris kosong. Pendek, 2-4 kalimat, panjang bervariasi.
 - Daftar langkah memakai "- " (bullet) atau "1. " (bernomor).
+- Tabel perbandingan/harga memakai tabel pipa Markdown lengkap dengan baris pemisah, contoh:
+  | Paket | Harga |
+  | --- | --- |
+  | 1 Bulan | Rp160.000 |
 - Penekanan memakai **tebal** atau *miring* seperlunya.
 - Sertakan minimal satu daftar langkah/checklist praktis.
 - Paragraf pembuka langsung menyentuh situasi nyata Mums, tanpa basa-basi.
@@ -204,6 +216,11 @@ export const seoPackageOutputSchema = z.object({
     schemaType: z.enum(["Article", "BlogPosting", "HowTo", "FAQPage"]),
     categorySlug: z.string().trim().min(1).max(120).nullable().default(null),
     tags: z.array(z.string().trim().min(2).max(60)).max(12).default([]),
+    // Optional so older gateways that omit them still validate. The editor treats an
+    // empty value as "keep what is already there".
+    slug: z.string().trim().max(90).optional().default(""),
+    ogTitle: z.string().trim().max(90).optional().default(""),
+    ogDescription: z.string().trim().max(200).optional().default(""),
 })
 
 export type SeoPackageOutput = z.infer<typeof seoPackageOutputSchema>
@@ -238,6 +255,12 @@ Aturan:
 - "categorySlug": WAJIB dipilih dari daftar kategori di bawah, dan harus yang paling relevan.
   Jika tidak ada yang benar-benar relevan, kembalikan null. JANGAN membuat kategori baru.
 - "tags": maksimal 8 tag. Boleh membuat tag baru bila memang lebih tepat.
+- "slug": slug URL yang SEO friendly. Huruf kecil, hanya a-z, 0-9, dan tanda hubung.
+  Maksimal 6 kata, mengandung focus keyword, tanpa kata sambung berlebihan.
+- "ogTitle": judul untuk share media sosial. Maksimal 70 karakter, boleh lebih menggugah
+  daripada metaTitle.
+- "ogDescription": deskripsi share media sosial, 100-180 karakter, tanpa mengulang
+  metaDescription kata per kata.
 
 KATEGORI YANG TERSEDIA (hanya boleh pilih dari sini):
 ${categoryList || "- (belum ada kategori)"}

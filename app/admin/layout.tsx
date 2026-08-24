@@ -17,7 +17,9 @@ export default async function AdminLayout({
     return (
         <div className="min-h-screen bg-[#F9F6F0] flex text-[#0F0A09]">
             <AdminSidebar />
-            <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
+            {/* overflow-x-clip (bukan -hidden): `hidden` menjadikan div ini scroll container
+                sehingga position: sticky pada top bar maupun toolbar editor tidak pernah aktif. */}
+            <div className="flex-1 flex flex-col min-h-screen overflow-x-clip">
                 {/* Top Bar */}
                 <header className="h-16 border-b border-[#D4BCAA]/20 bg-white/80 backdrop-blur-md flex items-center justify-between px-6 lg:px-8 sticky top-0 z-30">
                     <div className="lg:hidden w-10" /> {/* Spacer for mobile menu button */}
