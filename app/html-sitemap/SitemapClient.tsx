@@ -2,8 +2,9 @@
 
 import { Container } from '@/components/ui/container'
 import Link from 'next/link'
-import { ArrowRight, FileText, FolderOpen, Layers, Tag as TagIcon } from 'lucide-react'
+import { ArrowRight, FileText, FolderOpen, Layers, MapPin, Tag as TagIcon } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { LOCATIONS } from '@/lib/data/locations'
 
 // Define types based on the query result
 type Post = {
@@ -130,7 +131,41 @@ export default function SitemapClient({ categories, pages, tags, uncategorizedPo
                         </section>
                     )}
 
-                    {/* 2. Categories & Articles Section */}
+                    {/* 2. Layanan per Area (SEO lokal) */}
+                    <section>
+                        <h2 className="text-2xl font-bold text-[#382821] mb-6 flex items-center gap-2 border-b border-gray-100 pb-2">
+                            <MapPin className="text-[#466A68]" size={24} />
+                            Layanan Sewa Freezer ASI per Area
+                        </h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <motion.div variants={itemVariants}>
+                                <Link
+                                    href="/sewa-freezer-asi"
+                                    className="block p-4 bg-white rounded-xl border border-[#466A68]/25 shadow-sm hover:shadow-md hover:border-[#466A68]/50 transition-all group"
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-semibold text-[#382821] group-hover:text-[#466A68] transition-colors">Semua Area Layanan (Jabodetabek)</span>
+                                        <ArrowRight size={16} className="text-gray-300 group-hover:text-[#466A68] transition-colors" />
+                                    </div>
+                                </Link>
+                            </motion.div>
+                            {LOCATIONS.map((location) => (
+                                <motion.div key={location.slug} variants={itemVariants}>
+                                    <Link
+                                        href={`/sewa-freezer-asi/${location.slug}`}
+                                        className="block p-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:border-[#466A68]/20 transition-all group"
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-semibold text-[#382821] group-hover:text-[#466A68] transition-colors">Sewa Freezer ASI {location.city}</span>
+                                            <ArrowRight size={16} className="text-gray-300 group-hover:text-[#466A68] transition-colors" />
+                                        </div>
+                                    </Link>
+                                </motion.div>
+                            ))}
+                        </div>
+                    </section>
+
+                    {/* 3. Categories & Articles Section */}
                     <section>
                         <h2 className="text-2xl font-bold text-[#382821] mb-6 flex items-center gap-2 border-b border-gray-100 pb-2">
                             <FolderOpen className="text-[#466A68]" size={24} />

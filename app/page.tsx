@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { BenefitCard, FaqAccordion, VideoFacade, TestimonialsSection } from "@/components/home"
 import { HeroImageSlider } from "@/components/hero-image-slider"
 import { getPosts } from "@/lib/db/queries"
+import { getLocation } from "@/lib/data/locations"
 import {
   DEFAULT_OG_IMAGE,
   PRICING_PACKAGES,
@@ -70,30 +71,38 @@ const SEO_GEO_FAQ_DATA = [
 ]
 
 // Regional GEO Coverage Areas
+//
+// `locationSlugs` menghubungkan tiap kartu region ke halaman layanan spesifik-lokasi
+// (/sewa-freezer-asi/[slug]) — internal link dari homepage adalah jalur utama
+// discovery & distribusi authority untuk cluster SEO lokal tersebut.
 const GEO_REGIONS = [
   {
     region: "DKI Jakarta",
     subregions: ["Jakarta Selatan", "Jakarta Barat", "Jakarta Timur", "Jakarta Pusat", "Jakarta Utara"],
     desc: "Layanan sewa freezer ASI Jakarta dengan pengantaran cepat langsung ke rumah.",
     highlight: "Antar Langsung",
+    locationSlugs: ["jakarta-selatan"],
   },
   {
     region: "Depok & Bogor",
     subregions: ["Cinere", "Sawangan", "Margonda", "Cimanggis", "Cibubur", "Bogor Kota"],
     desc: "Rental kulkas ASI Depok dan Bogor terdekat dengan respon cepat.",
     highlight: "Respon Cepat",
+    locationSlugs: ["depok", "bogor"],
   },
   {
     region: "Tangerang & Tangsel",
     subregions: ["BSD City", "Bintaro Jaya", "Serpong", "Ciputat", "Alam Sutera", "Karawaci"],
     desc: "Sewa freezer ASI Tangerang Selatan & Bintaro siap pakai dan tanpa deposit.",
     highlight: "Tanpa Deposit",
+    locationSlugs: ["tangerang-selatan", "tangerang"],
   },
   {
     region: "Bekasi Raya",
     subregions: ["Bekasi Barat", "Bekasi Timur", "Galaxy", "Harapan Indah", "Tambun", "Cikarang"],
     desc: "Layanan rental kulkas ASI Bekasi bergaransi unit dan hemat listrik.",
     highlight: "Garansi Unit",
+    locationSlugs: ["bekasi"],
   },
 ]
 
@@ -531,6 +540,13 @@ export default async function HomePage() {
             <p className="text-sm md:text-base text-[#382821]/75 mt-3 leading-relaxed">
               Kami melayani pengiriman rental kulkas ASI langsung ke depan pintu rumah Anda di seluruh wilayah Jakarta, Depok, Tangerang, Tangerang Selatan, Bekasi, dan Bogor.
             </p>
+            <Link
+              href="/sewa-freezer-asi"
+              className="inline-flex items-center gap-1.5 mt-4 text-sm font-bold text-[#2E5650] hover:text-[#1D3A36] transition-colors"
+            >
+              Lihat detail semua area layanan
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
 
           {/* 4 GEO Region Cards */}
@@ -568,15 +584,33 @@ export default async function HomePage() {
                   ))}
                 </div>
 
+                {/* Internal links ke halaman layanan spesifik-lokasi */}
+                <div className="flex flex-col gap-1 mt-4 pt-4 border-t border-stone-100">
+                  {geo.locationSlugs.map((slug) => {
+                    const loc = getLocation(slug)
+                    if (!loc) return null
+                    return (
+                      <Link
+                        key={slug}
+                        href={`/sewa-freezer-asi/${slug}`}
+                        className="text-xs font-semibold text-[#2E5650] hover:text-[#1D3A36] flex items-center justify-between group/link"
+                      >
+                        <span>Sewa Freezer ASI {loc.city}</span>
+                        <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover/link:translate-x-1" />
+                      </Link>
+                    )
+                  })}
+                </div>
+
                 {/* WhatsApp button per region */}
                 <Link
                   href={getGeoWhatsAppLink(geo.region)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-4 pt-2 text-xs font-bold text-[#2E5650] hover:text-[#1D3A36] flex items-center justify-between group/link"
+                  className="mt-2 text-xs font-bold text-[#C87860] hover:text-[#A85F49] flex items-center justify-between group/link"
                 >
                   <span>Cek jadwal kirim ke {geo.region}</span>
-                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover/link:translate-x-1" />
+                  <MessageCircle className="w-3.5 h-3.5 transition-transform group-hover/link:translate-x-1" />
                 </Link>
               </div>
             ))}

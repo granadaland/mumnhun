@@ -17,19 +17,22 @@ const PILLAR_URL = `${SITE_URL}/sewa-freezer-asi`
 // Halaman PILAR: menargetkan kata kunci umum "Sewa Freezer ASI" (tanpa kota).
 // Halaman anak per lokasi menargetkan "Sewa Freezer ASI [Kota]". Pemisahan ini
 // mencegah kanibalisasi kata kunci antara pilar dan anak.
+// Title memimpin dengan "Area Layanan" (bukan mengulang head term homepage
+// "Sewa Freezer ASI Jabodetabek") supaya pilar mengklaim query navigasional
+// "area layanan/daftar kota" dan tidak rebutan dengan beranda.
 export const metadata: Metadata = {
-  title: { absolute: `Sewa Freezer ASI Jabodetabek — Semua Area Layanan | ${SITE_NAME}` },
+  title: { absolute: `Area Layanan Sewa Freezer ASI Jabodetabek | ${SITE_NAME}` },
   description:
     "Sewa freezer ASI & rental kulkas ASI di Jabodetabek. Pilih area layanan Anda: Jakarta Selatan, Depok, Tangerang, Tangerang Selatan, Bekasi, dan Bogor. Unit steril, tanpa deposit, bergaransi.",
   keywords: [
-    "Sewa Freezer ASI",
-    "Rental Kulkas ASI",
-    "Sewa Freezer ASI Jabodetabek",
     "Area Layanan Sewa Freezer ASI",
+    "Sewa Freezer ASI Jabodetabek",
+    "Rental Kulkas ASI Terdekat",
+    "Sewa Freezer ASI Depok Tangerang Bekasi Bogor",
   ],
   alternates: { canonical: PILLAR_URL },
   openGraph: {
-    title: `Sewa Freezer ASI Jabodetabek — Semua Area Layanan | ${SITE_NAME}`,
+    title: `Area Layanan Sewa Freezer ASI Jabodetabek | ${SITE_NAME}`,
     description:
       "Pilih area layanan sewa freezer ASI Anda di Jabodetabek. Unit steril food-grade, tanpa deposit, bergaransi unit, dengan pengantaran langsung ke rumah.",
     url: PILLAR_URL,
@@ -47,7 +50,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: `Sewa Freezer ASI Jabodetabek | ${SITE_NAME}`,
+    title: `Area Layanan Sewa Freezer ASI Jabodetabek | ${SITE_NAME}`,
     description:
       "Pilih area layanan sewa freezer ASI di Jabodetabek. Unit steril, tanpa deposit, bergaransi.",
     images: [DEFAULT_OG_IMAGE],

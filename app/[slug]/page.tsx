@@ -6,6 +6,7 @@ import { Container } from '@/components/ui/container'
 import { Calendar, Clock, ArrowLeft, ArrowRight, Tag, TrendingUp, Clock3, BookOpen } from 'lucide-react'
 import { Metadata } from 'next'
 import { sanitizeHtmlContent } from '@/lib/security/sanitize-html'
+import { matchLocationForPost } from '@/lib/seo/location-linking'
 import { DEFAULT_OG_IMAGE, SITE_NAME, SITE_URL } from '@/lib/constants'
 
 // Helper to calculate reading time if not in DB, though we added it. 
@@ -340,6 +341,14 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
     .filter((candidate, index, allCandidates) => allCandidates.findIndex((item) => item.id === candidate.id) === index)
     .slice(0, 6)
 
+  // Kanibalisasi lokal: artikel dengan sinyal kota pada slug/judul/focus keyword
+  // mengarahkan pembaca (dan link equity) ke halaman layanan spesifik-lokasi.
+  const matchedLocation = matchLocationForPost({
+    slug: post.slug,
+    title: post.title,
+    focusKeyword: post.focusKeyword,
+  })
+
   const articleJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Article',
@@ -500,6 +509,42 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
               className="article-content prose prose-lg max-w-none prose-headings:text-[#382821] prose-p:text-[#382821]/80 prose-a:text-[#466A68]"
               dangerouslySetInnerHTML={{ __html: sanitizedContent }}
             />
+
+            {/* Kartu layanan kontekstual: artikel lokal menaut ke halaman lokasinya */}
+            {matchedLocation && (
+              <section className="mt-10 p-6 rounded-2xl border border-[#466A68]/25 bg-gradient-to-r from-[#466A68]/10 to-[#466A68]/5" aria-label={`Layanan sewa freezer ASI di ${matchedLocation.city}`}>
+                <p className="text-xs font-bold uppercase tracking-wider text-[#2E5650]/70 mb-2">
+                  Layanan Resmi
+                </p>
+                <h2 className="text-xl font-bold text-[#382821] mb-2">
+                  <Link
+                    href={`/sewa-freezer-asi/${matchedLocation.slug}`}
+                    className="hover:text-[#466A68] transition-colors"
+                  >
+                    Sewa Freezer ASI {matchedLocation.city}
+                  </Link>
+                </h2>
+                <p className="text-sm text-[#382821]/70 leading-relaxed mb-4">
+                  Melayani {matchedLocation.coverageAreas.slice(0, 5).join(', ')}, dan sekitarnya.
+                  {matchedLocation.deliveryEstimate ? ` Pengiriman ${matchedLocation.deliveryEstimate.toLowerCase()}.` : ''}
+                </p>
+                <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold">
+                  <Link
+                    href={`/sewa-freezer-asi/${matchedLocation.slug}`}
+                    className="inline-flex items-center gap-1.5 text-[#2E5650] hover:text-[#1D3A36] transition-colors"
+                  >
+                    Lihat area &amp; harga di {matchedLocation.city}
+                    <ArrowRight size={16} />
+                  </Link>
+                  <Link
+                    href="/sewa-freezer-asi"
+                    className="inline-flex items-center gap-1.5 text-[#382821]/60 hover:text-[#466A68] transition-colors"
+                  >
+                    Semua area layanan
+                  </Link>
+                </div>
+              </section>
+            )}
 
             {/* SEO Internal Linking */}
             {seoInternalLinks.length > 0 && (
