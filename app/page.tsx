@@ -345,101 +345,48 @@ export default async function HomePage() {
       />
 
       {/* ═══════════════════════════════════════════════════════ */}
+      {/* ═══════════════════════════════════════════════════════ */}
       {/* SECTION 1: HERO - Perfectly Balanced Fullscreen View     */}
       {/* ═══════════════════════════════════════════════════════ */}
-      <section className="relative min-h-[calc(100svh-4.5rem)] lg:min-h-[calc(100vh-4rem)] pt-20 sm:pt-24 lg:pt-24 pb-8 sm:pb-10 lg:pb-12 px-4 sm:px-6 overflow-hidden bg-gradient-to-b from-[#FCFAF7] via-[#F7F3EE] to-white flex items-center justify-center">
+      <section className="relative min-h-[calc(100dvh-4rem)] sm:min-h-[calc(100dvh-4.5rem)] pt-18 xs:pt-20 sm:pt-24 lg:pt-24 pb-8 sm:pb-10 lg:pb-12 px-3.5 xs:px-4 sm:px-6 overflow-hidden bg-gradient-to-b from-[#FCFAF7] via-[#F7F3EE] to-white flex items-center justify-center">
         {/* Soft Background Accent Glows */}
         <div className="absolute top-16 left-1/2 -translate-x-1/2 w-[750px] h-[350px] bg-gradient-to-tr from-[#2E5650]/5 to-[#C87860]/5 rounded-full blur-[90px] pointer-events-none -z-10" />
 
-        <Container className="relative z-10 w-full py-2 sm:py-4">
-          <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-10 xl:gap-14">
-            {/* LEFT: Hero Content */}
-            <div className="flex-1 text-center lg:text-left space-y-4 sm:space-y-5 lg:space-y-5.5 w-full">
+        <Container className="relative z-10 w-full py-1 xs:py-2 sm:py-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 xs:gap-4 sm:gap-6 lg:gap-10 xl:gap-14 items-center">
+            {/* 1. Header Block (Paling Atas di mobile & Top-Left di desktop) */}
+            <div className="order-1 lg:col-span-7 lg:row-start-1 flex flex-col items-center lg:items-start text-center lg:text-left space-y-2 sm:space-y-2.5 w-full">
               {/* Trust Pill */}
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/90 border border-stone-200/80 shadow-2xs backdrop-blur-md">
-                <span className="flex h-2 w-2 relative shrink-0">
+              <div className="inline-flex items-center gap-1.5 xs:gap-2 px-2.5 xs:px-3 py-0.5 xs:py-1 rounded-full bg-white/95 border border-stone-200/80 shadow-2xs backdrop-blur-md">
+                <span className="flex h-1.5 w-1.5 xs:h-2 xs:w-2 relative shrink-0">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#2E5650] opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#2E5650]" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 xs:h-2 xs:w-2 bg-[#2E5650]" />
                 </span>
-                <span className="text-[11px] sm:text-xs font-bold tracking-wide text-[#281E19]">
-                  Jasa Sewa Freezer ASI Terpercaya Sejak 2010
+                <span className="text-[9.5px] xs:text-[10.5px] sm:text-[11px] font-bold tracking-wide text-[#281E19]">
+                  Sewa Freezer ASI Terpercaya Sejak 2010
                 </span>
               </div>
 
               {/* Strict Keyword-Optimized H1 */}
-              <div className="space-y-1.5">
-                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-[2.65rem] font-bold text-[#281E19] leading-[1.15] tracking-tight">
-                  Sewa Freezer ASI & <span className="text-[#2E5650]">Rental Kulkas ASI</span> Jabodetabek
-                </h1>
-                <p className="text-base sm:text-lg md:text-xl font-semibold text-[#2E5650]">
-                  Solusi Higienis & Aman untuk Penyimpanan Stok ASI Perah
-                </p>
-              </div>
+              <h1 className="text-[1.55rem] xs:text-[1.75rem] sm:text-3xl md:text-4xl lg:text-[2.65rem] font-extrabold text-[#281E19] leading-[1.18] tracking-tight">
+                Sewa Freezer ASI & <span className="text-[#2E5650]">Rental Kulkas ASI</span> Jabodetabek
+              </h1>
 
-              {/* Description with LSI & Semantic Density */}
-              <p className="text-xs sm:text-sm md:text-base text-[#382821]/75 leading-relaxed max-w-xl mx-auto lg:mx-0">
-                Layanan <strong className="text-[#281E19] font-semibold">sewa freezer ASI terdekat</strong> untuk area Jakarta, Depok, Tangerang, Bekasi, dan Bogor. Unit steril food-grade, hemat listrik, suhu stabil (-20°C), dan siap antar langsung ke rumah Anda.
+              {/* Subhead / Caption pada Desktop (di mobile ditampilkan pada order-3 di bawah gambar) */}
+              <p className="hidden lg:block text-base md:text-lg font-semibold text-[#2E5650]">
+                Solusi Higienis & Aman untuk Penyimpanan Stok ASI Perah
               </p>
-
-              {/* CTA Action Buttons */}
-              <div className="flex flex-col sm:flex-row items-center gap-3 justify-center lg:justify-start pt-1.5 w-full">
-                <Button
-                  size="lg"
-                  className="w-full sm:w-auto bg-gradient-to-r from-[#2E5650] to-[#244742] hover:from-[#244742] hover:to-[#1D3A36] text-white px-6 sm:px-7 py-3 sm:py-3.5 rounded-full font-bold text-sm sm:text-base shadow-md shadow-[#2E5650]/20 hover:shadow-lg hover:shadow-[#2E5650]/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 animate-shimmer"
-                  asChild
-                >
-                  <Link
-                    href={WHATSAPP_LINK}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Konsultasi sewa freezer ASI via WhatsApp"
-                  >
-                    <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 fill-white/20" />
-                    <span>Sewa via WhatsApp</span>
-                    <ArrowRight className="w-4 h-4 ml-0.5" />
-                  </Link>
-                </Button>
-
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="w-full sm:w-auto bg-white hover:bg-stone-50 border border-stone-300/90 text-[#281E19] px-6 sm:px-7 py-3 sm:py-3.5 rounded-full font-bold text-sm sm:text-base shadow-2xs hover:shadow-sm active:scale-[0.98] transition-all"
-                  asChild
-                >
-                  <Link href="#pricing" aria-label="Lihat harga sewa freezer ASI bulanan">
-                    Lihat Paket Bulanan
-                  </Link>
-                </Button>
-              </div>
-
-              {/* Micro Trust Indicators */}
-              <div className="pt-1 flex flex-wrap items-center justify-center lg:justify-start gap-x-4 sm:gap-x-5 gap-y-1.5 text-xs text-[#382821]/75 font-medium">
-                <div className="flex items-center gap-1.5">
-                  <Clock3 className="w-3.5 h-3.5 text-[#2E5650] shrink-0" />
-                  <span>Respon WA ±5 Menit</span>
-                </div>
-                <span className="text-stone-300 hidden sm:inline">•</span>
-                <div className="flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-[#2E5650] shrink-0" />
-                  <span>Garansi Unit 24 Jam</span>
-                </div>
-                <span className="text-stone-300 hidden sm:inline">•</span>
-                <div className="flex items-center gap-1.5">
-                  <HeartHandshake className="w-3.5 h-3.5 text-[#C87860] shrink-0" />
-                  <span>5.000+ Ibu Terbantu</span>
-                </div>
-              </div>
             </div>
 
-            {/* RIGHT: Hero Image Slider & Proof Elements */}
-            <div className="flex-1 w-full max-w-md lg:max-w-[460px] xl:max-w-[500px] relative mx-auto">
+            {/* 2. Visual Slider Block (Bawah H1 di mobile, Kolom Kanan di desktop) */}
+            <div className="order-2 lg:col-span-5 lg:col-start-8 lg:row-start-1 lg:row-span-3 relative w-full max-w-md lg:max-w-[460px] xl:max-w-[500px] mx-auto my-1 sm:my-2 lg:my-0">
               {/* Desktop Only Floating Rating Card */}
-              <div className="hidden sm:flex absolute -top-3 -left-3 sm:-left-4 z-20 bg-white/95 backdrop-blur-xl px-3.5 py-2.5 rounded-2xl shadow-lg border border-white items-center gap-2.5">
+              <div className="hidden sm:flex absolute -top-3.5 -left-3.5 z-20 bg-white/95 backdrop-blur-xl px-3.5 py-2 rounded-2xl shadow-[0_10px_25px_-5px_rgba(40,30,25,0.1)] border border-white/90 items-center gap-2.5 pointer-events-none">
                 <div className="flex -space-x-1.5">
                   {["M", "N", "H"].map((initial, i) => (
                     <div
                       key={i}
-                      className="w-6 h-6 rounded-full bg-gradient-to-br from-[#2E5650] to-[#1F3E3A] border-2 border-white flex items-center justify-center text-white text-[9px] font-bold"
+                      className="w-6 h-6 rounded-full bg-gradient-to-br from-[#2E5650] to-[#1F3E3A] border-2 border-white flex items-center justify-center text-white text-[9px] font-bold shadow-2xs"
                     >
                       {initial}
                     </div>
@@ -457,42 +404,100 @@ export default async function HomePage() {
                 </div>
               </div>
 
+              {/* Mobile Only Floating Glass Badges */}
+              <div className="sm:hidden absolute top-2.5 left-2.5 z-20 pointer-events-none">
+                <div className="bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-full shadow-md border border-white/80 flex items-center gap-1 text-[10px] font-bold text-[#281E19]">
+                  <Star className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0" />
+                  <span>4.9 (5k+ Mums)</span>
+                </div>
+              </div>
+
+              <div className="sm:hidden absolute top-2.5 right-2.5 z-20 pointer-events-none">
+                <div className="bg-[#2E5650]/90 backdrop-blur-md px-2.5 py-1 rounded-full shadow-md border border-white/20 flex items-center gap-1 text-[10px] font-bold text-white">
+                  <Sparkles className="w-3 h-3 text-amber-300 shrink-0" />
+                  <span>100% Steril</span>
+                </div>
+              </div>
+
               {/* Slider Component */}
               <HeroImageSlider />
 
               {/* Desktop Only Hygiene Badge */}
-              <div className="hidden sm:flex absolute -bottom-3 -right-2 sm:-right-3 z-20 bg-white px-3.5 py-2.5 rounded-2xl shadow-lg border border-stone-200/80 items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-[#2E5650]/10 flex items-center justify-center text-[#2E5650]">
-                  <Sparkles className="w-4 h-4" />
+              <div className="hidden sm:flex absolute -bottom-3.5 -right-3.5 z-20 bg-white/95 backdrop-blur-xl px-3.5 py-2 rounded-2xl shadow-[0_10px_25px_-5px_rgba(40,30,25,0.1)] border border-white/90 items-center gap-2.5 pointer-events-none">
+                <div className="w-7 h-7 rounded-xl bg-[#2E5650]/10 flex items-center justify-center text-[#2E5650] shrink-0">
+                  <Sparkles className="w-3.5 h-3.5" />
                 </div>
                 <div>
                   <p className="text-[9px] text-stone-400 uppercase tracking-wider font-bold">Standar Higienis</p>
                   <p className="text-[11px] font-bold text-[#281E19]">100% Steril Food Grade</p>
                 </div>
               </div>
+            </div>
 
-              {/* Mobile Only Clean Horizontal Badges (Underneath Slider, 0% Overlap) */}
-              <div className="grid grid-cols-2 gap-2 mt-2.5 sm:hidden">
-                <div className="bg-white/95 px-3 py-2 rounded-xl border border-stone-200/80 shadow-2xs flex items-center gap-2">
-                  <div className="flex text-amber-400">
-                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-bold text-[#281E19] leading-tight">4.9/5.0</p>
-                    <p className="text-[10px] text-stone-400 leading-tight">5.000+ Mums</p>
-                  </div>
+            {/* 3. Caption Block (Bawah Gambar di mobile) */}
+            <div className="order-3 lg:hidden text-center w-full px-2 pt-0.5">
+              <p className="text-xs xs:text-sm font-semibold text-[#2E5650] leading-snug">
+                Solusi Higienis & Aman untuk Penyimpanan Stok ASI Perah
+              </p>
+            </div>
+
+            {/* 4. CTA 2 Baris + Micro Trust Indicators (Bawah Caption di mobile) */}
+            <div className="order-4 lg:col-span-7 lg:row-start-3 flex flex-col items-center lg:items-start text-center lg:text-left space-y-2.5 sm:space-y-3.5 w-full">
+              {/* CTA Action Buttons (2 baris stacked penuh di mobile) */}
+              <div className="flex flex-col sm:flex-row items-center gap-2.5 sm:gap-3 justify-center lg:justify-start w-full max-w-md mx-auto lg:mx-0">
+                <Button
+                  size="lg"
+                  className="w-full sm:w-auto bg-gradient-to-r from-[#2E5650] to-[#244742] hover:from-[#244742] hover:to-[#1D3A36] text-white px-6 sm:px-7 py-3 sm:py-3.5 rounded-full font-bold text-sm sm:text-base shadow-md shadow-[#2E5650]/20 hover:shadow-lg hover:shadow-[#2E5650]/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 animate-shimmer"
+                  asChild
+                >
+                  <Link
+                    href={WHATSAPP_LINK}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Konsultasi sewa freezer ASI via WhatsApp"
+                  >
+                    <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 fill-white/20 shrink-0" />
+                    <span>Sewa via WhatsApp</span>
+                    <ArrowRight className="w-4 h-4 ml-0.5 shrink-0" />
+                  </Link>
+                </Button>
+
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-full sm:w-auto bg-white hover:bg-stone-50 border border-stone-300/90 text-[#281E19] px-6 sm:px-7 py-3 sm:py-3.5 rounded-full font-bold text-sm sm:text-base shadow-2xs hover:shadow-sm active:scale-[0.98] transition-all text-center flex items-center justify-center"
+                  asChild
+                >
+                  <Link href="#pricing" aria-label="Lihat harga sewa freezer ASI bulanan">
+                    Lihat Paket Bulanan
+                  </Link>
+                </Button>
+              </div>
+
+              {/* Micro Trust Indicators */}
+              <div className="pt-0.5 flex flex-wrap items-center justify-center lg:justify-start gap-x-3 sm:gap-x-5 gap-y-1 text-[11px] sm:text-xs text-[#382821]/75 font-medium">
+                <div className="flex items-center gap-1.5">
+                  <Clock3 className="w-3.5 h-3.5 text-[#2E5650] shrink-0" />
+                  <span>Respon WA ±5 Mnt</span>
                 </div>
-
-                <div className="bg-white/95 px-3 py-2 rounded-xl border border-stone-200/80 shadow-2xs flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-[#2E5650]/10 flex items-center justify-center text-[#2E5650] shrink-0">
-                    <Sparkles className="w-3 h-3" />
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-bold text-[#281E19] leading-tight">100% Steril</p>
-                    <p className="text-[10px] text-stone-400 leading-tight">Food Grade</p>
-                  </div>
+                <span className="text-stone-300">•</span>
+                <div className="flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#2E5650] shrink-0" />
+                  <span>Garansi 24 Jam</span>
+                </div>
+                <span className="text-stone-300">•</span>
+                <div className="flex items-center gap-1.5">
+                  <HeartHandshake className="w-3.5 h-3.5 text-[#C87860] shrink-0" />
+                  <span>5.000+ Mums</span>
                 </div>
               </div>
+            </div>
+
+            {/* 5. Deskripsi (Paling Bawah di mobile, Di bawah H1/Caption di desktop) */}
+            <div className="order-5 lg:col-span-7 lg:row-start-2 flex flex-col items-center lg:items-start text-center lg:text-left w-full pt-1 lg:pt-0">
+              <p className="text-xs sm:text-sm md:text-base text-[#382821]/80 leading-relaxed max-w-xl mx-auto lg:mx-0">
+                Layanan <strong className="text-[#281E19] font-semibold">sewa freezer ASI terdekat</strong> untuk area Jakarta, Depok, Tangerang, Bekasi, dan Bogor. Unit steril food-grade, hemat listrik, suhu stabil (-20°C), dan siap antar langsung ke rumah Anda.
+              </p>
             </div>
           </div>
         </Container>
