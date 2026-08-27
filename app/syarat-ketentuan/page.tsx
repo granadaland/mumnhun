@@ -20,7 +20,7 @@ import {
     RefreshCw,
     Headphones,
 } from "lucide-react"
-import { SITE_NAME, SITE_URL } from "@/lib/constants"
+import { SITE_NAME, SITE_URL, WHATSAPP_NUMBER } from "@/lib/constants"
 
 export const metadata: Metadata = {
     title: "Syarat dan Ketentuan",
@@ -523,7 +523,7 @@ export default function SyaratKetentuanPage() {
                                 asChild
                             >
                                 <Link
-                                    href="https://wa.me/6285312118352"
+                                    href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Halo Mum 'n Hun, saya ingin bertanya tentang syarat & ketentuan sewa dari mumnhun.id")}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                 >

@@ -21,6 +21,16 @@ export function MobileStickyBar() {
         return () => window.removeEventListener("scroll", handleScroll)
     }, [])
 
+    const handleCekPaketClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+        if (window.location.pathname === "/") {
+            e.preventDefault()
+            const element = document.getElementById("pricing")
+            if (element) {
+                element.scrollIntoView({ behavior: "smooth" })
+            }
+        }
+    }
+
     return (
         <aside
             aria-label="Aksi Cepat Sewa Freezer ASI"
@@ -33,6 +43,7 @@ export function MobileStickyBar() {
             <div className="flex items-center gap-2 max-w-md mx-auto">
                 <Link
                     href="/#pricing"
+                    onClick={handleCekPaketClick}
                     className="flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-2xl bg-[#FCFAF7] border border-stone-200/80 text-[#382821] font-semibold text-xs active:scale-[0.98] transition-transform text-center shadow-xs"
                 >
                     <Tag className="w-3.5 h-3.5 text-[#C87860] shrink-0" />

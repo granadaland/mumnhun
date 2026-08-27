@@ -134,12 +134,12 @@ const rupiahFormatter = new Intl.NumberFormat("id-ID")
 type LatestPost = Awaited<ReturnType<typeof getPosts>>["posts"][number]
 
 function getPackageWhatsAppLink(duration: string, priceDisplay: string) {
-  const message = `Halo Mum 'n Hun, saya ingin sewa freezer ASI paket ${duration} (${priceDisplay}). Mohon info ketersediaan unit dan jadwal pengiriman ke rumah saya. Terima kasih!`
+  const message = `Halo Mum 'n Hun, saya ingin sewa freezer ASI paket ${duration} (${priceDisplay}) dari mumnhun.id. Mohon info ketersediaan unit dan jadwal pengiriman ke rumah saya. Terima kasih!`
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`
 }
 
 function getGeoWhatsAppLink(regionName: string) {
-  const message = `Halo Mum 'n Hun, saya ingin konsultasi sewa freezer ASI / rental kulkas ASI untuk area ${regionName}. Mohon info jadwal antar dan paket sewanya.`
+  const message = `Halo Mum 'n Hun, saya ingin konsultasi sewa freezer ASI / rental kulkas ASI untuk area ${regionName} dari mumnhun.id. Mohon info jadwal antar dan paket sewanya.`
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`
 }
 

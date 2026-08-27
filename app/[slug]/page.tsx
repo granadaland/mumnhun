@@ -7,7 +7,7 @@ import { Calendar, Clock, ArrowLeft, ArrowRight, Tag, TrendingUp, Clock3, BookOp
 import { Metadata } from 'next'
 import { sanitizeHtmlContent } from '@/lib/security/sanitize-html'
 import { matchLocationForPost } from '@/lib/seo/location-linking'
-import { DEFAULT_OG_IMAGE, SITE_NAME, SITE_URL } from '@/lib/constants'
+import { DEFAULT_OG_IMAGE, SITE_NAME, SITE_URL, WHATSAPP_NUMBER } from '@/lib/constants'
 
 // Helper to calculate reading time if not in DB, though we added it. 
 // DB `readingTime` is preferred.
@@ -640,7 +640,9 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
                 Sewa freezer ASI premium dari {SITE_NAME}. Steril, hemat energi, dan siap diantar!
               </p>
               <Link
-                href="https://wa.me/6282122229350?text=Halo%20Mum%27N%20Hun%2C%20saya%20mau%20tanya%20tentang%20sewa%20freezer%20ASI"
+                href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Halo Mum 'n Hun, saya mau tanya tentang sewa freezer ASI dari mumnhun.id")}`}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 bg-white text-[#466A68] px-8 py-4 rounded-full font-bold hover:shadow-xl transition-all hover:-translate-y-1"
               >
                 Hubungi Kami via WhatsApp

@@ -109,11 +109,11 @@ export default async function LokasiPage(
   const startingPrice = Math.min(...PRICING_PACKAGES.map((pkg) => pkg.price))
 
   const waLink = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
-    `Halo Mum 'n Hun, saya mau sewa freezer ASI di ${city}. Mohon info jadwal antar & paket sewanya.`
+    `Halo Mum 'n Hun, saya mau sewa freezer ASI di ${city} dari mumnhun.id. Mohon info jadwal antar & paket sewanya.`
   )}`
 
   function getPackageWhatsAppLink(duration: string) {
-    const message = `Halo Mum 'n Hun, saya ingin sewa freezer ASI paket ${duration} untuk area ${city}. Mohon info ketersediaan unit dan jadwal pengiriman.`
+    const message = `Halo Mum 'n Hun, saya ingin sewa freezer ASI paket ${duration} untuk area ${city} dari mumnhun.id. Mohon info ketersediaan unit dan jadwal pengiriman.`
     return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`
   }
 

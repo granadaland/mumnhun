@@ -12,7 +12,7 @@ export const POSTS_PER_PAGE = 12
 
 // WhatsApp Contact
 export const WHATSAPP_NUMBER = "6281553328867" // Update with real number
-export const WHATSAPP_MESSAGE = "Halo, saya tertarik untuk menyewa freezer ASI. Bisa dibantu?"
+export const WHATSAPP_MESSAGE = "Halo, saya tertarik untuk menyewa freezer ASI dari mumnhun.id. Bisa dibantu?"
 export const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`
 
 // Contact Information

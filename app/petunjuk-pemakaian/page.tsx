@@ -17,7 +17,7 @@ import {
     Shield,
     ChevronDown,
 } from "lucide-react"
-import { SITE_NAME, SITE_URL } from "@/lib/constants"
+import { SITE_NAME, SITE_URL, WHATSAPP_NUMBER } from "@/lib/constants"
 
 const PETUNJUK_TITLE = "Panduan Sewa Freezer ASI: Cara Pakai & Perawatan"
 const PETUNJUK_DESCRIPTION =
@@ -634,7 +634,7 @@ export default function PetunjukPage() {
                                 asChild
                             >
                                 <Link
-                                    href="https://wa.me/6285312118352"
+                                    href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Halo Mum 'n Hun, saya ingin bertanya tentang panduan sewa dari mumnhun.id")}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                 >
