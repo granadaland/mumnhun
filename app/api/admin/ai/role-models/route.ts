@@ -27,7 +27,7 @@ import {
     AI_PROVIDERS,
     AI_PROVIDER_OPENAI_COMPATIBLE,
 } from "@/lib/ai/provider"
-import { type AuthStyle, type DiscoveredModel } from "@/lib/ai/openai-compatible"
+import { isLikelyNonChatModel, type AuthStyle, type DiscoveredModel } from "@/lib/ai/openai-compatible"
 import { AI_ROLES, aiRoleSchema } from "@/lib/ai/task-models"
 /**
  * Role models are the per-task credentials (scanning / text / image).
@@ -169,7 +169,13 @@ function getVerificationFailureMessage(errorCode: string): string {
 }
 
 type VerificationOutcome =
-    | { ok: true; authStyle?: AuthStyle; models?: DiscoveredModel[] }
+    | {
+        ok: true
+        authStyle?: AuthStyle
+        models?: DiscoveredModel[]
+        chatVerified?: boolean
+        modelsEndpointAvailable?: boolean
+    }
     | { ok: false; status: number; failure: AiKeyFailure }
 
 async function verifyRoleCredentials(input: {
@@ -200,14 +206,20 @@ async function verifyRoleCredentials(input: {
         })
 
         if (result.ok) {
-            return { ok: true, authStyle: result.authStyle, models: result.models }
+            return {
+                ok: true,
+                authStyle: result.authStyle,
+                models: result.models,
+                chatVerified: result.chatVerified,
+                modelsEndpointAvailable: result.modelsEndpointAvailable,
+            }
         }
 
         return { ok: false, status: result.status, failure: result.failure }
     }
 
     const result = await verifyGeminiApiKey(input.apiKey)
-    if (result.ok) return { ok: true }
+    if (result.ok) return { ok: true, chatVerified: true, modelsEndpointAvailable: true }
     return { ok: false, status: result.status, failure: result.failure }
 }
 
@@ -373,6 +385,20 @@ export async function PUT(request: NextRequest) {
             model: normalizedModel,
         })
 
+        // Model non-chat (embedding/image/audio) lolos daftar /models tapi tidak
+        // bisa chat/completions — tolak lebih awal dengan pesan yang jelas.
+        if (normalizedModel && isLikelyNonChatModel(normalizedModel) && payload.role !== "image") {
+            return errorJson(
+                "Model tidak tersedia pada provider ini",
+                "PROVIDER_MODEL_UNAVAILABLE",
+                400,
+                {
+                    provider,
+                    reason: `Model "${normalizedModel}" terlihat seperti model non-chat (embedding/gambar/audio). Untuk role teks pilih chat model (mis. gpt-4o-mini, llama-3.1-8b-instant).`,
+                }
+            )
+        }
+
         if (!verification.ok && payload.role !== "image") {
             logAdminWarn({
                 requestId,
@@ -389,6 +415,35 @@ export async function PUT(request: NextRequest) {
                 verification.failure.code,
                 verification.status,
                 { provider, reason: verification.failure.message }
+            )
+        }
+
+        // API key valid (daftar model terbaca) tapi uji chat dengan model yang
+        // dipilih gagal — dulu kasus ini tetap disimpan dan baru meledak sebagai
+        // "Model tidak mengembalikan format JSON" saat generate. Tolak sekarang.
+        if (
+            verification.ok &&
+            (payload.role === "text" || payload.role === "scanning") &&
+            verification.chatVerified === false
+        ) {
+            logAdminWarn({
+                requestId,
+                action: "ai-role-models:upsert",
+                userId: adminCheck.identity.id,
+                role: adminCheck.identity.role,
+                roleSource: adminCheck.identity.source,
+                status: 400,
+                validation: { ok: false, reason: "PROVIDER_MODEL_UNAVAILABLE" },
+            })
+
+            return errorJson(
+                "Model tidak tersedia pada provider ini",
+                "PROVIDER_MODEL_UNAVAILABLE",
+                400,
+                {
+                    provider,
+                    reason: `API key valid, tapi uji chat dengan model "${normalizedModel}" gagal. Pastikan nama model persis seperti di daftar Deteksi model dan model mendukung /chat/completions.`,
+                }
             )
         }
 
@@ -555,6 +610,30 @@ export async function PATCH(request: NextRequest) {
                     verification.failure.code,
                     verification.status,
                     { reason: verification.failure.message }
+                )
+            }
+
+            // Sama seperti PUT: jangan tandai "connected" bila hanya daftar model
+            // yang terbaca tapi chat dengan model teks gagal.
+            if (
+                (payload.role === "text" || payload.role === "scanning") &&
+                verification.chatVerified === false
+            ) {
+                await prisma.aiRoleModel.update({
+                    where: { role: payload.role },
+                    data: {
+                        lastUsedAt: new Date(),
+                        lastError: `PROVIDER_MODEL_UNAVAILABLE::API key valid, tapi uji chat dengan model "${effectiveModel}" gagal. Pastikan model mendukung /chat/completions.`,
+                    },
+                })
+
+                return errorJson(
+                    "Model tidak tersedia pada provider ini",
+                    "PROVIDER_MODEL_UNAVAILABLE",
+                    400,
+                    {
+                        reason: `API key valid, tapi uji chat dengan model "${effectiveModel}" gagal. Pastikan nama model persis seperti di daftar Deteksi model.`,
+                    }
                 )
             }
 

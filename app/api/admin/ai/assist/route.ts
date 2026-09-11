@@ -26,7 +26,7 @@ import {
     seoPackageOutputSchema,
     titleIdeasOutputSchema,
 } from "@/lib/ai/prompts"
-import { coerceToHtml, renderArticleHtml, renderOutlineHtml, salvageArticleOutputFromRaw, salvageOutlineHtmlFromRaw } from "@/lib/ai/article-format"
+import { coerceToHtml, renderArticleHtml, renderOutlineHtml, salvageArticleOutputFromRaw, salvageExcerptFromRaw, salvageImageMetaFromRaw, salvageOutlineHtmlFromRaw, salvageSeoPackageFromRaw, salvageTitleIdeasFromRaw } from "@/lib/ai/article-format"
 
 /**
  * In-editor AI assistant.
@@ -167,27 +167,47 @@ export async function POST(request: NextRequest) {
     try {
         switch (payload.action) {
             case "generate_title": {
-                const result = await generateRoleJson(
-                    "text",
-                    {
-                        system: HAIBUNDA_VOICE,
-                        prompt: buildTitleIdeasPrompt({
-                            topic: payload.payload.topic,
-                            keyword: payload.payload.keyword,
-                        }),
-                        ...tuning,
-                    },
-                    titleIdeasOutputSchema
-                )
-                return NextResponse.json({ success: true, data: result.value })
+                try {
+                    const result = await generateRoleJson(
+                        "text",
+                        {
+                            system: HAIBUNDA_VOICE,
+                            prompt: buildTitleIdeasPrompt({
+                                topic: payload.payload.topic,
+                                keyword: payload.payload.keyword,
+                            }),
+                            ...tuning,
+                        },
+                        titleIdeasOutputSchema
+                    )
+                    return NextResponse.json({ success: true, data: result.value })
+                } catch (titleError) {
+                    // Gateways that ignore json_mode often return a numbered/bulleted
+                    // prose list instead of {"titles":[...]} — that list IS the answer.
+                    if (titleError instanceof AiJsonFormatError) {
+                        const salvaged = salvageTitleIdeasFromRaw(titleError.raw)
+                        if (salvaged) {
+                            const validated = titleIdeasOutputSchema.safeParse(salvaged)
+                            if (validated.success) {
+                                return NextResponse.json({ success: true, data: validated.data })
+                            }
+                            // Single-title salvage below schema min still helps the editor.
+                            if (salvaged.titles.length > 0) {
+                                return NextResponse.json({ success: true, data: salvaged })
+                            }
+                        }
+                    }
+                    throw titleError
+                }
             }
 
             case "generate_excerpt": {
-                const result = await generateRoleJson(
-                    "text",
-                    {
-                        system: HAIBUNDA_VOICE,
-                        prompt: `Buat ringkasan (excerpt) untuk artikel berikut.
+                try {
+                    const result = await generateRoleJson(
+                        "text",
+                        {
+                            system: HAIBUNDA_VOICE,
+                            prompt: `Buat ringkasan (excerpt) untuk artikel berikut.
 Judul: ${payload.payload.title}
 Konten: ${payload.payload.content.slice(0, 2500)}
 
@@ -195,11 +215,23 @@ Syarat: 1-2 kalimat, maksimal 300 karakter, menyebut manfaat konkret bagi Mums,
 dan tidak sekadar mengulang judul.
 
 Kembalikan JSON dengan key "excerpt". ${JSON_ONLY_INSTRUCTION}`,
-                        ...tuning,
-                    },
-                    excerptOutputSchema
-                )
-                return NextResponse.json({ success: true, data: result.value })
+                            ...tuning,
+                        },
+                        excerptOutputSchema
+                    )
+                    return NextResponse.json({ success: true, data: result.value })
+                } catch (excerptError) {
+                    if (excerptError instanceof AiJsonFormatError) {
+                        const salvaged = salvageExcerptFromRaw(excerptError.raw)
+                        if (salvaged) {
+                            const validated = excerptOutputSchema.safeParse(salvaged)
+                            if (validated.success) {
+                                return NextResponse.json({ success: true, data: validated.data })
+                            }
+                        }
+                    }
+                    throw excerptError
+                }
             }
 
             case "generate_outline": {
@@ -336,50 +368,82 @@ Kembalikan JSON dengan key "excerpt". ${JSON_ONLY_INSTRUCTION}`,
                     prisma.tag.findMany({ select: { name: true }, orderBy: { name: "asc" }, take: 120 }),
                 ])
 
-                const result = await generateRoleJson(
-                    "text",
-                    {
-                        system: HAIBUNDA_VOICE,
-                        prompt: buildSeoPackagePrompt({
+                const applyCategoryGuard = (value: z.infer<typeof seoPackageOutputSchema>) => {
+                    const validSlugs = new Set(categories.map((category) => category.slug))
+                    const categorySlug =
+                        value.categorySlug && validSlugs.has(value.categorySlug) ? value.categorySlug : null
+                    return { ...value, categorySlug }
+                }
+
+                try {
+                    const result = await generateRoleJson(
+                        "text",
+                        {
+                            system: HAIBUNDA_VOICE,
+                            prompt: buildSeoPackagePrompt({
+                                title: payload.payload.title,
+                                content: payload.payload.content,
+                                keyword: payload.payload.keyword,
+                                availableCategories: categories,
+                                existingTags: tags.map((tag) => tag.name),
+                            }),
+                            ...tuning,
+                        },
+                        seoPackageOutputSchema
+                    )
+
+                    return NextResponse.json({ success: true, data: applyCategoryGuard(result.value) })
+                } catch (seoError) {
+                    // Over-long meta fields are the most common schema failure — coerce
+                    // by truncation instead of discarding a paid generation.
+                    if (seoError instanceof AiJsonFormatError) {
+                        const coerced = salvageSeoPackageFromRaw(seoError.raw, {
                             title: payload.payload.title,
-                            content: payload.payload.content,
                             keyword: payload.payload.keyword,
-                            availableCategories: categories,
-                            existingTags: tags.map((tag) => tag.name),
-                        }),
-                        ...tuning,
-                    },
-                    seoPackageOutputSchema
-                )
-
-                const validSlugs = new Set(categories.map((category) => category.slug))
-                const categorySlug =
-                    result.value.categorySlug && validSlugs.has(result.value.categorySlug)
-                        ? result.value.categorySlug
-                        : null
-
-                return NextResponse.json({
-                    success: true,
-                    data: { ...result.value, categorySlug },
-                })
+                        })
+                        if (coerced) {
+                            const validated = seoPackageOutputSchema.safeParse(coerced)
+                            if (validated.success) {
+                                return NextResponse.json({
+                                    success: true,
+                                    data: applyCategoryGuard(validated.data),
+                                })
+                            }
+                        }
+                    }
+                    throw seoError
+                }
             }
 
             case "generate_image_meta": {
-                const result = await generateRoleJson(
-                    "text",
-                    {
-                        system: HAIBUNDA_VOICE,
-                        prompt: buildImageMetaPrompt({
-                            title: payload.payload.title,
-                            context: payload.payload.context,
-                            keyword: payload.payload.keyword,
-                            purpose: payload.payload.purpose,
-                        }),
-                        ...tuning,
-                    },
-                    imageMetaOutputSchema
-                )
-                return NextResponse.json({ success: true, data: result.value })
+                try {
+                    const result = await generateRoleJson(
+                        "text",
+                        {
+                            system: HAIBUNDA_VOICE,
+                            prompt: buildImageMetaPrompt({
+                                title: payload.payload.title,
+                                context: payload.payload.context,
+                                keyword: payload.payload.keyword,
+                                purpose: payload.payload.purpose,
+                            }),
+                            ...tuning,
+                        },
+                        imageMetaOutputSchema
+                    )
+                    return NextResponse.json({ success: true, data: result.value })
+                } catch (imageMetaError) {
+                    if (imageMetaError instanceof AiJsonFormatError) {
+                        const coerced = salvageImageMetaFromRaw(imageMetaError.raw)
+                        if (coerced) {
+                            const validated = imageMetaOutputSchema.safeParse(coerced)
+                            if (validated.success) {
+                                return NextResponse.json({ success: true, data: validated.data })
+                            }
+                        }
+                    }
+                    throw imageMetaError
+                }
             }
         }
     } catch (error) {
@@ -402,6 +466,17 @@ Kembalikan JSON dengan key "excerpt". ${JSON_ONLY_INSTRUCTION}`,
                 "AI_ROLE_NOT_CONFIGURED",
                 { role: error.role }
             )
+        }
+
+        // Surface the raw snippet for format failures so the operator can tell a
+        // prose refusal apart from a truncation or schema violation.
+        if (error instanceof AiJsonFormatError) {
+            return errorJson("Gagal diproses AI", toAiKeyFailureHttpStatus(failure), failure.code, {
+                reason: failure.message,
+                kind: error.kind,
+                ...(error.schemaIssue ? { schemaIssue: error.schemaIssue } : {}),
+                snippet: error.snippet || null,
+            })
         }
 
         return errorJson("Gagal diproses AI", toAiKeyFailureHttpStatus(failure), failure.code, {

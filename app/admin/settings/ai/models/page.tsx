@@ -91,6 +91,12 @@ const EMPTY_FORM: RoleFormState = {
     label: "",
 }
 
+const NON_CHAT_MODEL_PATTERN = /embed|whisper|\btts\b|text-to-speech|dall[-_ ]?e|diffusion|moderation|rerank|transcri|\basr\b|^tts-|gpt-image|imagen|stable-diffusion|text-embedding/i
+
+function isNonChatModelId(modelId: string): boolean {
+    return NON_CHAT_MODEL_PATTERN.test((modelId ?? "").trim())
+}
+
 function getErrorMessage(error: unknown, fallback: string): string {
     if (error instanceof AdminClientError) {
         const payload = error.payload
@@ -570,22 +576,37 @@ export default function AiRoleModelsPage() {
                                                 </button>
                                             </div>
 
-                                            {modelOptions.length > 0 && (
-                                                <select
-                                                    value={modelOptions.includes(form.model) ? form.model : ""}
-                                                    onChange={(e) => {
-                                                        if (e.target.value) updateForm(item.role, { model: e.target.value })
-                                                    }}
-                                                    className="w-full mb-2 bg-[#FAF9F7] border border-[#D4BCAA]/30 rounded-lg px-3 py-2 text-xs text-[#0F0A09] font-mono outline-none focus:ring-2 focus:ring-[#466A68]/30"
-                                                    size={Math.min(6, Math.max(3, modelOptions.length))}
-                                                >
-                                                    {modelOptions.map((modelId) => (
-                                                        <option key={modelId} value={modelId}>
-                                                            {modelId}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            )}
+                                            {modelOptions.length > 0 && (() => {
+                                                const visibleOptions =
+                                                    item.role === "image"
+                                                        ? modelOptions
+                                                        : modelOptions.filter((modelId) => !isNonChatModelId(modelId))
+                                                const hiddenCount = modelOptions.length - visibleOptions.length
+                                                const list = visibleOptions.length > 0 ? visibleOptions : modelOptions
+                                                return (
+                                                    <>
+                                                        <select
+                                                            value={list.includes(form.model) ? form.model : ""}
+                                                            onChange={(e) => {
+                                                                if (e.target.value) updateForm(item.role, { model: e.target.value })
+                                                            }}
+                                                            className="w-full mb-2 bg-[#FAF9F7] border border-[#D4BCAA]/30 rounded-lg px-3 py-2 text-xs text-[#0F0A09] font-mono outline-none focus:ring-2 focus:ring-[#466A68]/30"
+                                                            size={Math.min(6, Math.max(3, list.length))}
+                                                        >
+                                                            {list.map((modelId) => (
+                                                                <option key={modelId} value={modelId}>
+                                                                    {modelId}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                        {hiddenCount > 0 && visibleOptions.length > 0 && (
+                                                            <p className="text-[10px] text-[#8C7A6B]/60 mb-2">
+                                                                {hiddenCount} model non-chat (embedding/gambar/audio) disembunyikan — pilih chat model untuk role teks.
+                                                            </p>
+                                                        )}
+                                                    </>
+                                                )
+                                            })()}
 
                                             <input
                                                 id={`model-${item.role}`}
@@ -595,6 +616,11 @@ export default function AiRoleModelsPage() {
                                                 placeholder={item.role === "image" ? (isCustom ? "gpt-image-1" : "imagen-3.0-generate-001") : "gpt-4o-mini"}
                                                 className="w-full bg-white border border-[#D4BCAA]/30 rounded-lg px-3 py-2 text-sm text-[#0F0A09] font-mono outline-none focus:ring-2 focus:ring-[#466A68]/30"
                                             />
+                                            {item.role !== "image" && form.model.trim() && isNonChatModelId(form.model) && (
+                                                <p className="text-[11px] text-amber-700 bg-amber-500/10 border border-amber-500/20 rounded-lg px-2.5 py-1.5 mt-1">
+                                                    Model ini terlihat seperti model non-chat (embedding/gambar/audio) dan tidak bisa generate judul/teks. Ganti ke chat model.
+                                                </p>
+                                            )}
                                             {item.role === "image" && (
                                                 <p className="text-[10px] text-[#8C7A6B]/60 mt-1">
                                                     Wajib model <strong>image generation</strong> (mis. {isCustom ? "gpt-image-1, dall-e-3" : "imagen-3.0-generate-001"}).

@@ -223,6 +223,35 @@ type OpenAiModelListResponse = {
     models?: Array<{ id?: unknown; name?: unknown }>
 }
 
+const NON_CHAT_MODEL_PATTERNS = [
+    /embed/i,
+    /whisper/i,
+    /tts/i,
+    /text-to-speech/i,
+    /dall[-_ ]?e/i,
+    /diffusion/i,
+    /moderation/i,
+    /rerank/i,
+    /transcri/i,
+    /\basr\b/i,
+    /^tts-/i,
+    /gpt-image/i,
+    /imagen/i,
+    /stable-diffusion/i,
+    /text-embedding/i,
+]
+
+/**
+ * Heuristic: /models lists every capability (embedding, TTS, image...).
+ * Text roles need a chat-completion model — picking an embedding/image id passes
+ * verification (list OK) but always fails JSON generation.
+ */
+export function isLikelyNonChatModel(modelId: string): boolean {
+    const id = (modelId ?? "").trim()
+    if (!id) return true
+    return NON_CHAT_MODEL_PATTERNS.some((pattern) => pattern.test(id))
+}
+
 function parseModelList(payload: unknown): DiscoveredModel[] {
     if (!payload || typeof payload !== "object") return []
 

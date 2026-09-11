@@ -374,10 +374,25 @@ export function classifyAiKeyFailure(error: unknown): AiKeyFailure {
     // Reporting this as an unknown/upstream failure (502) misleads the operator; it is a
     // request/format problem on our side of the contract.
     if (errorLike.name === "AiJsonFormatError" || errorLike.name === "AiJsonParseError") {
+        const detail = error && typeof error === "object" ? (error as Record<string, unknown>) : {}
+        const kind = typeof detail.kind === "string" ? detail.kind : null
+        const schemaIssue = typeof detail.schemaIssue === "string" ? detail.schemaIssue : null
+        const snippetRaw =
+            typeof detail.snippet === "string" && detail.snippet.trim()
+                ? detail.snippet.trim()
+                : typeof errorLike.message === "string"
+                  ? errorLike.message
+                  : ""
+        // Snippet is model output, not credentials: collapse + truncate for the dashboard.
+        const snippet = sanitizeAiKeyErrorMessage(snippetRaw.replace(/\s+/g, " ").trim()).slice(0, 200)
+        const cause =
+            kind === "schema"
+                ? `JSON valid tapi tidak sesuai schema${schemaIssue ? ` (${schemaIssue})` : ""}`
+                : `output bukan JSON yang valid`
+        const hint = snippet ? ` Cuplikan: ${snippet}` : ""
         return {
             code: "PROVIDER_REQUEST_FAILED",
-            message:
-                "Model tidak mengembalikan format JSON yang valid — coba lagi atau ganti model text role",
+            message: `Model tidak mengembalikan format JSON yang valid (${cause}).${hint} — coba lagi atau ganti model text role`,
         }
     }
 

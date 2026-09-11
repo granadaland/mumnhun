@@ -116,7 +116,7 @@ function repairJsonDefects(text: string): string {
         .replace(/[\u2018\u2019]/g, "'")
 }
 
-function makeSnippet(raw: string): string {
+export function makeSnippet(raw: string): string {
     return raw.replace(/\s+/g, " ").trim().slice(0, 300)
 }
 

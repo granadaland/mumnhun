@@ -10,7 +10,7 @@ import {
     type ChatMessage,
 } from "@/lib/ai/openai-compatible"
 import { getAiProviderGuardOptions, readResponseWithLimit, safeExternalFetch } from "@/lib/security/url-guard"
-import { AiJsonParseError, parseLlmJson } from "@/lib/ai/json-extract"
+import { AiJsonParseError, makeSnippet, parseLlmJson } from "@/lib/ai/json-extract"
 import { openAiSizeForAspectRatio } from "@/lib/ai/image-policy"
 import { salvageArticleOutputFromRaw } from "@/lib/ai/article-format"
 import { GoogleGenAI } from "@google/genai"
@@ -237,16 +237,39 @@ const JSON_REPAIR_REMINDER =
  * good article as Markdown instead of JSON should not cost the operator another paid
  * generation — the text converts deterministically via coerceToHtml/salvage helpers.
  */
+export type AiJsonFailureKind = "parse" | "schema"
+
 export class AiJsonFormatError extends Error {
     raw: string
     elapsedMs: number
+    /** "parse" = teks bukan JSON, "schema" = JSON valid tapi tidak sesuai schema. */
+    kind: AiJsonFailureKind
+    /** Cuplikan aman (max 300 char) dari output mentah untuk diagnosis. */
+    snippet: string
+    /** Pesan issue zod pertama bila kind === "schema". */
+    schemaIssue?: string
 
-    constructor(message: string, raw: string, elapsedMs: number) {
+    constructor(
+        message: string,
+        raw: string,
+        elapsedMs: number,
+        options: { kind?: AiJsonFailureKind; snippet?: string; schemaIssue?: string } = {}
+    ) {
         super(message)
         this.name = "AiJsonFormatError"
         this.raw = raw
         this.elapsedMs = elapsedMs
+        this.kind = options.kind ?? "parse"
+        this.snippet = options.snippet ?? makeSnippet(raw)
+        if (options.schemaIssue) this.schemaIssue = options.schemaIssue
     }
+}
+
+function toSchemaIssueMessage(error: z.ZodError): string {
+    const first = error.issues[0]
+    if (!first) return "unknown"
+    const path = first.path.length > 0 ? `${first.path.join(".")}: ` : ""
+    return `${path}${first.message}`
 }
 
 /**
@@ -273,29 +296,34 @@ export async function generateJson<T>(
     const startedAt = Date.now()
     let result = await attempt()
     let parsedRaw: unknown
-    let parseFailed = false
+    let firstFailure: { kind: AiJsonFailureKind; schemaIssue?: string; parseSnippet?: string } | null = null
 
     try {
         parsedRaw = parseLlmJson(result.text)
-    } catch {
-        parseFailed = true
-    }
-
-    if (!parseFailed) {
         const parsed = schema.safeParse(parsedRaw)
         if (parsed.success) {
             return { data: parsed.data, model: result.model, authStyle: result.authStyle }
+        }
+        firstFailure = { kind: "schema", schemaIssue: toSchemaIssueMessage(parsed.error) }
+    } catch (error) {
+        firstFailure = {
+            kind: "parse",
+            parseSnippet: error instanceof AiJsonParseError ? error.snippet : makeSnippet(result.text),
         }
     }
 
     // One retry with an explicit reminder fixes the vast majority of format-only failures —
     // but only when there is budget left for a second full generation.
     if (!shouldRetryJsonParse(Date.now() - startedAt)) {
-        throw new AiJsonFormatError(
-            "Output AI tidak dapat diparse sebagai JSON pada percobaan panjang.",
-            result.text,
-            Date.now() - startedAt
-        )
+        const detail =
+            firstFailure?.kind === "schema"
+                ? `JSON valid tapi tidak sesuai schema (${firstFailure.schemaIssue}). Cuplikan: ${makeSnippet(result.text) || "(kosong)"}`
+                : `Output AI bukan JSON yang valid. Cuplikan: ${firstFailure?.parseSnippet || makeSnippet(result.text) || "(kosong)"}`
+        throw new AiJsonFormatError(`Output AI tidak dapat dipakai (${detail}).`, result.text, Date.now() - startedAt, {
+            kind: firstFailure?.kind ?? "parse",
+            snippet: makeSnippet(result.text),
+            ...(firstFailure?.schemaIssue ? { schemaIssue: firstFailure.schemaIssue } : {}),
+        })
     }
 
     result = await attempt(JSON_REPAIR_REMINDER)
@@ -308,7 +336,8 @@ export async function generateJson<T>(
             throw new AiJsonFormatError(
                 `Output AI bukan JSON yang valid setelah 2 percobaan. Cuplikan: ${error.snippet || "(kosong)"}`,
                 result.text,
-                Date.now() - startedAt
+                Date.now() - startedAt,
+                { kind: "parse", snippet: error.snippet || makeSnippet(result.text) }
             )
         }
         throw error
@@ -316,10 +345,12 @@ export async function generateJson<T>(
 
     const retryParsed = schema.safeParse(retryRaw)
     if (!retryParsed.success) {
+        const issue = toSchemaIssueMessage(retryParsed.error)
         throw new AiJsonFormatError(
-            `Output AI tidak sesuai format yang diminta: ${retryParsed.error.issues[0]?.message || "unknown"}`,
+            `Output AI tidak sesuai format yang diminta (${issue}). Cuplikan: ${makeSnippet(result.text) || "(kosong)"}`,
             result.text,
-            Date.now() - startedAt
+            Date.now() - startedAt,
+            { kind: "schema", snippet: makeSnippet(result.text), schemaIssue: issue }
         )
     }
 

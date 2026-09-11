@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { parseLlmJson } from "@/lib/ai/json-extract"
 import type { AiArticleOutput } from "@/lib/ai/provider"
 
 /**
@@ -388,6 +389,251 @@ export function salvageOutlineHtmlFromRaw(raw: string): string | null {
     if (!/<h[1-6]>/.test(html)) return null
 
     return html
+}
+
+// ---------------------------------------------------------------------------
+// Salvage: title ideas / excerpt / seo / image-meta from non-strict output
+// ---------------------------------------------------------------------------
+
+function cleanTitleCandidate(raw: string): string {
+    return raw
+        .trim()
+        // leading list markers: "1. ", "1) ", "- ", "* ", "+ ", "• ", "## "
+        .replace(/^\s*(?:\d{1,2}[.)\-:]|[-*+•]|#{1,6})\s+/, "")
+        .replace(/^["'“”‘’]+\s*/, "")
+        .replace(/\s*["'“”‘’]+$/, "")
+        .replace(/^\*\*(.+?)\*\*$/, "$1")
+        .replace(/^__(.+?)__$/, "$1")
+        .replace(/\s+/g, " ")
+        .trim()
+}
+
+function dedupeKeepOrder(values: string[]): string[] {
+    const seen = new Set<string>()
+    const out: string[] = []
+    for (const value of values) {
+        const key = value.toLowerCase()
+        if (!key || seen.has(key)) continue
+        seen.add(key)
+        out.push(value)
+    }
+    return out
+}
+
+function normalizeTitleList(candidates: unknown): string[] {
+    if (!Array.isArray(candidates)) return []
+    const cleaned = candidates
+        .filter((entry): entry is string => typeof entry === "string")
+        .map(cleanTitleCandidate)
+        .map((title) => (title.length > 90 ? title.slice(0, 90).trim() : title))
+        .filter((title) => title.length >= 10)
+    return dedupeKeepOrder(cleaned)
+}
+
+/**
+ * Recovers title ideas when the model ignored the strict JSON contract.
+ *
+ * Handles: bare JSON array, `{titles:[...]}` under alias keys, numbered/bulleted
+ * prose lists, and quoted strings. Returns null unless at least 3 usable titles
+ * are found (the schema minimum), so callers don't store junk.
+ */
+export function salvageTitleIdeasFromRaw(raw: string): { titles: string[] } | null {
+    const trimmed = (raw ?? "").trim()
+    if (trimmed.length < 20) return null
+
+    // 1. Structured variants (object with alias keys, or bare array).
+    try {
+        const parsed: unknown = parseLlmJson(trimmed)
+        if (Array.isArray(parsed)) {
+            const titles = normalizeTitleList(parsed).slice(0, 10)
+            if (titles.length >= 3) return { titles: titles.slice(0, 6) }
+        } else if (parsed && typeof parsed === "object") {
+            const record = parsed as Record<string, unknown>
+            const aliasKeys = ["titles", "ideas", "headlines", "judul", "suggestions", "options", "titleIdeas"]
+            for (const key of aliasKeys) {
+                const titles = normalizeTitleList(record[key]).slice(0, 10)
+                if (titles.length >= 3) return { titles: titles.slice(0, 6) }
+            }
+            // Single-string shape: {"title": "..."} — split it into lines.
+            if (typeof record.title === "string" && record.title.trim().length >= 10) {
+                const titles = normalizeTitleList(record.title.split(/\n+/)).slice(0, 10)
+                if (titles.length >= 1) {
+                    // Single title still useful for the editor even if below schema min;
+                    // pad by returning what we have so the UI can show something.
+                    return { titles: titles.slice(0, 6) }
+                }
+            }
+        }
+    } catch {
+        // fall through to line-based recovery
+    }
+
+    // 2. Line-based prose list ("1. Judul ...", "- Judul ...").
+    const lines = trimmed
+        .replace(/\r\n/g, "\n")
+        .split("\n")
+        .map(cleanTitleCandidate)
+        .map((title) => (title.length > 90 ? title.slice(0, 90).trim() : title))
+        .filter((title) => title.length >= 10 && !/^(berikut|ini adalah|judul)/i.test(title))
+    const deduped = dedupeKeepOrder(lines).slice(0, 10)
+    if (deduped.length >= 3) return { titles: deduped.slice(0, 6) }
+
+    // 3. Quoted strings anywhere in the text.
+    const quoted: string[] = []
+    const quotePattern = /["“”]([^"“”\n]{10,120})["“”]/g
+    let match: RegExpExecArray | null
+    while ((match = quotePattern.exec(trimmed)) !== null) {
+        const cleaned = cleanTitleCandidate(match[1])
+        if (cleaned.length >= 10) quoted.push(cleaned.length > 90 ? cleaned.slice(0, 90).trim() : cleaned)
+        if (quoted.length >= 10) break
+    }
+    const dedupedQuoted = dedupeKeepOrder(quoted).slice(0, 10)
+    if (dedupedQuoted.length >= 3) return { titles: dedupedQuoted.slice(0, 6) }
+
+    return null
+}
+
+function stripJsonWrapperForExcerpt(raw: string): string {
+    const trimmed = raw.trim()
+    // {"excerpt": "..."} — extract the value without a full JSON parse.
+    const excerptMatch = trimmed.match(/"excerpt"\s*:\s*"([\s\S]*?)"\s*[}\]]?\s*$/)
+    if (excerptMatch?.[1]) {
+        return excerptMatch[1].replace(/\\"/g, '"').replace(/\\n/g, " ").trim()
+    }
+    return trimmed
+}
+
+/**
+ * Recovers an excerpt from prose or a malformed JSON wrapper.
+ * Excerpts are short by nature, so any coherent 10+ char text is accepted.
+ */
+export function salvageExcerptFromRaw(raw: string): { excerpt: string } | null {
+    const trimmed = (raw ?? "").trim()
+    if (trimmed.length < 10) return null
+
+    try {
+        const parsed: unknown = parseLlmJson(trimmed)
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            const excerpt = (parsed as Record<string, unknown>).excerpt
+            if (typeof excerpt === "string" && excerpt.trim().length >= 10) {
+                return { excerpt: excerpt.trim().replace(/\s+/g, " ").slice(0, 400) }
+            }
+        }
+        if (typeof parsed === "string" && parsed.trim().length >= 10) {
+            return { excerpt: parsed.trim().replace(/\s+/g, " ").slice(0, 400) }
+        }
+    } catch {
+        // fall through
+    }
+
+    const plain = stripJsonWrapperForExcerpt(trimmed)
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/\s*```$/, "")
+        .replace(/^#{1,6}\s+/gm, "")
+        .replace(/^[-*+]\s+/gm, "")
+        .replace(/^\d+[.)]\s+/gm, "")
+        .replace(/["“”‘’]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+    if (plain.length < 10) return null
+    return { excerpt: plain.slice(0, 300) }
+}
+
+function toTrimmedString(value: unknown): string {
+    return typeof value === "string" ? value.trim() : ""
+}
+
+function toStringArray(value: unknown, maxItems: number, maxLen: number): string[] {
+    if (!Array.isArray(value)) return []
+    return value
+        .filter((entry): entry is string => typeof entry === "string")
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+        .map((entry) => (entry.length > maxLen ? entry.slice(0, maxLen).trim() : entry))
+        .filter((entry) => entry.length >= 2)
+        .slice(0, maxItems)
+}
+
+/**
+ * Tolerant coercion for SEO packages: truncates over-long fields and normalizes
+ * the schema enum case-insensitively, so a good answer with one long field
+ * doesn't fail the whole request.
+ * Returns a plain object (caller validates with the zod schema) or null.
+ */
+export function salvageSeoPackageFromRaw(
+    raw: string,
+    fallback: { title?: string; keyword?: string } = {}
+): Record<string, unknown> | null {
+    const trimmed = (raw ?? "").trim()
+    if (trimmed.length < 20) return null
+
+    let parsed: unknown
+    try {
+        parsed = parseLlmJson(trimmed)
+    } catch {
+        return null
+    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null
+    const record = parsed as Record<string, unknown>
+
+    const focusKeyword =
+        toTrimmedString(record.focusKeyword).slice(0, 120) ||
+        toTrimmedString(fallback.keyword).slice(0, 120) ||
+        toTrimmedString(fallback.title).split(/\s+/).slice(0, 5).join(" ").slice(0, 120)
+    if (focusKeyword.length < 2) return null
+
+    const metaTitle = toTrimmedString(record.metaTitle).slice(0, 70) || toTrimmedString(fallback.title).slice(0, 70)
+    if (metaTitle.length < 10) return null
+    const metaDescription = toTrimmedString(record.metaDescription).slice(0, 165)
+    if (metaDescription.length < 20) return null
+
+    const schemaRaw = toTrimmedString(record.schemaType).toLowerCase()
+    const schemaType =
+        schemaRaw === "blogposting" ? "BlogPosting"
+        : schemaRaw === "howto" ? "HowTo"
+        : schemaRaw === "faqpage" ? "FAQPage"
+        : "Article"
+
+    return {
+        focusKeyword,
+        secondaryKeywords: toStringArray(record.secondaryKeywords, 10, 120),
+        metaTitle,
+        metaDescription,
+        schemaType,
+        categorySlug:
+            typeof record.categorySlug === "string" && record.categorySlug.trim()
+                ? record.categorySlug.trim().slice(0, 120)
+                : null,
+        tags: toStringArray(record.tags, 12, 60),
+        slug: toTrimmedString(record.slug).slice(0, 90),
+        ogTitle: toTrimmedString(record.ogTitle).slice(0, 90),
+        ogDescription: toTrimmedString(record.ogDescription).slice(0, 200),
+    }
+}
+
+/**
+ * Tolerant coercion for image meta (prompt/alt/caption): truncates over-long
+ * fields instead of failing the whole request.
+ */
+export function salvageImageMetaFromRaw(raw: string): Record<string, unknown> | null {
+    const trimmed = (raw ?? "").trim()
+    if (trimmed.length < 20) return null
+
+    let parsed: unknown
+    try {
+        parsed = parseLlmJson(trimmed)
+    } catch {
+        return null
+    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null
+    const record = parsed as Record<string, unknown>
+
+    const imagePrompt = toTrimmedString(record.imagePrompt).slice(0, 900)
+    const altText = toTrimmedString(record.altText).slice(0, 160)
+    const caption = toTrimmedString(record.caption).slice(0, 220)
+    if (imagePrompt.length < 20 || altText.length < 10 || caption.length < 10) return null
+
+    return { imagePrompt, altText, caption }
 }
 
 // ---------------------------------------------------------------------------

@@ -48,6 +48,15 @@ function getErrorMessage(error: unknown, fallback: string): string {
         const payload = error.payload
         if (payload && typeof payload === "object" && !Array.isArray(payload)) {
             const record = payload as Record<string, unknown>
+            const details =
+                record.details && typeof record.details === "object" && !Array.isArray(record.details)
+                    ? (record.details as Record<string, unknown>)
+                    : null
+            // Backend sends {error, errorCode, details:{reason, snippet, kind}} —
+            // surface the actionable reason + snippet, not just "Gagal diproses AI".
+            const reason = details && typeof details.reason === "string" ? details.reason.trim() : ""
+            const snippet = details && typeof details.snippet === "string" ? details.snippet.trim() : ""
+            if (reason) return snippet ? `${reason} — Cuplikan: ${snippet.slice(0, 200)}` : reason
             if (typeof record.error === "string" && record.error.trim()) return record.error
         }
         if (error.message.trim()) return error.message
