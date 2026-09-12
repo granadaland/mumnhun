@@ -34,7 +34,7 @@ export function MobileStickyBar() {
     return (
         <aside
             aria-label="Aksi Cepat Sewa Freezer ASI"
-            className={`md:hidden fixed bottom-0 left-0 right-0 z-50 p-3 bg-white/95 backdrop-blur-xl border-t border-stone-200/80 shadow-[0_-8px_24px_rgba(56,40,33,0.08)] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+            className={`md:hidden fixed bottom-0 left-0 right-0 z-50 pt-2.5 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-white/95 backdrop-blur-xl border-t border-stone-200/80 shadow-[0_-8px_30px_rgba(56,40,33,0.1)] transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] ${
                 isVisible
                     ? "translate-y-0 opacity-100 pointer-events-auto"
                     : "translate-y-full opacity-0 pointer-events-none"
@@ -44,9 +44,9 @@ export function MobileStickyBar() {
                 <Link
                     href="/#pricing"
                     onClick={handleCekPaketClick}
-                    className="flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-2xl bg-[#FCFAF7] border border-stone-200/80 text-[#382821] font-semibold text-xs active:scale-[0.98] transition-transform text-center shadow-xs"
+                    className="flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-2xl bg-[#FCFAF7] hover:bg-[#F5EDE5] border border-stone-200/80 text-[#382821] font-semibold text-xs active:scale-[0.96] transition-transform text-center shadow-xs"
                 >
-                    <Tag className="w-3.5 h-3.5 text-[#C87860] shrink-0" />
+                    <Tag className="w-3.5 h-3.5 text-[#C87860] shrink-0" strokeWidth={2} />
                     <span className="truncate">Cek Paket</span>
                 </Link>
 
@@ -54,9 +54,9 @@ export function MobileStickyBar() {
                     href={WHATSAPP_LINK}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-[2] flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-gradient-to-r from-[#2E5650] to-[#244742] text-white font-bold text-xs shadow-md shadow-[#2E5650]/20 active:scale-[0.98] transition-transform text-center animate-shimmer"
+                    className="flex-[2] flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-gradient-to-r from-[#2E5650] to-[#244742] text-white font-bold text-xs shadow-md shadow-[#2E5650]/25 active:scale-[0.96] transition-transform text-center animate-shimmer"
                 >
-                    <MessageCircle className="w-4 h-4 fill-white/20 shrink-0" />
+                    <MessageCircle className="w-4 h-4 fill-white/20 shrink-0" strokeWidth={2} />
                     <span className="truncate">Sewa via WhatsApp</span>
                 </Link>
             </div>

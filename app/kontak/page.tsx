@@ -81,10 +81,10 @@ export default function KontakPage() {
                             <span className="w-1.5 h-1.5 rounded-full bg-[#2E5650]" />
                             <span>Bantuan & Layanan Pelanggan</span>
                         </div>
-                        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#281E19] leading-tight tracking-tight">
-                            Kami Siap Membantu <span className="text-[#2E5650]">Kebutuhan ASI Mums</span>
+                        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#281E19] leading-tight tracking-tight text-balance">
+                            Kami Siap Membantu <span className="font-serif italic font-normal text-[#2E5650]">Kebutuhan ASI Mums</span>
                         </h1>
-                        <p className="text-sm sm:text-base md:text-lg text-[#382821]/75 max-w-2xl mx-auto leading-relaxed">
+                        <p className="text-sm sm:text-base md:text-lg text-[#382821]/75 max-w-2xl mx-auto leading-relaxed text-pretty">
                             Punya pertanyaan seputar kapasitas unit, ketersediaan, atau biaya sewa? Tim Mum &apos;n Hun siap memberikan solusi cepat dan terpercaya.
                         </p>
                     </div>
@@ -92,10 +92,10 @@ export default function KontakPage() {
                     {/* 3 Top Fast Contact Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mt-10 sm:mt-12">
                         {/* WhatsApp Fast CS */}
-                        <div className="bg-white p-6 rounded-3xl border border-stone-200/80 shadow-2xs hover:shadow-md hover:border-[#2E5650]/40 transition-all group flex flex-col justify-between">
+                        <div className="bg-white p-6 rounded-3xl border border-stone-200/80 shadow-2xs hover:shadow-md hover:border-[#2E5650]/40 transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 group flex flex-col justify-between">
                             <div className="flex items-start gap-4">
-                                <div className="w-12 h-12 rounded-2xl bg-[#2E5650]/10 border border-[#2E5650]/15 flex items-center justify-center text-[#2E5650] shrink-0 group-hover:scale-110 transition-transform">
-                                    <MessageCircle className="w-6 h-6" />
+                                <div className="w-12 h-12 rounded-2xl bg-[#2E5650]/10 border border-[#2E5650]/15 flex items-center justify-center text-[#2E5650] shrink-0 group-hover:scale-105 transition-transform">
+                                    <MessageCircle className="w-6 h-6" strokeWidth={1.8} />
                                 </div>
                                 <div className="space-y-1">
                                     <h3 className="font-bold text-[#281E19] text-base">WhatsApp CS</h3>
@@ -110,19 +110,19 @@ export default function KontakPage() {
                                     href={WHATSAPP_LINK}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-xs font-bold text-[#2E5650] hover:text-[#1D3A36] flex items-center justify-between group/link"
+                                    className="text-xs font-bold text-[#2E5650] hover:text-[#1D3A36] flex items-center justify-between group/link active:scale-[0.96]"
                                 >
                                     <span>Chat WhatsApp Sekarang</span>
-                                    <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover/link:translate-x-1" />
+                                    <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover/link:translate-x-1" strokeWidth={2} />
                                 </Link>
                             </div>
                         </div>
 
                         {/* Email Official */}
-                        <div className="bg-white p-6 rounded-3xl border border-stone-200/80 shadow-2xs hover:shadow-md hover:border-[#C87860]/40 transition-all group flex flex-col justify-between">
+                        <div className="bg-white p-6 rounded-3xl border border-stone-200/80 shadow-2xs hover:shadow-md hover:border-[#C87860]/40 transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 group flex flex-col justify-between">
                             <div className="flex items-start gap-4">
-                                <div className="w-12 h-12 rounded-2xl bg-[#C87860]/10 border border-[#C87860]/15 flex items-center justify-center text-[#C87860] shrink-0 group-hover:scale-110 transition-transform">
-                                    <Mail className="w-6 h-6" />
+                                <div className="w-12 h-12 rounded-2xl bg-[#C87860]/10 border border-[#C87860]/15 flex items-center justify-center text-[#C87860] shrink-0 group-hover:scale-105 transition-transform">
+                                    <Mail className="w-6 h-6" strokeWidth={1.8} />
                                 </div>
                                 <div className="space-y-1">
                                     <h3 className="font-bold text-[#281E19] text-base">Email Resmi</h3>
@@ -135,19 +135,19 @@ export default function KontakPage() {
                             <div className="pt-4 mt-2 border-t border-stone-100">
                                 <a
                                     href={`mailto:${CONTACT_INFO.email}`}
-                                    className="text-xs font-bold text-[#C87860] hover:text-[#A95D47] flex items-center justify-between group/link"
+                                    className="text-xs font-bold text-[#C87860] hover:text-[#A95D47] flex items-center justify-between group/link active:scale-[0.96]"
                                 >
                                     <span>Kirim Pesan Email</span>
-                                    <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover/link:translate-x-1" />
+                                    <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover/link:translate-x-1" strokeWidth={2} />
                                 </a>
                             </div>
                         </div>
 
                         {/* Work Hours */}
-                        <div className="bg-white p-6 rounded-3xl border border-stone-200/80 shadow-2xs hover:shadow-md hover:border-stone-300 transition-all group flex flex-col justify-between">
+                        <div className="bg-white p-6 rounded-3xl border border-stone-200/80 shadow-2xs hover:shadow-md hover:border-stone-300 transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 group flex flex-col justify-between">
                             <div className="flex items-start gap-4">
-                                <div className="w-12 h-12 rounded-2xl bg-stone-100 border border-stone-200/60 flex items-center justify-center text-[#281E19] shrink-0 group-hover:scale-110 transition-transform">
-                                    <Clock className="w-6 h-6 text-[#2E5650]" />
+                                <div className="w-12 h-12 rounded-2xl bg-stone-100 border border-stone-200/60 flex items-center justify-center text-[#281E19] shrink-0 group-hover:scale-105 transition-transform">
+                                    <Clock className="w-6 h-6 text-[#2E5650]" strokeWidth={1.8} />
                                 </div>
                                 <div className="space-y-1">
                                     <h3 className="font-bold text-[#281E19] text-base">Jam Operasional</h3>
@@ -158,7 +158,7 @@ export default function KontakPage() {
                                 </div>
                             </div>
                             <div className="pt-4 mt-2 border-t border-stone-100 flex items-center gap-1.5 text-xs text-[#2E5650] font-medium">
-                                <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                                <ShieldCheck className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} />
                                 <span>Layanan Siap Antar Se-Jabodetabek</span>
                             </div>
                         </div>
@@ -177,10 +177,10 @@ export default function KontakPage() {
                                     <Sparkles className="w-3.5 h-3.5" />
                                     <span>Formulir Kontak</span>
                                 </div>
-                                <h2 className="text-2xl sm:text-3xl font-bold text-[#281E19] tracking-tight">
+                                <h2 className="text-2xl sm:text-3xl font-bold text-[#281E19] tracking-tight text-balance">
                                     Kirim Pesan Langsung
                                 </h2>
-                                <p className="text-xs sm:text-sm text-[#382821]/70 leading-relaxed">
+                                <p className="text-xs sm:text-sm text-[#382821]/70 leading-relaxed text-pretty">
                                     Silakan isi data di bawah ini. Tim kami akan segera menanggapi konsultasi Mums.
                                 </p>
                             </div>
@@ -193,7 +193,7 @@ export default function KontakPage() {
                                         </label>
                                         <Input
                                             placeholder="Contoh: Bunda Sarah"
-                                            className="h-11 sm:h-12 rounded-xl border-stone-200 bg-stone-50/60 focus:bg-white focus:border-[#2E5650] text-xs sm:text-sm transition-colors"
+                                            className="h-11 sm:h-12 rounded-xl border-stone-200 bg-[#FCFAF7]/60 focus:bg-white focus:border-[#2E5650] text-base sm:text-sm transition-colors"
                                             required
                                         />
                                     </div>
@@ -204,7 +204,7 @@ export default function KontakPage() {
                                         <Input
                                             type="tel"
                                             placeholder="0812-xxxx-xxxx"
-                                            className="h-11 sm:h-12 rounded-xl border-stone-200 bg-stone-50/60 focus:bg-white focus:border-[#2E5650] text-xs sm:text-sm transition-colors"
+                                            className="h-11 sm:h-12 rounded-xl border-stone-200 bg-[#FCFAF7]/60 focus:bg-white focus:border-[#2E5650] text-base sm:text-sm transition-colors"
                                             required
                                         />
                                     </div>
@@ -218,7 +218,7 @@ export default function KontakPage() {
                                         <Input
                                             type="email"
                                             placeholder="email@contoh.com"
-                                            className="h-11 sm:h-12 rounded-xl border-stone-200 bg-stone-50/60 focus:bg-white focus:border-[#2E5650] text-xs sm:text-sm transition-colors"
+                                            className="h-11 sm:h-12 rounded-xl border-stone-200 bg-[#FCFAF7]/60 focus:bg-white focus:border-[#2E5650] text-base sm:text-sm transition-colors"
                                         />
                                     </div>
                                     <div className="space-y-1.5">
@@ -227,7 +227,7 @@ export default function KontakPage() {
                                         </label>
                                         <Input
                                             placeholder="Contoh: Jakarta Selatan, Depok, dll."
-                                            className="h-11 sm:h-12 rounded-xl border-stone-200 bg-stone-50/60 focus:bg-white focus:border-[#2E5650] text-xs sm:text-sm transition-colors"
+                                            className="h-11 sm:h-12 rounded-xl border-stone-200 bg-[#FCFAF7]/60 focus:bg-white focus:border-[#2E5650] text-base sm:text-sm transition-colors"
                                             required
                                         />
                                     </div>
@@ -240,16 +240,16 @@ export default function KontakPage() {
                                     <textarea
                                         placeholder="Tuliskan kebutuhan paket sewa (1/3/6 bulan) atau pertanyaan Mums di sini..."
                                         rows={4}
-                                        className="w-full rounded-xl border border-stone-200 bg-stone-50/60 focus:bg-white p-3.5 sm:p-4 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#2E5650]/20 focus:border-[#2E5650] transition-all resize-none"
+                                        className="w-full rounded-xl border border-stone-200 bg-[#FCFAF7]/60 focus:bg-white p-3.5 sm:p-4 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#2E5650]/20 focus:border-[#2E5650] transition-all resize-none"
                                         required
                                     />
                                 </div>
 
                                 <Button
                                     type="submit"
-                                    className="w-full h-11 sm:h-12 rounded-full bg-[#2E5650] hover:bg-[#244742] text-white font-bold text-sm sm:text-base shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                                    className="w-full h-11 sm:h-12 rounded-full bg-[#2E5650] hover:bg-[#244742] text-white font-bold text-sm sm:text-base shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 active:scale-[0.96] animate-shimmer"
                                 >
-                                    <Send className="w-4 h-4" />
+                                    <Send className="w-4 h-4" strokeWidth={2} />
                                     <span>Kirim Formulir Konsultasi</span>
                                 </Button>
                             </form>

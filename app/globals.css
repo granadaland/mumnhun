@@ -104,38 +104,38 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --radius: 0.75rem;
+  --background: #FCFAF7;
+  --foreground: #281E19;
+  --card: #FFFFFF;
+  --card-foreground: #281E19;
+  --popover: #FFFFFF;
+  --popover-foreground: #281E19;
+  --primary: #2E5650;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F5EDE5;
+  --secondary-foreground: #281E19;
+  --muted: #F5EDE5;
+  --muted-foreground: #7A6854;
+  --accent: #EFE8DF;
+  --accent-foreground: #2E5650;
+  --destructive: #C84B31;
+  --border: rgba(212, 188, 168, 0.35);
+  --input: rgba(212, 188, 168, 0.5);
+  --ring: #2E5650;
+  --chart-1: #2E5650;
+  --chart-2: #C87860;
+  --chart-3: #7FBAB2;
+  --chart-4: #D4BCA8;
+  --chart-5: #3E3228;
+  --sidebar: #FAF7F4;
+  --sidebar-foreground: #281E19;
+  --sidebar-primary: #2E5650;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F5EDE5;
+  --sidebar-accent-foreground: #2E5650;
+  --sidebar-border: rgba(212, 188, 168, 0.35);
+  --sidebar-ring: #2E5650;
 }
 
 .dark {
@@ -417,4 +417,30 @@ p {
   );
   transform: translateX(-100%);
   animation: subtle-shimmer 3.5s infinite;
+}
+
+/* Typography & Better-UI Utilities */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.editorial-serif {
+  font-family: var(--font-serif), "Playfair Display", Georgia, serif;
+}
+
+/* Tactile press feedback compliant with better-ui (0.96 scale) */
+.tactile-press {
+  transition-property: transform;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.tactile-press:active {
+  transform: scale(0.96);
+}
+
+/* Image depth outline for consistent 1px contrast against light surfaces */
+.image-depth-outline {
+  outline: 1px solid rgba(40, 30, 25, 0.08);
+  outline-offset: -1px;
 }

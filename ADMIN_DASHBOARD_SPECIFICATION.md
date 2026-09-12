@@ -1,4 +1,5 @@
 # SPESIFIKASI LENGKAP UI/UX, SISTEM, DAN ARSITEKTUR ADMIN DASHBOARD
+
 > **Dokumen Panduan Duplikasi Sistem & Desain Dashboard ke Proyek Baru**
 > *Tech Stack Target: Next.js (App Router), TypeScript, Tailwind CSS v4, Prisma ORM, PostgreSQL, Tiptap, NextAuth v5.*
 
@@ -8,7 +9,8 @@
 
 Dashboard Admin ini dirancang dengan gaya **Warm Luxury Editorial / Premium Nurturing Aesthetic**, menggabungkan manajemen konten CMS modern (Blog, Halaman, Kategori, Media) dengan ekosistem **AI Automation Suite** (Rotary Key Pool, Dedicated Task Models, SEO Scanner, Content Audit & 30-Day Editorial Calendar, Internal Link Suggester, dan External Agent API Tokens).
 
-### Fitur Utama:
+### Fitur Utama
+
 1. **Core CMS**: Manajemen Artikel (Post) dengan Rich Text Editor (Tiptap v3), Kategori, Tag, Halaman Statis, Media Manager (Cloudinary / Direct Upload), dan Hero Section Builder.
 2. **SEO Suite**: Metadata preview, Focus Keyword Analyzer, XML Sitemap / Robots management, Schema (JSON-LD) Generator per entitas.
 3. **AI Rotary Key Pool & Dedicated Models**: Multi-key Gemini & OpenAI-compatible failover pool, auto-load balancing, serta dedicated model routing per peran (`scanning`, `text`, `image`).
@@ -24,7 +26,7 @@ Dashboard Admin ini dirancang dengan gaya **Warm Luxury Editorial / Premium Nurt
 Dashboard ini mengusung palet warna hangat, ramah, dan profesional, menghindari warna generik terang:
 
 | Nama Token | Hex Code | Penggunaan di UI |
-|---|---|---|
+| --- | --- | --- |
 | **Background Root** | `#F9F6F0` (Warm Cream / Linen) | Background seluruh halaman dashboard |
 | **Card / Surface** | `#FFFFFF` (Pure White) | Card container, sidebar, form panel, popover |
 | **Foreground Text** | `#0F0A09` (Charcoal Espresso) | Heading, teks utama, angka statistik |
@@ -33,10 +35,11 @@ Dashboard ini mengusung palet warna hangat, ramah, dan profesional, menghindari 
 | **Primary Brand** | `#466A68` (Forest Sage / Deep Teal) | Tombol aksi utama, active menu indicator, badge AI |
 | **Success / Live** | `#059669` / `bg-emerald-100` | Badge status "Published / Live", tombol simpan |
 | **Warning / Draft** | `#D97706` / `bg-amber-100` | Badge status "Draft", peringatan |
-| **Info / Scheduled**| `#2563EB` / `bg-blue-100` | Badge status "Scheduled", statistik jadwal |
+| **Info / Scheduled** | `#2563EB` / `bg-blue-100` | Badge status "Scheduled", statistik jadwal |
 | **Danger / Error** | `#DC2626` / `bg-rose-100` | Tombol Hapus, badge error, status gagal |
 
 ### 2.2 Tipografi & Font
+
 - **Primary / Body Sans**: `Inter`, `-apple-system`, `BlinkMacSystemFont`, `"Segoe UI"`, `Roboto`, `sans-serif`.
 - **Display / Editorial Serif**: `"Playfair Display"`, `Georgia`, `serif` (digunakan pada judul hero/publikasi).
 - **Scale Hierarchy**:
@@ -47,6 +50,7 @@ Dashboard ini mengusung palet warna hangat, ramah, dan profesional, menghindari 
   - Body Text: `text-sm font-medium text-[#0F0A09]`
 
 ### 2.3 Aturan Komponen & Micro-Interactions
+
 1. **Cards**: `bg-white border border-[#D4BCAA]/20 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300`
 2. **Stat Cards**: Icon dengan background pastel (`w-11 h-11 rounded-xl flex items-center justify-center`), dilengkapi efek zoom & rotasi halus saat hover (`group-hover:scale-[1.15] group-hover:rotate-6`).
 3. **Buttons**:
@@ -61,7 +65,7 @@ Dashboard ini mengusung palet warna hangat, ramah, dan profesional, menghindari 
 
 ## 3. STRUKTUR NAVIGASI & ARSITEKTUR HALAMAN
 
-```
+```text
 /admin
 ├── /admin (Overview Dashboard - Quick Stats, Recent Posts, Quick Actions)
 ├── /admin/monitoring (System health, API key statuses, error logs)
@@ -754,6 +758,7 @@ export default async function AdminDashboardPage() {
 Jika Anda ingin mereplikasi dashboard ini ke project baru, ikuti urutan berikut:
 
 ### Langkah 1: Install Dependencies
+
 ```bash
 npm install @prisma/client @radix-ui/react-slot @radix-ui/react-avatar clsx tailwind-merge lucide-react next-auth@beta bcryptjs zod
 npm install @tiptap/react @tiptap/starter-kit @tiptap/extension-heading @tiptap/extension-image @tiptap/extension-link @tiptap/extension-table @tiptap/extension-text-align @tiptap/extension-underline
@@ -762,6 +767,7 @@ npm install -D prisma @tailwindcss/postcss tailwindcss tw-animate-css typescript
 ```
 
 ### Langkah 2: Setup Environment Variables (`.env`)
+
 ```env
 DATABASE_URL="postgresql://user:password@localhost:5432/mydb?schema=public"
 AUTH_SECRET="your-super-secret-nextauth-key-32-chars-min"
@@ -776,15 +782,19 @@ CLOUDINARY_API_SECRET="your-api-secret"
 ```
 
 ### Langkah 3: Setup Prisma & Database
+
 1. Letakkan isi skema dari **Bagian 5** ke `prisma/schema.prisma`.
 2. Jalankan migrasi:
+
    ```bash
    npx prisma db push
    npx prisma generate
    ```
 
 ### Langkah 4: Copy Core Modules & Components
+
 Salin direktori berikut dari project ini:
+
 - `components/admin/` (Sidebar, Post Editor, Tiptap, Cloudinary Uploader, SEO Scanner)
 - `lib/security/` (`admin.ts`, `csrf.ts`, `rate-limit.ts`, `api-key-crypto.ts`)
 - `lib/ai/` (`key-rotary.ts`, `provider.ts`, `openai-compatible.ts`)

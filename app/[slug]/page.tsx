@@ -262,34 +262,34 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
     }
 
     return (
-      <main className="min-h-screen bg-gradient-to-b from-[#FFFBF7] to-white">
+      <main className="min-h-screen bg-gradient-to-b from-[#FCFAF7] via-[#F7F3EE]/50 to-white">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageJsonLd) }}
         />
 
-        <section className="pt-32 pb-6 px-6 border-b border-gray-100">
+        <section className="pt-32 pb-6 px-4 sm:px-6 border-b border-stone-200/70">
           <Container className="max-w-4xl">
             <div className="flex items-center gap-2 text-sm text-[#382821]/60">
-              <Link href="/" className="hover:text-[#466A68] transition-colors">
+              <Link href="/" className="hover:text-[#2E5650] transition-colors">
                 Home
               </Link>
               <span>/</span>
-              <span className="text-[#382821] truncate max-w-[260px]">{page.title}</span>
+              <span className="text-[#281E19] font-medium truncate max-w-[260px]">{page.title}</span>
             </div>
           </Container>
         </section>
 
-        <Container className="max-w-4xl py-12 px-6">
-          <article className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 md:p-10">
-            <header className="mb-8 pb-6 border-b border-gray-100">
-              <h1 className="text-3xl md:text-4xl font-bold text-[#382821] leading-tight">
+        <Container className="max-w-4xl py-12 px-4 sm:px-6">
+          <article className="bg-white rounded-3xl border border-stone-200/80 shadow-[0_4px_25px_rgba(40,30,25,0.04)] p-6 md:p-10">
+            <header className="mb-8 pb-6 border-b border-stone-100">
+              <h1 className="text-3xl md:text-4xl font-bold text-[#281E19] leading-tight text-balance">
                 {page.title}
               </h1>
             </header>
 
             <div
-              className="article-content prose prose-lg max-w-none prose-headings:text-[#382821] prose-p:text-[#382821]/80 prose-a:text-[#466A68]"
+              className="article-content prose prose-lg max-w-[68ch] prose-headings:text-[#281E19] prose-p:text-[#382821]/80 prose-a:text-[#2E5650]"
               dangerouslySetInnerHTML={{ __html: sanitizedContent }}
             />
           </article>
@@ -424,7 +424,7 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-[#FFFBF7] to-white">
+    <main className="min-h-screen bg-gradient-to-b from-[#FCFAF7] via-[#F7F3EE]/50 to-white">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
@@ -439,18 +439,18 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
       />
 
       {/* Breadcrumb Navigation */}
-      <section className="pt-32 pb-6 px-6 border-b border-gray-100">
+      <section className="pt-32 pb-6 px-4 sm:px-6 border-b border-stone-200/70">
         <Container className="max-w-7xl">
           <div className="flex items-center gap-2 text-sm text-[#382821]/60">
-            <Link href="/" className="hover:text-[#466A68] transition-colors">
+            <Link href="/" className="hover:text-[#2E5650] transition-colors">
               Home
             </Link>
             <span>/</span>
-            <Link href="/blog" className="hover:text-[#466A68] transition-colors">
+            <Link href="/blog" className="hover:text-[#2E5650] transition-colors">
               Blog
             </Link>
             <span>/</span>
-            <span className="text-[#382821] truncate max-w-[200px]">{post.title}</span>
+            <span className="text-[#281E19] font-medium truncate max-w-[200px]">{post.title}</span>
           </div>
         </Container>
       </section>
@@ -461,15 +461,15 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
           <article className="lg:col-span-8">
             {/* Article Header */}
             <div className="mb-8">
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#382821] mb-6 leading-tight">
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#281E19] mb-6 leading-tight text-balance">
                 {post.title}
               </h1>
 
               {/* Meta Info */}
-              <div className="flex flex-wrap items-center gap-4 text-[#382821]/60 pb-6 border-b border-gray-100">
+              <div className="flex flex-wrap items-center gap-4 text-[#382821]/65 pb-6 border-b border-stone-200/70 text-xs sm:text-sm">
                 {post.publishedAt && (
                   <span className="flex items-center gap-2">
-                    <Calendar size={16} />
+                    <Calendar size={15} className="text-[#2E5650]" />
                     {new Date(post.publishedAt).toLocaleDateString('id-ID', {
                       day: 'numeric',
                       month: 'long',
@@ -478,21 +478,21 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
                   </span>
                 )}
                 <span className="flex items-center gap-2">
-                  <Clock size={16} />
+                  <Clock size={15} className="text-[#2E5650]" />
                   {readingTime} min read
                 </span>
                 {post.focusKeyword && (
-                  <span className="flex items-center gap-2 text-[#466A68] bg-[#466A68]/10 px-3 py-1 rounded-full text-xs font-medium">
-                    <Tag size={14} />
-                    Fokus topik: {post.focusKeyword}
+                  <span className="flex items-center gap-2 text-[#2E5650] bg-[#2E5650]/10 border border-[#2E5650]/15 px-3 py-1 rounded-full text-xs font-semibold">
+                    <Tag size={13} />
+                    Fokus: {post.focusKeyword}
                   </span>
                 )}
               </div>
             </div>
 
-            {/* Hero Image (first image from content) */}
+            {/* Hero Image */}
             {heroImageUrl && (
-              <div className="relative aspect-[16/9] rounded-2xl overflow-hidden shadow-xl mb-10">
+              <div className="relative aspect-[16/9] rounded-3xl overflow-hidden shadow-lg border border-stone-200/80 ring-1 ring-[#281E19]/5 mb-10 bg-[#F7F3EE]">
                 <Image
                   src={heroImageUrl}
                   alt={post.title}
@@ -632,18 +632,18 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
             )}
 
             {/* CTA Section */}
-            <div className="mt-12 p-8 rounded-3xl bg-gradient-to-r from-[#466A68] to-[#2F4A48] text-white text-center">
-              <h3 className="text-2xl font-bold mb-3">
+            <div className="mt-12 p-8 sm:p-10 rounded-3xl bg-gradient-to-br from-[#2E5650] to-[#1F3E3A] text-white text-center shadow-xl">
+              <h3 className="text-2xl sm:text-3xl font-bold mb-3 text-balance">
                 Butuh Freezer ASI Berkualitas?
               </h3>
-              <p className="text-white/90 mb-6">
-                Sewa freezer ASI premium dari {SITE_NAME}. Steril, hemat energi, dan siap diantar!
+              <p className="text-white/85 mb-6 max-w-lg mx-auto text-sm sm:text-base text-pretty">
+                Sewa freezer ASI premium dari {SITE_NAME}. Steril food-grade, hemat listrik, dan siap diantar langsung ke rumah Anda!
               </p>
               <Link
                 href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Halo Mum 'n Hun, saya mau tanya tentang sewa freezer ASI dari mumnhun.id")}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-white text-[#466A68] px-8 py-4 rounded-full font-bold hover:shadow-xl transition-all hover:-translate-y-1"
+                className="inline-flex items-center gap-2 bg-white text-[#2E5650] hover:bg-[#FCFAF7] px-8 py-4 rounded-full font-bold text-sm sm:text-base shadow-lg transition-all active:scale-[0.96]"
               >
                 Hubungi Kami via WhatsApp
               </Link>

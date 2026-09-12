@@ -27,12 +27,12 @@ export function FaqAccordion({ faqs, className }: FaqAccordionProps) {
                 <AccordionItem
                     key={index}
                     value={`item-${index}`}
-                    className="border rounded-2xl bg-white/90 border-stone-200/80 data-[state=open]:border-[#2E5650]/40 data-[state=open]:shadow-md data-[state=open]:shadow-[#2E5650]/5 hover:border-stone-300 transition-all duration-200 overflow-hidden"
+                    className="border rounded-2xl bg-white/95 border-stone-200/80 data-[state=open]:border-[#2E5650]/40 data-[state=open]:shadow-md data-[state=open]:shadow-[#2E5650]/5 hover:border-stone-300/90 transition-[border-color,box-shadow] duration-200 overflow-hidden"
                 >
-                    <AccordionTrigger className="text-left font-bold text-sm sm:text-base hover:no-underline px-5 py-4 text-[#281E19] data-[state=open]:text-[#2E5650] [&[data-state=open]>svg]:text-[#2E5650] [&[data-state=open]>svg]:rotate-180 [&>svg]:transition-transform [&>svg]:duration-200">
+                    <AccordionTrigger className="text-left font-bold text-sm sm:text-base hover:no-underline px-5 py-4 text-[#281E19] data-[state=open]:text-[#2E5650] [&[data-state=open]>svg]:text-[#2E5650] [&[data-state=open]>svg]:rotate-180 [&>svg]:transition-transform [&>svg]:duration-200 text-balance leading-snug">
                         {faq.question}
                     </AccordionTrigger>
-                    <AccordionContent className="px-5 pb-5 pt-0 text-[#382821]/75 leading-relaxed text-sm">
+                    <AccordionContent className="px-5 pb-5 pt-0 text-[#382821]/75 leading-relaxed text-sm text-pretty">
                         {faq.answer}
                     </AccordionContent>
                 </AccordionItem>

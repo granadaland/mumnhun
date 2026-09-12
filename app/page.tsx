@@ -367,13 +367,13 @@ export default async function HomePage() {
                 </span>
               </div>
 
-              {/* Strict Keyword-Optimized H1 */}
-              <h1 className="text-[1.55rem] xs:text-[1.75rem] sm:text-3xl md:text-4xl lg:text-[2.65rem] font-extrabold text-[#281E19] leading-[1.18] tracking-tight">
-                Sewa Freezer ASI & <span className="text-[#2E5650]">Rental Kulkas ASI</span> Jabodetabek
+              {/* Strict Keyword-Optimized H1 with Editorial Warmth */}
+              <h1 className="text-[1.65rem] xs:text-[1.85rem] sm:text-3xl md:text-4xl lg:text-[2.75rem] font-extrabold text-[#281E19] leading-[1.14] tracking-tight text-balance">
+                Sewa Freezer ASI & <span className="font-serif italic font-normal text-[#2E5650]">Rental Kulkas ASI</span> Jabodetabek
               </h1>
 
-              {/* Subhead / Caption pada Desktop (di mobile ditampilkan pada order-3 di bawah gambar) */}
-              <p className="hidden lg:block text-base md:text-lg font-semibold text-[#2E5650]">
+              {/* Subhead / Caption pada Desktop */}
+              <p className="hidden lg:block text-base md:text-lg font-semibold text-[#2E5650] text-pretty">
                 Solusi Higienis & Aman untuk Penyimpanan Stok ASI Perah
               </p>
             </div>
@@ -447,7 +447,7 @@ export default async function HomePage() {
               <div className="flex flex-col sm:flex-row items-center gap-2.5 sm:gap-3 justify-center lg:justify-start w-full max-w-md mx-auto lg:mx-0">
                 <Button
                   size="lg"
-                  className="w-full sm:w-auto bg-gradient-to-r from-[#2E5650] to-[#244742] hover:from-[#244742] hover:to-[#1D3A36] text-white px-6 sm:px-7 py-3 sm:py-3.5 rounded-full font-bold text-sm sm:text-base shadow-md shadow-[#2E5650]/20 hover:shadow-lg hover:shadow-[#2E5650]/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 animate-shimmer"
+                  className="w-full sm:w-auto bg-gradient-to-r from-[#2E5650] to-[#244742] hover:from-[#244742] hover:to-[#1D3A36] text-white px-6 sm:px-7 py-3 sm:py-3.5 rounded-full font-bold text-sm sm:text-base shadow-md shadow-[#2E5650]/20 hover:shadow-lg hover:shadow-[#2E5650]/30 active:scale-[0.96] transition-all flex items-center justify-center gap-2 animate-shimmer"
                   asChild
                 >
                   <Link
@@ -456,16 +456,16 @@ export default async function HomePage() {
                     rel="noopener noreferrer"
                     aria-label="Konsultasi sewa freezer ASI via WhatsApp"
                   >
-                    <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 fill-white/20 shrink-0" />
+                    <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 fill-white/20 shrink-0" strokeWidth={2} />
                     <span>Sewa via WhatsApp</span>
-                    <ArrowRight className="w-4 h-4 ml-0.5 shrink-0" />
+                    <ArrowRight className="w-4 h-4 ml-0.5 shrink-0" strokeWidth={2} />
                   </Link>
                 </Button>
 
                 <Button
                   size="lg"
                   variant="outline"
-                  className="w-full sm:w-auto bg-white hover:bg-stone-50 border border-stone-300/90 text-[#281E19] px-6 sm:px-7 py-3 sm:py-3.5 rounded-full font-bold text-sm sm:text-base shadow-2xs hover:shadow-sm active:scale-[0.98] transition-all text-center flex items-center justify-center"
+                  className="w-full sm:w-auto bg-white hover:bg-stone-50 border border-stone-300/90 text-[#281E19] px-6 sm:px-7 py-3 sm:py-3.5 rounded-full font-bold text-sm sm:text-base shadow-2xs hover:shadow-sm active:scale-[0.96] transition-all text-center flex items-center justify-center"
                   asChild
                 >
                   <Link href="#pricing" aria-label="Lihat harga sewa freezer ASI bulanan">
@@ -483,7 +483,7 @@ export default async function HomePage() {
                 <span className="text-stone-300">•</span>
                 <div className="flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-[#2E5650] shrink-0" />
-                  <span>Garansi 24 Jam</span>
+                  <span>Garansi Unit</span>
                 </div>
                 <span className="text-stone-300">•</span>
                 <div className="flex items-center gap-1.5">
@@ -495,7 +495,7 @@ export default async function HomePage() {
 
             {/* 5. Deskripsi (Paling Bawah di mobile, Di bawah H1/Caption di desktop) */}
             <div className="order-5 lg:col-span-7 lg:row-start-2 flex flex-col items-center lg:items-start text-center lg:text-left w-full pt-1 lg:pt-0">
-              <p className="text-xs sm:text-sm md:text-base text-[#382821]/80 leading-relaxed max-w-xl mx-auto lg:mx-0">
+              <p className="text-xs sm:text-sm md:text-base text-[#382821]/80 leading-relaxed max-w-xl mx-auto lg:mx-0 text-pretty">
                 Layanan <strong className="text-[#281E19] font-semibold">sewa freezer ASI terdekat</strong> untuk area Jakarta, Depok, Tangerang, Bekasi, dan Bogor. Unit steril food-grade, hemat listrik, suhu stabil (-20°C), dan siap antar langsung ke rumah Anda.
               </p>
             </div>
@@ -510,15 +510,15 @@ export default async function HomePage() {
         <Container>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 text-center">
             <div className="p-2 sm:p-3">
-              <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-[#2E5650]">2010</p>
+              <p className="tabular-nums text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-[#2E5650]">2010</p>
               <p className="text-xs sm:text-sm text-[#382821]/70 font-medium mt-1">Berdiri Sejak</p>
             </div>
             <div className="p-2 sm:p-3 border-l border-stone-200/60">
-              <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-[#281E19]">5.000+</p>
+              <p className="tabular-nums text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-[#281E19]">5.000+</p>
               <p className="text-xs sm:text-sm text-[#382821]/70 font-medium mt-1">Ibu Menyusui</p>
             </div>
             <div className="p-2 sm:p-3 border-l-0 md:border-l border-stone-200/60">
-              <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-[#C87860]">100%</p>
+              <p className="tabular-nums text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-[#C87860]">100%</p>
               <p className="text-xs sm:text-sm text-[#382821]/70 font-medium mt-1">Garansi Steril</p>
             </div>
             <div className="p-2 sm:p-3 border-l border-stone-200/60">
@@ -539,10 +539,10 @@ export default async function HomePage() {
               <MapPin className="w-3.5 h-3.5" />
               Cakupan Wilayah Pengantaran
             </div>
-            <h2 id="geo-coverage-heading" className="text-3xl md:text-4xl font-bold text-[#281E19] tracking-tight">
-              Area Layanan Sewa Freezer ASI Jakarta & Jabodetabek
+            <h2 id="geo-coverage-heading" className="text-3xl md:text-4xl font-bold text-[#281E19] tracking-tight text-balance">
+              Area Layanan Sewa Freezer ASI <span className="font-serif italic font-normal text-[#2E5650]">Jakarta & Jabodetabek</span>
             </h2>
-            <p className="text-sm md:text-base text-[#382821]/75 mt-3 leading-relaxed">
+            <p className="text-sm md:text-base text-[#382821]/75 mt-3 leading-relaxed text-pretty">
               Kami melayani pengiriman rental kulkas ASI langsung ke depan pintu rumah Anda di seluruh wilayah Jakarta, Depok, Tangerang, Tangerang Selatan, Bekasi, dan Bogor.
             </p>
             <Link
@@ -638,10 +638,10 @@ export default async function HomePage() {
               <span className="w-1.5 h-1.5 rounded-full bg-[#2E5650]" />
               <span>Layanan Terpercaya Sejak 2010</span>
             </div>
-            <h2 id="about-heading" className="text-2xl sm:text-3xl md:text-4xl lg:text-[2.5rem] font-bold text-[#281E19] leading-tight tracking-tight">
-              Spesialis Jasa Sewa Freezer ASI & <span className="text-[#2E5650]">Rental Kulkas ASI</span>
+            <h2 id="about-heading" className="text-2xl sm:text-3xl md:text-4xl lg:text-[2.5rem] font-bold text-[#281E19] leading-tight tracking-tight text-balance">
+              Spesialis Jasa Sewa Freezer ASI & <span className="font-serif italic font-normal text-[#2E5650]">Rental Kulkas ASI</span>
             </h2>
-            <p className="text-sm sm:text-base text-[#382821]/75 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-sm sm:text-base text-[#382821]/75 max-w-2xl mx-auto leading-relaxed text-pretty">
               Solusi higienis berstandar medis untuk menjaga kualitas setiap tetes ASI perah Mums tetap segar, bergizi, dan aman bagi Si Kecil.
             </p>
           </div>
@@ -741,7 +741,7 @@ export default async function HomePage() {
               <div className="pt-1">
                 <Button
                   size="sm"
-                  className="w-full bg-[#2E5650] hover:bg-[#244742] text-white rounded-full font-bold text-xs sm:text-sm py-3 shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2"
+                  className="w-full bg-[#2E5650] hover:bg-[#244742] text-white rounded-full font-bold text-xs sm:text-sm py-3 shadow-sm hover:shadow-md active:scale-[0.96] transition-all flex items-center justify-center gap-2"
                   asChild
                 >
                   <Link
@@ -750,9 +750,9 @@ export default async function HomePage() {
                     rel="noopener noreferrer"
                     aria-label="Konsultasi sewa freezer ASI dengan admin Mum 'n Hun"
                   >
-                    <MessageCircle className="w-4 h-4" />
+                    <MessageCircle className="w-4 h-4" strokeWidth={2} />
                     <span>Konsultasi Kebutuhan ASI Anda</span>
-                    <ArrowRight className="w-4 h-4 ml-0.5" />
+                    <ArrowRight className="w-4 h-4 ml-0.5" strokeWidth={2} />
                   </Link>
                 </Button>
               </div>
@@ -788,17 +788,17 @@ export default async function HomePage() {
                 >
                   <div className="flex items-center justify-between mb-6">
                     <div className="w-12 h-12 rounded-2xl bg-[#2E5650]/10 text-[#2E5650] flex items-center justify-center font-bold">
-                      <Icon className="w-6 h-6" />
+                      <Icon className="w-6 h-6" strokeWidth={1.8} />
                     </div>
-                    <span className="text-2xl font-black text-stone-200 font-serif">
+                    <span className="text-3xl font-light text-[#2E5650]/40 font-serif tabular-nums">
                       {step.step}
                     </span>
                   </div>
 
-                  <h3 className="text-lg font-bold text-[#281E19] mb-2 leading-snug">
+                  <h3 className="text-lg font-bold text-[#281E19] mb-2 leading-snug text-balance">
                     {step.title}
                   </h3>
-                  <p className="text-sm text-[#382821]/70 leading-relaxed">
+                  <p className="text-sm text-[#382821]/70 leading-relaxed text-pretty">
                     {step.description}
                   </p>
                 </div>
@@ -896,11 +896,11 @@ export default async function HomePage() {
                     </p>
                     <div className="flex items-baseline justify-center gap-1">
                       <span className="text-sm font-semibold text-stone-400">Rp</span>
-                      <span className="text-4xl font-extrabold text-[#281E19] tracking-tight">
+                      <span className="tabular-nums text-4xl font-extrabold text-[#281E19] tracking-tight">
                         {rupiahFormatter.format(pkg.price)}
                       </span>
                     </div>
-                    <p className="text-xs text-[#2E5650] font-semibold mt-1.5">
+                    <p className="tabular-nums text-xs text-[#2E5650] font-semibold mt-1.5">
                       ~Rp {rupiahFormatter.format(dailyPrice)} / hari
                     </p>
                   </div>
@@ -919,9 +919,9 @@ export default async function HomePage() {
 
                   {/* WhatsApp CTA Button */}
                   <Button
-                    className={`w-full py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-[0.98] ${
+                    className={`w-full py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-[0.96] ${
                       isPopular
-                        ? "bg-gradient-to-r from-[#2E5650] to-[#244742] hover:from-[#244742] hover:to-[#1D3A36] text-white shadow-md shadow-[#2E5650]/25"
+                        ? "bg-gradient-to-r from-[#2E5650] to-[#244742] hover:from-[#244742] hover:to-[#1D3A36] text-white shadow-md shadow-[#2E5650]/25 animate-shimmer"
                         : "bg-stone-100 hover:bg-[#2E5650] text-[#281E19] hover:text-white"
                     }`}
                     asChild
@@ -932,7 +932,7 @@ export default async function HomePage() {
                       rel="noopener noreferrer"
                       aria-label={`Pilih paket sewa ${pkg.duration} via WhatsApp`}
                     >
-                      <MessageCircle className="w-4 h-4 mr-2" />
+                      <MessageCircle className="w-4 h-4 mr-2" strokeWidth={2} />
                       Pilih Paket {pkg.duration}
                     </Link>
                   </Button>
@@ -1048,7 +1048,7 @@ export default async function HomePage() {
           <div className="pt-2 flex justify-center items-center w-full">
             <Button
               size="lg"
-              className="w-full sm:w-auto bg-white text-[#2E5650] hover:bg-[#FCFAF7] hover:text-[#1F3E3A] px-8 sm:px-10 py-4 rounded-full font-bold text-base shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 mx-auto"
+              className="w-full sm:w-auto bg-white text-[#2E5650] hover:bg-[#FCFAF7] hover:text-[#1F3E3A] px-8 sm:px-10 py-4 rounded-full font-bold text-base shadow-xl active:scale-[0.96] transition-all flex items-center justify-center gap-2 mx-auto"
               asChild
             >
               <Link
@@ -1057,7 +1057,7 @@ export default async function HomePage() {
                 rel="noopener noreferrer"
                 aria-label="Hubungi WhatsApp Mum 'n Hun sekarang"
               >
-                <MessageCircle className="w-5 h-5 fill-[#2E5650]/20" />
+                <MessageCircle className="w-5 h-5 fill-[#2E5650]/20" strokeWidth={2} />
                 <span>Hubungi Sekarang</span>
               </Link>
             </Button>
