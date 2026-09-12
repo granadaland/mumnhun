@@ -26,7 +26,7 @@ import {
     seoPackageOutputSchema,
     titleIdeasOutputSchema,
 } from "@/lib/ai/prompts"
-import { coerceToHtml, renderArticleHtml, renderOutlineHtml, salvageArticleOutputFromRaw, salvageExcerptFromRaw, salvageImageMetaFromRaw, salvageOutlineHtmlFromRaw, salvageSeoPackageFromRaw, salvageTitleIdeasFromRaw } from "@/lib/ai/article-format"
+import { coerceToHtml, renderArticleHtml, renderOutlineHtml, salvageArticleOutputFromRaw, salvageExcerptFromRaw, salvageImageMetaFromRaw, salvageOutlineFromTruncatedJson, salvageOutlineHtmlFromRaw, salvageSeoPackageFromRaw, salvageTitleIdeasFromRaw } from "@/lib/ai/article-format"
 
 /**
  * In-editor AI assistant.
@@ -123,16 +123,23 @@ function validationErrorJson(zodError: z.ZodError) {
     )
 }
 
-/** Per-action tuning. Long-form generation needs a larger budget and a longer timeout. */
+/**
+ * Per-action tuning. Long-form generation needs a larger budget and a longer timeout.
+ *
+ * Token budgets assume a REASONING model may share the completion budget between
+ * internal thinking and the final answer — so each budget = expected answer size +
+ * generous thinking headroom. A budget that only fits the answer gets truncated JSON
+ * (finish_reason "length"), which is exactly the outline failure we saw.
+ */
 const ACTION_TUNING: Record<AssistAction, { temperature: number; maxTokens: number; timeoutMs: number }> = {
-    generate_title: { temperature: 0.85, maxTokens: 1024, timeoutMs: 60_000 },
-    generate_excerpt: { temperature: 0.7, maxTokens: 1024, timeoutMs: 60_000 },
+    generate_title: { temperature: 0.85, maxTokens: 4096, timeoutMs: 90_000 },
+    generate_excerpt: { temperature: 0.7, maxTokens: 4096, timeoutMs: 90_000 },
     // Outline and full content go through slow free gateways; give them the same generous
     // budget the dashboard generator gets. Still clamped by resolveTextGenerationTimeoutMs.
-    generate_outline: { temperature: 0.6, maxTokens: 2048, timeoutMs: 150_000 },
-    generate_content: { temperature: 0.75, maxTokens: 8192, timeoutMs: 260_000 },
-    generate_seo: { temperature: 0.4, maxTokens: 2048, timeoutMs: 90_000 },
-    generate_image_meta: { temperature: 0.7, maxTokens: 1024, timeoutMs: 60_000 },
+    generate_outline: { temperature: 0.6, maxTokens: 8192, timeoutMs: 180_000 },
+    generate_content: { temperature: 0.75, maxTokens: 16384, timeoutMs: 260_000 },
+    generate_seo: { temperature: 0.4, maxTokens: 8192, timeoutMs: 120_000 },
+    generate_image_meta: { temperature: 0.7, maxTokens: 4096, timeoutMs: 90_000 },
 }
 
 export async function POST(request: NextRequest) {
@@ -267,6 +274,19 @@ Kembalikan JSON dengan key "excerpt". ${JSON_ONLY_INSTRUCTION}`,
 
                     if (salvagedHtml) {
                         outlineHtml = sanitizeArticleHtml(salvagedHtml)
+                    } else if (
+                        structuredError instanceof AiJsonFormatError &&
+                        structuredError.kind === "truncated"
+                    ) {
+                        // max_tokens cut the JSON mid-string. extractBalancedJson now
+                        // closes the truncated tail, so re-parse the raw prefix: the
+                        // sections completed before the cut are still a usable outline.
+                        const repaired = salvageOutlineFromTruncatedJson(structuredError.raw)
+                        if (repaired) {
+                            outlineHtml = sanitizeArticleHtml(repaired)
+                        } else {
+                            throw structuredError
+                        }
                     } else {
                         throw structuredError
                     }

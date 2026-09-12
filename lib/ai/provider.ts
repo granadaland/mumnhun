@@ -105,6 +105,8 @@ export type TextGenerationResult = {
     model: string
     /** Present only for OpenAI-compatible providers; lets the caller persist what worked. */
     authStyle?: AuthStyle
+    /** "length" when the gateway cut the answer mid-generation (max_tokens exhausted). */
+    finishReason?: string | null
 }
 
 export function isCustomProvider(provider: string): boolean {
@@ -145,7 +147,7 @@ export async function generateText(
             }
         )
 
-        return { text: result.text, model: result.model, authStyle: result.authStyle }
+        return { text: result.text, model: result.model, authStyle: result.authStyle, finishReason: result.finishReason }
     }
 
     const result = await geminiGenerate(resolved.apiKey, {
@@ -159,7 +161,7 @@ export async function generateText(
         model: resolved.model,
     })
 
-    return { text: result.text, model: result.model }
+    return { text: result.text, model: result.model, finishReason: result.finishReason ?? null }
 }
 
 /** Multi-turn variant used by the admin chat, mapped onto each provider's native shape. */
@@ -237,12 +239,12 @@ const JSON_REPAIR_REMINDER =
  * good article as Markdown instead of JSON should not cost the operator another paid
  * generation — the text converts deterministically via coerceToHtml/salvage helpers.
  */
-export type AiJsonFailureKind = "parse" | "schema"
+export type AiJsonFailureKind = "parse" | "schema" | "truncated"
 
 export class AiJsonFormatError extends Error {
     raw: string
     elapsedMs: number
-    /** "parse" = teks bukan JSON, "schema" = JSON valid tapi tidak sesuai schema. */
+    /** "parse" = teks bukan JSON, "schema" = JSON valid tapi tidak sesuai schema, "truncated" = terpotong max_tokens. */
     kind: AiJsonFailureKind
     /** Cuplikan aman (max 300 char) dari output mentah untuk diagnosis. */
     snippet: string
@@ -312,6 +314,19 @@ export async function generateJson<T>(
         }
     }
 
+    // The gateway said the answer was CUT at max_tokens (or the parse failed on a
+    // text that visibly ends mid-token). Retrying with the same budget produces the
+    // same truncation, so surface it as a distinct, actionable failure instead.
+    const wasTruncated = result.finishReason === "length" || result.finishReason === "MAX_TOKENS"
+    if (wasTruncated && firstFailure) {
+        throw new AiJsonFormatError(
+            `Respons model terpotong oleh batas max_tokens sebelum JSON selesai (finish_reason=${result.finishReason}). Naikkan maxTokens atau pilih model non-reasoning. Cuplikan: ${makeSnippet(result.text) || "(kosong)"}`,
+            result.text,
+            Date.now() - startedAt,
+            { kind: "truncated", snippet: makeSnippet(result.text) }
+        )
+    }
+
     // One retry with an explicit reminder fixes the vast majority of format-only failures —
     // but only when there is budget left for a second full generation.
     if (!shouldRetryJsonParse(Date.now() - startedAt)) {
@@ -333,11 +348,14 @@ export async function generateJson<T>(
         retryRaw = parseLlmJson(result.text)
     } catch (error) {
         if (error instanceof AiJsonParseError) {
+            const retryTruncated = result.finishReason === "length" || result.finishReason === "MAX_TOKENS"
             throw new AiJsonFormatError(
-                `Output AI bukan JSON yang valid setelah 2 percobaan. Cuplikan: ${error.snippet || "(kosong)"}`,
+                retryTruncated
+                    ? `Respons model terpotong oleh batas max_tokens setelah 2 percobaan (finish_reason=${result.finishReason}). Cuplikan: ${error.snippet || "(kosong)"}`
+                    : `Output AI bukan JSON yang valid setelah 2 percobaan. Cuplikan: ${error.snippet || "(kosong)"}`,
                 result.text,
                 Date.now() - startedAt,
-                { kind: "parse", snippet: error.snippet || makeSnippet(result.text) }
+                { kind: retryTruncated ? "truncated" : "parse", snippet: error.snippet || makeSnippet(result.text) }
             )
         }
         throw error

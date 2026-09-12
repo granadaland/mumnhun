@@ -395,6 +395,70 @@ export function salvageOutlineHtmlFromRaw(raw: string): string | null {
 // Salvage: title ideas / excerpt / seo / image-meta from non-strict output
 // ---------------------------------------------------------------------------
 
+/**
+ * True for lines that are leaked chain-of-thought, not a title. Conservative on
+ * purpose: only obvious English planning prose and instruction restatements are
+ * rejected, so a legitimate Indonesian title is never dropped.
+ */
+function looksLikeReasoningLeak(line: string): boolean {
+    const text = line.trim()
+    if (!text) return true
+    if (/^(the\s+)?(user|users)\s+(want|wants|asked|asks|requested|needs?)\b/i.test(text)) return true
+    if (/^(okay|ok|let'?s|let us|i'?ll|i\s+will|i\s+should|i\s+need|first|now)\b/i.test(text)) return true
+    // English meta commentary about the task itself.
+    if (/\b(articles? about|in indonesian|in indo|storing breast milk|the request|the prompt|json format|valid json)\b/i.test(text)) {
+        return true
+    }
+    return false
+}
+
+/**
+ * Recovers an outline from a JSON response that was cut mid-string by max_tokens.
+ *
+ * json-extract's truncated-tail repair closes the still-open string/containers, so
+ * the completed prefix parses. Sections finished before the cut are rendered; a
+ * dangling partial section is dropped. Returns null when fewer than 2 usable
+ * sections survive (a 1-section outline is not worth applying to the editor).
+ */
+export function salvageOutlineFromTruncatedJson(raw: string): string | null {
+    const trimmed = (raw ?? "").trim()
+    if (trimmed.length < 40) return null
+
+    let parsed: unknown
+    try {
+        parsed = parseLlmJson(trimmed)
+    } catch {
+        return null
+    }
+
+    const outlineCheck = structuredOutlineSchema.safeParse(parsed)
+    if (outlineCheck.success) {
+        return renderOutlineHtml(outlineCheck.data)
+    }
+
+    // Shape parsed but does not meet schema (e.g. min 3 sections): keep only the
+    // complete sections and render those.
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const record = parsed as Record<string, unknown>
+        if (!Array.isArray(record.sections)) return null
+
+        const usable = record.sections
+            .filter((entry): entry is Record<string, unknown> =>
+                Boolean(entry) && typeof entry === "object" && !Array.isArray(entry))
+            .filter((entry) => typeof entry.heading === "string" && entry.heading.trim().length > 0)
+            .slice(0, MAX_SECTIONS)
+
+        if (usable.length < 2) return null
+
+        const partial = structuredOutlineSchema.safeParse({ sections: usable })
+        if (partial.success) {
+            return renderOutlineHtml(partial.data)
+        }
+    }
+
+    return null
+}
+
 function cleanTitleCandidate(raw: string): string {
     return raw
         .trim()
@@ -425,8 +489,10 @@ function normalizeTitleList(candidates: unknown): string[] {
     const cleaned = candidates
         .filter((entry): entry is string => typeof entry === "string")
         .map(cleanTitleCandidate)
-        .map((title) => (title.length > 90 ? title.slice(0, 90).trim() : title))
-        .filter((title) => title.length >= 10)
+        // Over-long entries are thinking prose, not titles — drop them instead of
+        // truncating into a half-sentence that reads as garbage in the editor.
+        .filter((title) => title.length >= 10 && title.length <= 90)
+        .filter((title) => !looksLikeReasoningLeak(title))
     return dedupeKeepOrder(cleaned)
 }
 
@@ -473,8 +539,9 @@ export function salvageTitleIdeasFromRaw(raw: string): { titles: string[] } | nu
         .replace(/\r\n/g, "\n")
         .split("\n")
         .map(cleanTitleCandidate)
-        .map((title) => (title.length > 90 ? title.slice(0, 90).trim() : title))
-        .filter((title) => title.length >= 10 && !/^(berikut|ini adalah|judul)/i.test(title))
+        .filter((title) => title.length >= 10 && title.length <= 90)
+        .filter((title) => !/^(berikut|ini adalah|judul)/i.test(title))
+        .filter((title) => !looksLikeReasoningLeak(title))
     const deduped = dedupeKeepOrder(lines).slice(0, 10)
     if (deduped.length >= 3) return { titles: deduped.slice(0, 6) }
 
@@ -484,7 +551,9 @@ export function salvageTitleIdeasFromRaw(raw: string): { titles: string[] } | nu
     let match: RegExpExecArray | null
     while ((match = quotePattern.exec(trimmed)) !== null) {
         const cleaned = cleanTitleCandidate(match[1])
-        if (cleaned.length >= 10) quoted.push(cleaned.length > 90 ? cleaned.slice(0, 90).trim() : cleaned)
+        if (cleaned.length >= 10 && cleaned.length <= 90 && !looksLikeReasoningLeak(cleaned)) {
+            quoted.push(cleaned)
+        }
         if (quoted.length >= 10) break
     }
     const dedupedQuoted = dedupeKeepOrder(quoted).slice(0, 10)

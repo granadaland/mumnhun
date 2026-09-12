@@ -97,14 +97,70 @@ export type ChatCompletionResult = {
     text: string
     authStyle: AuthStyle
     model: string
+    /** "length" when the gateway cut the answer mid-token (max_tokens exhausted). */
+    finishReason?: string | null
 }
 
 type OpenAiChatCompletionResponse = {
     choices?: Array<{
         message?: { content?: string | null; reasoning_content?: string | null }
         text?: string | null
+        finish_reason?: string | null
     }>
+    usage?: { completion_tokens?: unknown }
     error?: { message?: string; type?: string }
+}
+
+/**
+ * Removes chain-of-thought leakage some reasoning-style blocks, "Let me..." planning prose, or restated
+ * instructions ("The user wants 6 title ideas..."). Only the trailing part after the
+ * last closing think-tag / restatement line survives.
+ */
+export function stripReasoningLeak(text: string): string {
+    let cleaned = text.trim()
+
+    // <think>...</think> (also unclosed variant — reasoning until the very end).
+    cleaned = cleaned.replace(/<think>[\s\S]*?<\/think>\s*/gi, "").replace(/<think>[\s\S]*$/i, "")
+
+    // ```thinking / ```reasoning fenced blocks some gateways emit.
+    cleaned = cleaned.replace(/```(?:thinking|reasoning|thought)\s*[\s\S]*?```\s*/gi, "")
+
+    const lines = cleaned.split(/\r?\n/)
+    // Find the first leaked-thinking line; everything from that line onward with a
+    // trailing blank separator is dropped ONLY when a later non-leak block exists.
+    // Default: keep everything (clean content must pass through untouched).
+    let firstLeakIndex = -1
+    for (let i = 0; i < lines.length; i += 1) {
+        const line = lines[i].trim()
+        if (!line) continue
+        if (/^(the\s+)?(user|users)\s+(want|wants|asked|asks|requested|needs?)\b/i.test(line)) {
+            firstLeakIndex = i
+            break
+        }
+        if (/^(okay|ok|let'?s|let us|i'?ll|i\s+will|i\s+should|i\s+need|first|now|so)\b[\s\S]{0,120}(title|judul|idea|ide|outline|json|extract|generate|user|wants?|topik|topic|answer|titles)/i.test(line)) {
+            firstLeakIndex = i
+            break
+        }
+    }
+
+    if (firstLeakIndex === -1) {
+        return cleaned
+    }
+
+    // The leak block is consecutive leak lines starting at firstLeakIndex. The real
+    // answer starts after them (often after a blank line or a closing think tag).
+    let answerStart = firstLeakIndex
+    for (let i = firstLeakIndex; i < lines.length; i += 1) {
+        const line = lines[i].trim()
+        if (!line) { answerStart = i + 1; continue }
+        // Still inside the leak block: planning prose continues.
+        if (/^(the\s+)?(user|users)\s+(want|wants|asked|asks|requested|needs?)\b/i.test(line)) { answerStart = i + 1; continue }
+        if (/^(okay|ok|let'?s|let us|i'?ll|i\s+will|i\s+should|i\s+need|first|now|so|here\s+(are|is)|berikut|these\s+(are|is))\b/i.test(line)) { answerStart = i + 1; continue }
+        // First line that is not planning prose is the start of the real answer.
+        break
+    }
+
+    return lines.slice(answerStart).join("\n").trim()
 }
 
 function extractChoiceText(payload: OpenAiChatCompletionResponse): string {
@@ -112,13 +168,13 @@ function extractChoiceText(payload: OpenAiChatCompletionResponse): string {
     if (!choice) return ""
 
     const content = choice.message?.content
-    if (typeof content === "string" && content.trim()) return content.trim()
+    if (typeof content === "string" && content.trim()) return stripReasoningLeak(content)
 
     // Some reasoning models place the answer in reasoning_content when content is empty.
     const reasoning = choice.message?.reasoning_content
-    if (typeof reasoning === "string" && reasoning.trim()) return reasoning.trim()
+    if (typeof reasoning === "string" && reasoning.trim()) return stripReasoningLeak(reasoning)
 
-    if (typeof choice.text === "string" && choice.text.trim()) return choice.text.trim()
+    if (typeof choice.text === "string" && choice.text.trim()) return stripReasoningLeak(choice.text)
 
     return ""
 }
@@ -182,7 +238,7 @@ export async function chatCompletion(
                     )
                 }
 
-                return { text, authStyle: style, model: config.model }
+                return { text, authStyle: style, model: config.model, finishReason: payload?.choices?.[0]?.finish_reason ?? null }
             }
 
             const snippet = await readBodySnippet(response)

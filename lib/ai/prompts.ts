@@ -30,8 +30,14 @@ SEO:
 - Focus keyword muncul natural di judul, paragraf pembuka, dan minimal satu subjudul.
 - Jangan menumpuk keyword. Gunakan variasi dan sinonim.`
 
-export const JSON_ONLY_INSTRUCTION =
-    "Jawab HANYA dengan JSON object valid. Tanpa markdown code fence, tanpa teks lain."
+export const JSON_ONLY_INSTRUCTION = [
+    "Jawab HANYA dengan SATU JSON object valid.",
+    "Jangan tulis proses berpikir, catatan internal, penjelasan rencana, atau kalimat pembuka seperti 'Berikut adalah...'.",
+    "Jangan mengulang instruksi ini atau merestatement permintaan user (mis. 'The user wants...').",
+    "Tanpa markdown code fence, tanpa teks lain sebelum atau sesudah JSON.",
+    "Karakter PERTAMA respons harus '{' dan karakter TERAKHIR harus '}'.",
+    "Seluruh nilai string dalam bahasa Indonesia.",
+].join(" ")
 
 // ---------------------------------------------------------------------------
 // Title ideas

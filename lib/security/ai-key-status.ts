@@ -385,6 +385,15 @@ export function classifyAiKeyFailure(error: unknown): AiKeyFailure {
                   : ""
         // Snippet is model output, not credentials: collapse + truncate for the dashboard.
         const snippet = sanitizeAiKeyErrorMessage(snippetRaw.replace(/\s+/g, " ").trim()).slice(0, 200)
+
+        // Truncation and reasoning leaks are actionable with different fixes; give each
+        // its own diagnosis instead of the old blanket "JSON tidak valid".
+        if (kind === "truncated") {
+            return {
+                code: "PROVIDER_REQUEST_FAILED",
+                message: `Respons model terpotong oleh max_tokens sebelum JSON selesai. Cuplikan: ${snippet || "(kosong)"} — naikkan target, atau ganti ke model non-reasoning (thinking ikut memakai budget token).`,
+            }
+        }
         const cause =
             kind === "schema"
                 ? `JSON valid tapi tidak sesuai schema${schemaIssue ? ` (${schemaIssue})` : ""}`

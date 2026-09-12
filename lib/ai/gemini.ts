@@ -10,6 +10,7 @@ export type GeminiMessage = {
 type GeminiResponse = {
     candidates?: Array<{
         content?: { parts?: Array<{ text?: string }> }
+        finishReason?: string
     }>
 }
 
@@ -28,6 +29,8 @@ export type GeminiChatOptions = {
 export type GeminiChatResult = {
     text: string
     model: string
+    /** "MAX_TOKENS" when Gemini cut the answer at the output-token ceiling. */
+    finishReason?: string | null
 }
 
 /**
@@ -93,7 +96,7 @@ export async function geminiGenerate(
                 throw new Error("Gemini tidak mengembalikan konten")
             }
 
-            return { text, model }
+            return { text, model, finishReason: payload.candidates?.[0]?.finishReason ?? null }
         }
 
         throw lastModelError ?? new Error("Semua model Gemini gagal diakses")

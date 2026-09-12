@@ -57,6 +57,8 @@ function extractBalancedJson(text: string): string | null {
     let inString = false
     let escaped = false
     let end = -1
+    /** Index of the opening quote of the currently open string, if any. */
+    let stringStart = -1
 
     for (let i = start; i < text.length; i += 1) {
         const char = text[i]
@@ -68,12 +70,14 @@ function extractBalancedJson(text: string): string | null {
                 escaped = true
             } else if (char === '"') {
                 inString = false
+                stringStart = -1
             }
             continue
         }
 
         if (char === '"') {
             inString = true
+            stringStart = i
             continue
         }
 
@@ -92,11 +96,35 @@ function extractBalancedJson(text: string): string | null {
         return text.slice(start, end + 1)
     }
 
-    // Truncated output: take from the start and close the still-open containers.
+    // Truncated output (finish_reason=length): close what is still open so the
+    // complete prefix can still parse. The open string, if any, is either a VALUE
+    // ("point": "Berbagai ... membu) or a KEY (..., "subhead) — told apart by the
+    // last non-space char before its opening quote.
     if (stack.length > 0) {
         let repaired = text.slice(start)
-        // Drop a trailing partial string/token so the auto-close does not corrupt a value.
-        repaired = repaired.replace(/,\s*"[^"]*$/, "").replace(/,\s*$/, "")
+
+        if (inString && stringStart >= 0) {
+            const beforeQuote = text.slice(0, stringStart).trimEnd().slice(-1)
+
+            if (beforeQuote === ":") {
+                // Cut inside a VALUE string — append the closing quote. An unescaped
+                // backslash at the cut would escape it, so drop the backslash first.
+                repaired = `${repaired.replace(/\\$/, "")}"`
+            } else {
+                // Cut inside a KEY (or a bare string in an array). A closed key with
+                // no `: value` is invalid, so drop the whole dangling member.
+                repaired = repaired
+                    .replace(/,\s*"[^"]*$/, "")
+                    .replace(/,\s*$/, "")
+                    .replace(/([{[]\s*)"[^"]*$/, "$1")
+            }
+        } else {
+            // Cut outside a string: drop a dangling separator, then auto-close.
+            repaired = repaired
+                .replace(/,\s*"[A-Za-z0-9_]*"\s*:\s*$/, "")
+                .replace(/,\s*$/, "")
+        }
+
         for (let i = stack.length - 1; i >= 0; i -= 1) {
             repaired += stack[i] === "{" ? "}" : "]"
         }
